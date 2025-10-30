@@ -41,11 +41,30 @@ Verify that we can ingest audio recordings stored in Google Cloud Storage bucket
   export GCS_AUDIO_BUCKET=sales-ai-automation-leads-staging
   export GCS_AUDIO_PREFIX=incoming/leads/
   ```
+- 安裝依賴：
+  ```bash
+  pip install google-cloud-storage google-cloud-core
+  ```
+  若要直接驅動轉錄管線，也需確保 `transcription` 專案依賴（torch、faster-whisper、ffmpeg 等）已建立。
 
 ## Deliverables
 - `download_and_transcribe.py`: CLI script performing steps above.
 - `poc1b_results.json`: summary metrics.
 - Updated documentation in `docs/cloud-run-deployment.md` or spec/plan as needed.
+
+## How to Run the POC
+```bash
+python download_and_transcribe.py \
+  --bucket "$GCS_AUDIO_BUCKET" \
+  --prefix "$GCS_AUDIO_PREFIX" \
+  --limit 3 \
+  --move-to processed/leads/
+```
+
+執行完成後請檢查：
+1. `poc1b_results.json` 內每筆結果是否包含 `download_seconds`、`sourceType=leads`、`gcsUri`；若轉錄成功應有 `transcription` 欄位。
+2. GCS 中的檔案是否被移至 `processed/leads/`（若指定 `--move-to`）。
+3. Firestore 或後端日誌是否紀錄成功/失敗狀態（未串接可先以終端輸出確認）。
 
 ## Extensions (Later Phases)
 - Integrate with Cloud Tasks for scheduled polling.

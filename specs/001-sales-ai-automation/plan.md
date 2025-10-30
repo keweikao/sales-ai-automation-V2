@@ -466,6 +466,14 @@ sales-ai-automation-v2/
 4. **對外通知**：完成頁面生成後，透過 SMS（可選擇同步 Email）發送頁面連結與簡短問候語給客戶，並記錄發送結果。
 5. **再次修訂**：若業務於 thread 更新內容，可重新按鈕送出，系統會覆寫頁面與重新通知客戶。
 
+### Testing & QA Considerations（新增）
+- **Agent 6 / 7**：新增單元測試覆蓋 prompt 整合（mock Gemini 輸出），並撰寫整合測試驗證 Firestore 寫入 `analysis.structured` / `analysis.customerSummary` 的 schema。
+- **Slack 摘要流程**：為 `✅ 送出摘要` handler 撰寫 E2E 測試（可用 Slack Bolt testing utilities），確認 thread 更新、@ mention、送出後回覆與錯誤處理。
+- **摘要頁渲染**：加入 snapshot 測試（HTML / Markdown），確保必備章節存在且 LINE 連結正確生成。
+- **SMS/Email 傳送**：以 stub provider 實作 integration test，驗證成功/失敗記錄寫入 Firestore audit collection。
+- **POC 1b（GCS leads）**：執行 `specs/001-sales-ai-automation/poc-tests/poc1b_gcs/download_and_transcribe.py` 的實測，需安裝 `google-cloud-storage`、`google-cloud-core`，並準備 staging bucket；測試時應確認 `poc1b_results.json` 的 latency、標籤與錯誤欄位。
+- **POC 6（POS adoption）**：更新後的測試腳本 `test_questionnaire_extraction.py` 需加入覆蓋率門檻檢查；建議在 CI 中提供可重播 transcript fixture 以檢測 regression。
+
 ### Critical Path Performance Budget
 
 | Stage | Target | Buffer | Total |
