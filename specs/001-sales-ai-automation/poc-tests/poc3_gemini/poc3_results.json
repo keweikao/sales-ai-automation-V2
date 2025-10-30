@@ -1,0 +1,255 @@
+{
+  "timestamp": "2025-10-29T16:24:05.089397",
+  "summary": {
+    "total_tests": 15,
+    "valid_json_count": 13,
+    "schema_compliant_count": 6,
+    "avg_completeness": 43.58974358974359,
+    "hallucination_count": 0,
+    "avg_response_time_ms": 1600.8386294047039,
+    "valid_json_rate": 86.66666666666667,
+    "schema_compliance_rate": 40.0,
+    "hallucination_rate": 0.0,
+    "passed": false
+  },
+  "details": [
+    {
+      "test_id": "agent1_test1",
+      "input_length": 450,
+      "output_length": 942,
+      "is_valid_json": true,
+      "is_schema_compliant": true,
+      "completeness_score": 100.0,
+      "hallucination_detected": false,
+      "response_time_ms": 2949.636220932007,
+      "error_message": null,
+      "missing_fields": [],
+      "extra_fields": null
+    },
+    {
+      "test_id": "agent1_test1",
+      "input_length": 450,
+      "output_length": 946,
+      "is_valid_json": true,
+      "is_schema_compliant": true,
+      "completeness_score": 100.0,
+      "hallucination_detected": false,
+      "response_time_ms": 2630.856990814209,
+      "error_message": null,
+      "missing_fields": [],
+      "extra_fields": null
+    },
+    {
+      "test_id": "agent1_test1",
+      "input_length": 450,
+      "output_length": 942,
+      "is_valid_json": true,
+      "is_schema_compliant": true,
+      "completeness_score": 100.0,
+      "hallucination_detected": false,
+      "response_time_ms": 2943.732976913452,
+      "error_message": null,
+      "missing_fields": [],
+      "extra_fields": null
+    },
+    {
+      "test_id": "agent5_test1",
+      "input_length": 482,
+      "output_length": 499,
+      "is_valid_json": true,
+      "is_schema_compliant": true,
+      "completeness_score": 88.88888888888889,
+      "hallucination_detected": false,
+      "response_time_ms": 1861.0870838165283,
+      "error_message": null,
+      "missing_fields": [],
+      "extra_fields": null
+    },
+    {
+      "test_id": "agent5_test1",
+      "input_length": 482,
+      "output_length": 503,
+      "is_valid_json": true,
+      "is_schema_compliant": true,
+      "completeness_score": 88.88888888888889,
+      "hallucination_detected": false,
+      "response_time_ms": 1753.0128955841064,
+      "error_message": null,
+      "missing_fields": [],
+      "extra_fields": null
+    },
+    {
+      "test_id": "agent5_test1",
+      "input_length": 482,
+      "output_length": 499,
+      "is_valid_json": true,
+      "is_schema_compliant": true,
+      "completeness_score": 88.88888888888889,
+      "hallucination_detected": false,
+      "response_time_ms": 1900.4440307617188,
+      "error_message": null,
+      "missing_fields": [],
+      "extra_fields": null
+    },
+    {
+      "test_id": "agent1_test2",
+      "input_length": 113,
+      "output_length": 159,
+      "is_valid_json": true,
+      "is_schema_compliant": false,
+      "completeness_score": 0.0,
+      "hallucination_detected": false,
+      "response_time_ms": 1196.8450546264648,
+      "error_message": null,
+      "missing_fields": [
+        "participants",
+        "participants[].role",
+        "participants[].name",
+        "participants[].organizationLevel",
+        "participants[].decisionMakingPower"
+      ],
+      "extra_fields": null
+    },
+    {
+      "test_id": "agent1_test2",
+      "input_length": 113,
+      "output_length": 173,
+      "is_valid_json": true,
+      "is_schema_compliant": false,
+      "completeness_score": 0.0,
+      "hallucination_detected": false,
+      "response_time_ms": 1367.685317993164,
+      "error_message": null,
+      "missing_fields": [
+        "participants",
+        "participants[].role",
+        "participants[].name",
+        "participants[].organizationLevel",
+        "participants[].decisionMakingPower"
+      ],
+      "extra_fields": null
+    },
+    {
+      "test_id": "agent1_test2",
+      "input_length": 113,
+      "output_length": 176,
+      "is_valid_json": true,
+      "is_schema_compliant": false,
+      "completeness_score": 0.0,
+      "hallucination_detected": false,
+      "response_time_ms": 1146.381139755249,
+      "error_message": null,
+      "missing_fields": [
+        "participants",
+        "participants[].role",
+        "participants[].name",
+        "participants[].organizationLevel",
+        "participants[].decisionMakingPower"
+      ],
+      "extra_fields": null
+    },
+    {
+      "test_id": "agent5_test2",
+      "input_length": 123,
+      "output_length": 102,
+      "is_valid_json": true,
+      "is_schema_compliant": false,
+      "completeness_score": 0.0,
+      "hallucination_detected": false,
+      "response_time_ms": 1200.9210586547852,
+      "error_message": null,
+      "missing_fields": [
+        "discoveryQuestionnaires",
+        "discoveryQuestionnaires[].topic",
+        "discoveryQuestionnaires[].featureCategory",
+        "discoveryQuestionnaires[].currentStatus",
+        "discoveryQuestionnaires[].hasNeed",
+        "discoveryQuestionnaires[].completenessScore"
+      ],
+      "extra_fields": null
+    },
+    {
+      "test_id": "agent5_test2",
+      "input_length": 123,
+      "output_length": 114,
+      "is_valid_json": false,
+      "is_schema_compliant": false,
+      "completeness_score": 0.0,
+      "hallucination_detected": false,
+      "response_time_ms": 1214.0088081359863,
+      "error_message": "Extra data: line 4 column 4 (char 42)",
+      "missing_fields": null,
+      "extra_fields": null
+    },
+    {
+      "test_id": "agent5_test2",
+      "input_length": 123,
+      "output_length": 166,
+      "is_valid_json": false,
+      "is_schema_compliant": false,
+      "completeness_score": 0.0,
+      "hallucination_detected": false,
+      "response_time_ms": 1222.2061157226562,
+      "error_message": "Extra data: line 4 column 4 (char 44)",
+      "missing_fields": null,
+      "extra_fields": null
+    },
+    {
+      "test_id": "agent1_hallucination_test",
+      "input_length": 59,
+      "output_length": 56,
+      "is_valid_json": true,
+      "is_schema_compliant": false,
+      "completeness_score": 0.0,
+      "hallucination_detected": false,
+      "response_time_ms": 945.1339244842529,
+      "error_message": null,
+      "missing_fields": [
+        "participants",
+        "participants[].role",
+        "participants[].name",
+        "participants[].organizationLevel",
+        "participants[].decisionMakingPower"
+      ],
+      "extra_fields": null
+    },
+    {
+      "test_id": "agent1_hallucination_test",
+      "input_length": 59,
+      "output_length": 56,
+      "is_valid_json": true,
+      "is_schema_compliant": false,
+      "completeness_score": 0.0,
+      "hallucination_detected": false,
+      "response_time_ms": 829.197883605957,
+      "error_message": null,
+      "missing_fields": [
+        "participants",
+        "participants[].role",
+        "participants[].name",
+        "participants[].organizationLevel",
+        "participants[].decisionMakingPower"
+      ],
+      "extra_fields": null
+    },
+    {
+      "test_id": "agent1_hallucination_test",
+      "input_length": 59,
+      "output_length": 56,
+      "is_valid_json": true,
+      "is_schema_compliant": false,
+      "completeness_score": 0.0,
+      "hallucination_detected": false,
+      "response_time_ms": 851.4299392700195,
+      "error_message": null,
+      "missing_fields": [
+        "participants",
+        "participants[].role",
+        "participants[].name",
+        "participants[].organizationLevel",
+        "participants[].decisionMakingPower"
+      ],
+      "extra_fields": null
+    }
+  ]
+}

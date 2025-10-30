@@ -38,8 +38,12 @@ env/
 .env
 .env.local
 *.lock
+.claude/
 
 # Spec Kit-specific files
 .genreleases/
 *.zip
 sdd-*/
+# CLI downloads
+q/
+*.sig

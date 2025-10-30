@@ -1,0 +1,16 @@
+{
+  "success": true,
+  "passed": true,
+  "audio_path": "test-data/audio/202510-121658_中清路咖啡林s-Solo - 鍾志杰.m4a",
+  "audio_duration": 2834.496,
+  "audio_size_mb": 45.12069892883301,
+  "model_size": "tiny",
+  "processing_time": 255.4972915649414,
+  "speed_ratio": 0.090138526060697,
+  "quality_score": 100,
+  "total_segments": 2214,
+  "text_length": 15046,
+  "vad_enabled": true,
+  "chunk_count": 5,
+  "workers": 1
+}

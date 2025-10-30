@@ -1,0 +1,19 @@
+{
+  "success": true,
+  "passed": true,
+  "audio_path": "test-data/audio/202510-121658_中清路咖啡林s-Solo - 鍾志杰.m4a",
+  "audio_duration": 2834.496,
+  "audio_size_mb": 45.12069892883301,
+  "model_size": "tiny",
+  "processing_time": 300.47465538978577,
+  "speed_ratio": 0.10600637834372875,
+  "quality_score": 100,
+  "total_segments": 2118,
+  "text_length": 15057,
+  "vad_enabled": true,
+  "chunk_count": 5,
+  "workers": 1,
+  "diarization_enabled": true,
+  "diarization_error": "Missing Hugging Face token for pyannote.audio diarization. Set the HUGGINGFACE_TOKEN environment variable or provide `use_auth_token` when constructing PyannoteDiarizer. | 404 Client Error. (Request ID: Root=1-690329c5-325811c526c04b1604de8eec;34f5bdfa-ad7a-4687-aff8-91fe1cbacae0)\n\nEntry Not Found for url: https://huggingface.co/speechbrain/spkrec-ecapa-voxceleb/resolve/main/custom.py.",
+  "speakers": []
+}

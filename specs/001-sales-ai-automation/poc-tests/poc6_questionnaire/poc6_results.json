@@ -1,0 +1,78 @@
+{
+  "test_count": 7,
+  "total_duration": 57.29137587547302,
+  "topic_detection": {
+    "recall": 80.0,
+    "total_features": 10,
+    "detected_features": 8,
+    "missed": [
+      {
+        "file_id": "test_03",
+        "missed": [
+          "掃碼點餐"
+        ]
+      },
+      {
+        "file_id": "test_06",
+        "missed": [
+          "POS點餐系統"
+        ]
+      }
+    ],
+    "false_positives": [
+      {
+        "file_id": "test_03",
+        "false_positives": [
+          "銷售分析",
+          "總部系統",
+          "POS點餐系統"
+        ]
+      },
+      {
+        "file_id": "test_05",
+        "false_positives": [
+          "會員管理"
+        ]
+      },
+      {
+        "file_id": "test_07",
+        "false_positives": [
+          "銷售分析",
+          "庫存管理",
+          "POS點餐系統",
+          "線上點餐接單"
+        ]
+      },
+      {
+        "file_id": "test_02",
+        "false_positives": [
+          "庫存管理",
+          "成本控管"
+        ]
+      }
+    ]
+  },
+  "extraction_accuracy": {
+    "average": 45.0,
+    "scores": [
+      0,
+      25.0,
+      25.0,
+      75.0,
+      75.0,
+      75.0,
+      0,
+      60.0,
+      90.0,
+      25.0
+    ],
+    "field_accuracies": {
+      "currentStatus": 62.5,
+      "hasNeed": 87.5,
+      "needReasons": 7.142857142857142,
+      "barriers": 100.0,
+      "implementationWillingness": 50.0
+    }
+  },
+  "overall_pass": false
+}

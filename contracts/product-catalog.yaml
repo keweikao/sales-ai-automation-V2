@@ -1,0 +1,43 @@
+# iCHEF Product Catalog (Prompt Reference)
+# 此檔案為 Agent 5 的功能對照表，若有更新，請同步調整 prompt。
+
+feature_categories:
+  - id: order_management
+    name: 點餐與訂單管理
+    topics:
+      - 掃碼點餐
+      - 多人掃碼
+      - 套餐加價購
+      - 智慧菜單推薦
+  - id: online_services
+    name: 線上整合服務
+    topics:
+      - 線上訂位
+      - 線上外帶
+      - 雲端餐廳
+      - 外送平台整合
+  - id: cost_inventory
+    name: 成本與庫存
+    topics:
+      - 會計系統
+      - 庫存管理
+      - 成本控管
+  - id: analytics
+    name: 業績分析
+    topics:
+      - 銷售分析報表
+      - 經營數據管理
+  - id: customer_relationship
+    name: 客戶關係
+    topics:
+      - 零秒集點
+      - 會員管理系統
+  - id: enterprise
+    name: 企業級功能
+    topics:
+      - 總部系統
+      - 連鎖品牌管理
+  - id: others
+    name: 其他功能
+    topics:
+      - 自訂功能或對話中提到的其他需求

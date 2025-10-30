@@ -1,0 +1,102 @@
+{
+  "sequential": {
+    "sequential_duration": 10.16058611869812,
+    "agent_results": {
+      "agent1_participant": {
+        "agent_id": "agent1_participant",
+        "success": true,
+        "duration": 2.2303731441497803,
+        "output": "```json\n[\n  {\n    \"speakerId\": \"業務\",\n    \"role\": \"Sales Representative\",\n    \"personalityType\": \"Helpful, persuasive, and solution-oriented. Focuses on addressing the client's pain points.\",\n    \"decisionPower\": 30\n  },\n  {\n    \"speakerId\": \"張總\",\n    \"role\": \"Restaurant Owner/General Manager\",\n    \"personalityType\": \"Pragmatic, concerned about efficiency and customer satisfaction, cautious but open to new solutions. Needs evidence before making a decision.\",\n    \"decisionPower\": 90\n  }\n]\n```",
+        "tokens": 862,
+        "error": null
+      },
+      "agent2_sentiment": {
+        "agent_id": "agent2_sentiment",
+        "success": true,
+        "duration": 1.9071967601776123,
+        "output": "```json\n{\n  \"overallSentiment\": \"Positive\",\n  \"trustLevel\": 85,\n  \"buyingSignals\": [\n    \"我們現在確實遇到一些痛點，想要找解決方案。\",\n    \"聽起來不錯欸！\",\n    \"喔這樣聽起來蠻合理的。\",\n    \"好，這個我很有興趣。\",\n    \"我對這個功能真的蠻感興趣的，如果效果好的話，我們應該在一個月內就會導入。\"\n  ],\n  \"objections\": [\n    \"但我擔心客人不會用怎麼辦？我們有很多年紀比較大的客人。\",\n    \"那這個功能會很貴嗎？\",\n    \"3,500 一個月喔。\"\n  ]\n}\n```",
+        "tokens": 883,
+        "error": null
+      },
+      "agent3_needs": {
+        "agent_id": "agent3_needs",
+        "success": true,
+        "duration": 1.8155980110168457,
+        "output": "```json\n{\n  \"explicitNeeds\": [\n    \"Reduce wait times for customers during peak hours.\",\n    \"Address customer complaints about slow service.\",\n    \"Reduce errors in order taking and kitchen mistakes.\",\n    \"Find a solution for staff shortages during peak hours.\"\n  ],\n  \"implicitNeeds\": [\n    \"Improve customer satisfaction and Google review scores.\",\n    \"Find a cost-effective solution.\",\n    \"Ensure ease of use for a diverse customer base (including older customers).\",\n    \"Minimize disruption during implementation.\",\n    \"Increase revenue.\"\n  ],\n  \"recommendedProducts\": [\n    \"iCHEF POS system with QR code ordering functionality.\"\n  ]\n}\n```",
+        "tokens": 862,
+        "error": null
+      },
+      "agent4_competitor": {
+        "agent_id": "agent4_competitor",
+        "success": true,
+        "duration": 2.8762760162353516,
+        "output": "```json\n{\n  \"competitors\": [],\n  \"customerOpinions\": {\n    \"painPoints\": [\n      \"Staff shortage during peak hours\",\n      \"Long wait times for customers to order\",\n      \"Negative Google reviews due to long wait times\",\n      \"Traditional pen-and-paper ordering is time-consuming\",\n      \"Order errors due to manual entry into POS system\"\n    ],\n    \"concerns\": [\n      \"Customers, especially older ones, may not be comfortable using QR code ordering.\"\n    ],\n    \"interests\": [\n      \"Interested in seeing the system in operation at other restaurants\",\n      \"Interested in the potential to improve service quality by allowing staff to focus on customers needing assistance.\",\n      \"Potential for increased revenue.\"\n    ]\n  },\n  \"competitiveAdvantages\": [\n    \"Scan-to-order included within POS system with no added cost.\",\n    \"Implementation within 3-5 business days.\",\n    \"On-site setup and training.\",\n    \"Proven customer success stories\"\n  ]\n}\n```",
+        "tokens": 940,
+        "error": null
+      },
+      "agent5_questionnaire": {
+        "agent_id": "agent5_questionnaire",
+        "success": true,
+        "duration": 1.3295300006866455,
+        "output": "```json\n{\n  \"discoveredFeatures\": [\n    \"掃碼點餐 (QR Code Ordering)\"\n  ],\n  \"currentStatus\": \"Using traditional paper-based ordering system.\",\n  \"implementationWillingness\": \"High. Expressed interest and requested a visit to a restaurant using the system. Expects to implement within a month if the visit is positive.\"\n}\n```",
+        "tokens": 791,
+        "error": null
+      }
+    },
+    "total_agents": 5,
+    "successful_agents": 5,
+    "total_tokens": 4338
+  },
+  "parallel": {
+    "parallel_duration": 3.276128053665161,
+    "agent_results": {
+      "agent1_participant": {
+        "agent_id": "agent1_participant",
+        "success": true,
+        "duration": 1.324465036392212,
+        "output": "```json\n[\n  {\n    \"speakerId\": \"業務\",\n    \"role\": \"iCHEF業務經理\",\n    \"personalityType\": \"積極、專業、以客戶為中心\",\n    \"decisionPower\": 30\n  },\n  {\n    \"speakerId\": \"張總\",\n    \"role\": \"義大利餐廳老闆\",\n    \"personalityType\": \"謹慎、務實、注重細節\",\n    \"decisionPower\": 90\n  }\n]\n```",
+        "tokens": 839,
+        "error": null
+      },
+      "agent2_sentiment": {
+        "agent_id": "agent2_sentiment",
+        "success": true,
+        "duration": 2.047766923904419,
+        "output": "```json\n{\n  \"overallSentiment\": \"Positive\",\n  \"trustLevel\": 85,\n  \"buyingSignals\": [\n    \"我們現在確實遇到一些痛點，想要找解決方案。\",\n    \"聽起來不錯欸！\",\n    \"喔這樣聽起來蠻合理的。\",\n    \"好，這個我很有興趣。\",\n    \"我對這個功能真的蠻感興趣的，如果效果好的話，我們應該在一個月內就會導入。\"\n  ],\n  \"objections\": [\n    \"但我擔心客人不會用怎麼辦？我們有很多年紀比較大的客人。\",\n    \"那這個功能會很貴嗎？\",\n    \"3,500 一個月喔。\"\n  ]\n}\n```",
+        "tokens": 883,
+        "error": null
+      },
+      "agent3_needs": {
+        "agent_id": "agent3_needs",
+        "success": true,
+        "duration": 2.0458078384399414,
+        "output": "```json\n{\n  \"explicitNeeds\": [\n    \"Reduce workload of waiters during peak hours\",\n    \"Reduce order errors\",\n    \"Improve customer satisfaction (reduce waiting time)\",\n    \"Find a solution to staff shortage during peak hours\",\n    \"See other restaurants using the product\"\n  ],\n  \"implicitNeeds\": [\n    \"Easy to use solution for both staff and customers (including older customers)\",\n    \"Affordable solution\",\n    \"Quick implementation\",\n    \"Increased revenue\",\n    \"Improved service quality\"\n  ],\n  \"recommendedProducts\": [\n    \"iCHEF POS System with QR code ordering functionality\"\n  ]\n}\n```",
+        "tokens": 856,
+        "error": null
+      },
+      "agent4_competitor": {
+        "agent_id": "agent4_competitor",
+        "success": true,
+        "duration": 3.2731728553771973,
+        "output": "```json\n{\n  \"competitors\": [],\n  \"customerOpinions\": {\n    \"painPoints\": [\n      \"Staff shortage during peak hours\",\n      \"Long wait times for customers\",\n      \"Negative Google reviews due to slow service\",\n      \"Traditional pen and paper ordering is inefficient and prone to errors\"\n    ],\n    \"concerns\": [\n      \"Customer adoption of QR code ordering, especially older customers\",\n      \"Cost of the solution\"\n    ],\n    \"interests\": [\n      \"Interested in seeing the system in action at other restaurants\",\n      \"Potential for increased efficiency and service quality\"\n    ]\n  },\n  \"competitiveAdvantages\": [\n    \"QR code ordering integrated within POS system\",\n    \"Service Quality improvement for staff to support more complex customer needs\",\n    \"On-site setup and training\",\n    \"Positive case study: Bella Vita, a restaurant in Xinyi District, saw a 15% increase in revenue\"\n  ]\n}\n```",
+        "tokens": 927,
+        "error": null
+      },
+      "agent5_questionnaire": {
+        "agent_id": "agent5_questionnaire",
+        "success": true,
+        "duration": 2.045759916305542,
+        "output": "```json\n{\n  \"discoveredFeatures\": [\n    \"掃碼點餐 (QR Code Ordering)\"\n  ],\n  \"currentStatus\": \"餐廳尖峰時段人手不足，服務生需要花費大量時間在點餐上，導致顧客等待時間長，影響 Google 評論。\",\n  \"implementationWillingness\": \"張總對掃碼點餐功能感興趣，並願意參觀其他餐廳的使用狀況。如果效果好的話，預計一個月內導入。\"\n}\n```",
+        "tokens": 819,
+        "error": null
+      }
+    },
+    "total_agents": 5,
+    "successful_agents": 5,
+    "failed_agents": 0,
+    "max_agent_time": 3.2731728553771973,
+    "total_tokens": 4324
+  },
+  "speedup": 3.1014007853969523,
+  "success": true
+}

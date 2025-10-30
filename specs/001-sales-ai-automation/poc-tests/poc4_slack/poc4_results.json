@@ -1,0 +1,216 @@
+{
+  "timestamp": "2025-10-30T07:59:48.260640",
+  "summary": {
+    "total_tests": 25,
+    "successful_tests": 25,
+    "failed_tests": 0,
+    "avg_response_time_ms": 471.422643661499,
+    "p50_response_time_ms": 408.97607803344727,
+    "p95_response_time_ms": 1203.00874710083,
+    "p99_response_time_ms": 1739.6118354797363,
+    "reliability_rate": 100.0,
+    "passed": true
+  },
+  "details": [
+    {
+      "test_id": "button_1",
+      "interaction_type": "button_click",
+      "start_time": 1761811167.3242567,
+      "response_time_ms": 461.49516105651855,
+      "success": true,
+      "error_message": null
+    },
+    {
+      "test_id": "button_2",
+      "interaction_type": "button_click",
+      "start_time": 1761811168.2894905,
+      "response_time_ms": 446.0129737854004,
+      "success": true,
+      "error_message": null
+    },
+    {
+      "test_id": "button_3",
+      "interaction_type": "button_click",
+      "start_time": 1761811169.2392077,
+      "response_time_ms": 422.92165756225586,
+      "success": true,
+      "error_message": null
+    },
+    {
+      "test_id": "button_4",
+      "interaction_type": "button_click",
+      "start_time": 1761811170.1675208,
+      "response_time_ms": 418.1091785430908,
+      "success": true,
+      "error_message": null
+    },
+    {
+      "test_id": "button_5",
+      "interaction_type": "button_click",
+      "start_time": 1761811171.2643225,
+      "response_time_ms": 1357.7980995178223,
+      "success": true,
+      "error_message": null
+    },
+    {
+      "test_id": "select_1",
+      "interaction_type": "select_menu",
+      "start_time": 1761811173.1348414,
+      "response_time_ms": 387.53390312194824,
+      "success": true,
+      "error_message": null
+    },
+    {
+      "test_id": "select_2",
+      "interaction_type": "select_menu",
+      "start_time": 1761811174.031365,
+      "response_time_ms": 525.6843566894531,
+      "success": true,
+      "error_message": null
+    },
+    {
+      "test_id": "select_3",
+      "interaction_type": "select_menu",
+      "start_time": 1761811175.3352711,
+      "response_time_ms": 841.8335914611816,
+      "success": true,
+      "error_message": null
+    },
+    {
+      "test_id": "select_4",
+      "interaction_type": "select_menu",
+      "start_time": 1761811176.7881434,
+      "response_time_ms": 433.6082935333252,
+      "success": true,
+      "error_message": null
+    },
+    {
+      "test_id": "select_5",
+      "interaction_type": "select_menu",
+      "start_time": 1761811177.724861,
+      "response_time_ms": 404.2963981628418,
+      "success": true,
+      "error_message": null
+    },
+    {
+      "test_id": "modal_1",
+      "interaction_type": "modal_open",
+      "start_time": 1761811178.6337836,
+      "response_time_ms": 391.7062282562256,
+      "success": true,
+      "error_message": null
+    },
+    {
+      "test_id": "modal_2",
+      "interaction_type": "modal_open",
+      "start_time": 1761811179.5269108,
+      "response_time_ms": 375.60296058654785,
+      "success": true,
+      "error_message": null
+    },
+    {
+      "test_id": "modal_3",
+      "interaction_type": "modal_open",
+      "start_time": 1761811180.4053016,
+      "response_time_ms": 388.55624198913574,
+      "success": true,
+      "error_message": null
+    },
+    {
+      "test_id": "modal_4",
+      "interaction_type": "modal_open",
+      "start_time": 1761811181.3040097,
+      "response_time_ms": 380.2757263183594,
+      "success": true,
+      "error_message": null
+    },
+    {
+      "test_id": "modal_5",
+      "interaction_type": "modal_open",
+      "start_time": 1761811182.1866677,
+      "response_time_ms": 378.1616687774658,
+      "success": true,
+      "error_message": null
+    },
+    {
+      "test_id": "delivery_test_msg_1",
+      "interaction_type": "message_delivery",
+      "start_time": 1761811183.0670226,
+      "response_time_ms": 402.45819091796875,
+      "success": true,
+      "error_message": null
+    },
+    {
+      "test_id": "delivery_test_msg_2",
+      "interaction_type": "message_delivery",
+      "start_time": 1761811183.5702808,
+      "response_time_ms": 372.29347229003906,
+      "success": true,
+      "error_message": null
+    },
+    {
+      "test_id": "delivery_test_msg_3",
+      "interaction_type": "message_delivery",
+      "start_time": 1761811184.04443,
+      "response_time_ms": 556.3879013061523,
+      "success": true,
+      "error_message": null
+    },
+    {
+      "test_id": "delivery_test_msg_4",
+      "interaction_type": "message_delivery",
+      "start_time": 1761811184.7016573,
+      "response_time_ms": 396.7554569244385,
+      "success": true,
+      "error_message": null
+    },
+    {
+      "test_id": "delivery_test_msg_5",
+      "interaction_type": "message_delivery",
+      "start_time": 1761811185.2015462,
+      "response_time_ms": 375.8196830749512,
+      "success": true,
+      "error_message": null
+    },
+    {
+      "test_id": "delivery_test_msg_6",
+      "interaction_type": "message_delivery",
+      "start_time": 1761811185.6795487,
+      "response_time_ms": 422.9440689086914,
+      "success": true,
+      "error_message": null
+    },
+    {
+      "test_id": "delivery_test_msg_7",
+      "interaction_type": "message_delivery",
+      "start_time": 1761811186.203521,
+      "response_time_ms": 412.4939441680908,
+      "success": true,
+      "error_message": null
+    },
+    {
+      "test_id": "delivery_test_msg_8",
+      "interaction_type": "message_delivery",
+      "start_time": 1761811186.716335,
+      "response_time_ms": 389.6758556365967,
+      "success": true,
+      "error_message": null
+    },
+    {
+      "test_id": "delivery_test_msg_9",
+      "interaction_type": "message_delivery",
+      "start_time": 1761811187.2073178,
+      "response_time_ms": 408.97607803344727,
+      "success": true,
+      "error_message": null
+    },
+    {
+      "test_id": "delivery_test_msg_10",
+      "interaction_type": "message_delivery",
+      "start_time": 1761811187.7175012,
+      "response_time_ms": 434.16500091552734,
+      "success": true,
+      "error_message": null
+    }
+  ]
+}

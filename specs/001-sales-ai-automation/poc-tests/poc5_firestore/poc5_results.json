@@ -1,0 +1,1376 @@
+{
+  "timestamp": "2025-10-29T22:36:03.233971",
+  "summary": {
+    "total_operations": 150,
+    "successful_operations": 150,
+    "failed_operations": 0,
+    "avg_write_latency_ms": 55.33975124359131,
+    "avg_read_latency_ms": 26.247129440307617,
+    "avg_query_latency_ms": 50.03941059112549,
+    "p95_query_latency_ms": 121.57062292098999,
+    "estimated_monthly_cost": {
+      "reads": 3750,
+      "writes": 750,
+      "deletes": 0,
+      "storage_gb": 0.0011920928955078125,
+      "read_cost": 0.00225,
+      "write_cost": 0.0013499999999999999,
+      "delete_cost": 0.0,
+      "storage_cost": 0.00021457672119140625,
+      "total_cost": 0.003814576721191406
+    },
+    "passed": true
+  },
+  "details": [
+    {
+      "operation_id": "write_1",
+      "operation_type": "write",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 418.8520908355713,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "write_2",
+      "operation_type": "write",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 54.24189567565918,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "write_3",
+      "operation_type": "write",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 108.86406898498535,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "write_4",
+      "operation_type": "write",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 104.62808609008789,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "write_5",
+      "operation_type": "write",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 32.69600868225098,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "write_6",
+      "operation_type": "write",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 24.760007858276367,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "write_7",
+      "operation_type": "write",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 49.4997501373291,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "write_8",
+      "operation_type": "write",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 21.097898483276367,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "write_9",
+      "operation_type": "write",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 428.7679195404053,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "write_10",
+      "operation_type": "write",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 118.64185333251953,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "write_11",
+      "operation_type": "write",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 44.59500312805176,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "write_12",
+      "operation_type": "write",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 25.469303131103516,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "write_13",
+      "operation_type": "write",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 26.71980857849121,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "write_14",
+      "operation_type": "write",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 23.411273956298828,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "write_15",
+      "operation_type": "write",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 26.669025421142578,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "write_16",
+      "operation_type": "write",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 69.32616233825684,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "write_17",
+      "operation_type": "write",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 23.324966430664062,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "write_18",
+      "operation_type": "write",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 25.381088256835938,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "write_19",
+      "operation_type": "write",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 32.41991996765137,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "write_20",
+      "operation_type": "write",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 25.41327476501465,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "write_21",
+      "operation_type": "write",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 22.398948669433594,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "write_22",
+      "operation_type": "write",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 76.26986503601074,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "write_23",
+      "operation_type": "write",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 21.403789520263672,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "write_24",
+      "operation_type": "write",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 25.231122970581055,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "write_25",
+      "operation_type": "write",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 58.58492851257324,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "write_26",
+      "operation_type": "write",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 22.386789321899414,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "write_27",
+      "operation_type": "write",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 103.57999801635742,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "write_28",
+      "operation_type": "write",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 24.109840393066406,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "write_29",
+      "operation_type": "write",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 26.777982711791992,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "write_30",
+      "operation_type": "write",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 22.694826126098633,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "write_31",
+      "operation_type": "write",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 23.204803466796875,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "write_32",
+      "operation_type": "write",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 26.0159969329834,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "write_33",
+      "operation_type": "write",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 93.55401992797852,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "write_34",
+      "operation_type": "write",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 27.647972106933594,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "write_35",
+      "operation_type": "write",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 24.104833602905273,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "write_36",
+      "operation_type": "write",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 25.951147079467773,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "write_37",
+      "operation_type": "write",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 27.4050235748291,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "write_38",
+      "operation_type": "write",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 21.174907684326172,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "write_39",
+      "operation_type": "write",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 81.68411254882812,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "write_40",
+      "operation_type": "write",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 27.354001998901367,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "write_41",
+      "operation_type": "write",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 25.99310874938965,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "write_42",
+      "operation_type": "write",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 26.018142700195312,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "write_43",
+      "operation_type": "write",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 27.186870574951172,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "write_44",
+      "operation_type": "write",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 28.522968292236328,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "write_45",
+      "operation_type": "write",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 64.80693817138672,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "write_46",
+      "operation_type": "write",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 24.281978607177734,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "write_47",
+      "operation_type": "write",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 25.109052658081055,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "write_48",
+      "operation_type": "write",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 24.585962295532227,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "write_49",
+      "operation_type": "write",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 26.098966598510742,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "write_50",
+      "operation_type": "write",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 28.069257736206055,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "read_1",
+      "operation_type": "read",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 74.63908195495605,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "read_2",
+      "operation_type": "read",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 29.78825569152832,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "read_3",
+      "operation_type": "read",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 30.014991760253906,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "read_4",
+      "operation_type": "read",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 27.261972427368164,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "read_5",
+      "operation_type": "read",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 28.07021141052246,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "read_6",
+      "operation_type": "read",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 16.90220832824707,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "read_7",
+      "operation_type": "read",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 18.65983009338379,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "read_8",
+      "operation_type": "read",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 25.661945343017578,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "read_9",
+      "operation_type": "read",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 17.781734466552734,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "read_10",
+      "operation_type": "read",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 105.10897636413574,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "read_11",
+      "operation_type": "read",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 16.222000122070312,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "read_12",
+      "operation_type": "read",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 18.682241439819336,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "read_13",
+      "operation_type": "read",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 25.288820266723633,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "read_14",
+      "operation_type": "read",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 21.272897720336914,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "read_15",
+      "operation_type": "read",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 15.978097915649414,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "read_16",
+      "operation_type": "read",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 16.89910888671875,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "read_17",
+      "operation_type": "read",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 14.240026473999023,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "read_18",
+      "operation_type": "read",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 14.409780502319336,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "read_19",
+      "operation_type": "read",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 15.356063842773438,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "read_20",
+      "operation_type": "read",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 104.79903221130371,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "read_21",
+      "operation_type": "read",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 18.308162689208984,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "read_22",
+      "operation_type": "read",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 14.351129531860352,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "read_23",
+      "operation_type": "read",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 30.303955078125,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "read_24",
+      "operation_type": "read",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 15.542030334472656,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "read_25",
+      "operation_type": "read",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 16.53313636779785,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "read_26",
+      "operation_type": "read",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 18.065929412841797,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "read_27",
+      "operation_type": "read",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 18.932104110717773,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "read_28",
+      "operation_type": "read",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 16.06297492980957,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "read_29",
+      "operation_type": "read",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 16.65520668029785,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "read_30",
+      "operation_type": "read",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 19.174814224243164,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "read_31",
+      "operation_type": "read",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 99.40910339355469,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "read_32",
+      "operation_type": "read",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 17.15397834777832,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "read_33",
+      "operation_type": "read",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 14.558076858520508,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "read_34",
+      "operation_type": "read",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 16.84880256652832,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "read_35",
+      "operation_type": "read",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 16.807079315185547,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "read_36",
+      "operation_type": "read",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 15.329837799072266,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "read_37",
+      "operation_type": "read",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 16.632080078125,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "read_38",
+      "operation_type": "read",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 18.195152282714844,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "read_39",
+      "operation_type": "read",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 17.993927001953125,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "read_40",
+      "operation_type": "read",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 15.102148056030273,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "read_41",
+      "operation_type": "read",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 17.930030822753906,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "read_42",
+      "operation_type": "read",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 88.45901489257812,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "read_43",
+      "operation_type": "read",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 15.552043914794922,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "read_44",
+      "operation_type": "read",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 15.413045883178711,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "read_45",
+      "operation_type": "read",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 17.20905303955078,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "read_46",
+      "operation_type": "read",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 19.471168518066406,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "read_47",
+      "operation_type": "read",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 16.83807373046875,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "read_48",
+      "operation_type": "read",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 15.709877014160156,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "read_49",
+      "operation_type": "read",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 19.22917366027832,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "read_50",
+      "operation_type": "read",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 17.548084259033203,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "query_status_filter_1",
+      "operation_type": "query",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 81.20274543762207,
+      "success": true,
+      "document_count": 50,
+      "error_message": null
+    },
+    {
+      "operation_id": "query_timestamp_range_2",
+      "operation_type": "query",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 47.5308895111084,
+      "success": true,
+      "document_count": 50,
+      "error_message": null
+    },
+    {
+      "operation_id": "query_order_by_limit_3",
+      "operation_type": "query",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 26.95298194885254,
+      "success": true,
+      "document_count": 10,
+      "error_message": null
+    },
+    {
+      "operation_id": "query_status_filter_4",
+      "operation_type": "query",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 45.81284523010254,
+      "success": true,
+      "document_count": 50,
+      "error_message": null
+    },
+    {
+      "operation_id": "query_timestamp_range_5",
+      "operation_type": "query",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 119.34900283813477,
+      "success": true,
+      "document_count": 50,
+      "error_message": null
+    },
+    {
+      "operation_id": "query_order_by_limit_6",
+      "operation_type": "query",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 38.18082809448242,
+      "success": true,
+      "document_count": 10,
+      "error_message": null
+    },
+    {
+      "operation_id": "query_status_filter_7",
+      "operation_type": "query",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 37.72997856140137,
+      "success": true,
+      "document_count": 50,
+      "error_message": null
+    },
+    {
+      "operation_id": "query_timestamp_range_8",
+      "operation_type": "query",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 108.6122989654541,
+      "success": true,
+      "document_count": 50,
+      "error_message": null
+    },
+    {
+      "operation_id": "query_order_by_limit_9",
+      "operation_type": "query",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 21.849870681762695,
+      "success": true,
+      "document_count": 10,
+      "error_message": null
+    },
+    {
+      "operation_id": "query_status_filter_10",
+      "operation_type": "query",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 33.93697738647461,
+      "success": true,
+      "document_count": 50,
+      "error_message": null
+    },
+    {
+      "operation_id": "query_timestamp_range_11",
+      "operation_type": "query",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 39.544105529785156,
+      "success": true,
+      "document_count": 50,
+      "error_message": null
+    },
+    {
+      "operation_id": "query_order_by_limit_12",
+      "operation_type": "query",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 25.070905685424805,
+      "success": true,
+      "document_count": 10,
+      "error_message": null
+    },
+    {
+      "operation_id": "query_status_filter_13",
+      "operation_type": "query",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 34.941911697387695,
+      "success": true,
+      "document_count": 50,
+      "error_message": null
+    },
+    {
+      "operation_id": "query_timestamp_range_14",
+      "operation_type": "query",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 32.85098075866699,
+      "success": true,
+      "document_count": 50,
+      "error_message": null
+    },
+    {
+      "operation_id": "query_order_by_limit_15",
+      "operation_type": "query",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 111.93990707397461,
+      "success": true,
+      "document_count": 10,
+      "error_message": null
+    },
+    {
+      "operation_id": "query_status_filter_16",
+      "operation_type": "query",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 32.51385688781738,
+      "success": true,
+      "document_count": 50,
+      "error_message": null
+    },
+    {
+      "operation_id": "query_timestamp_range_17",
+      "operation_type": "query",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 28.83291244506836,
+      "success": true,
+      "document_count": 50,
+      "error_message": null
+    },
+    {
+      "operation_id": "query_order_by_limit_18",
+      "operation_type": "query",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 24.236679077148438,
+      "success": true,
+      "document_count": 10,
+      "error_message": null
+    },
+    {
+      "operation_id": "query_status_filter_19",
+      "operation_type": "query",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 58.799028396606445,
+      "success": true,
+      "document_count": 50,
+      "error_message": null
+    },
+    {
+      "operation_id": "query_timestamp_range_20",
+      "operation_type": "query",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 52.6430606842041,
+      "success": true,
+      "document_count": 50,
+      "error_message": null
+    },
+    {
+      "operation_id": "query_order_by_limit_21",
+      "operation_type": "query",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 26.604175567626953,
+      "success": true,
+      "document_count": 10,
+      "error_message": null
+    },
+    {
+      "operation_id": "query_status_filter_22",
+      "operation_type": "query",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 124.28593635559082,
+      "success": true,
+      "document_count": 50,
+      "error_message": null
+    },
+    {
+      "operation_id": "query_timestamp_range_23",
+      "operation_type": "query",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 29.9680233001709,
+      "success": true,
+      "document_count": 50,
+      "error_message": null
+    },
+    {
+      "operation_id": "query_order_by_limit_24",
+      "operation_type": "query",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 25.799274444580078,
+      "success": true,
+      "document_count": 10,
+      "error_message": null
+    },
+    {
+      "operation_id": "query_status_filter_25",
+      "operation_type": "query",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 33.92291069030762,
+      "success": true,
+      "document_count": 50,
+      "error_message": null
+    },
+    {
+      "operation_id": "query_timestamp_range_26",
+      "operation_type": "query",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 37.1861457824707,
+      "success": true,
+      "document_count": 50,
+      "error_message": null
+    },
+    {
+      "operation_id": "query_order_by_limit_27",
+      "operation_type": "query",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 26.763916015625,
+      "success": true,
+      "document_count": 10,
+      "error_message": null
+    },
+    {
+      "operation_id": "query_status_filter_28",
+      "operation_type": "query",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 51.91302299499512,
+      "success": true,
+      "document_count": 50,
+      "error_message": null
+    },
+    {
+      "operation_id": "query_timestamp_range_29",
+      "operation_type": "query",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 105.43417930603027,
+      "success": true,
+      "document_count": 50,
+      "error_message": null
+    },
+    {
+      "operation_id": "query_order_by_limit_30",
+      "operation_type": "query",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 36.772966384887695,
+      "success": true,
+      "document_count": 10,
+      "error_message": null
+    },
+    {
+      "operation_id": "update_1",
+      "operation_type": "update",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 22.94301986694336,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "update_2",
+      "operation_type": "update",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 41.893959045410156,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "update_3",
+      "operation_type": "update",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 96.75192832946777,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "update_4",
+      "operation_type": "update",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 30.106067657470703,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "update_5",
+      "operation_type": "update",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 23.023128509521484,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "update_6",
+      "operation_type": "update",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 21.17180824279785,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "update_7",
+      "operation_type": "update",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 22.64714241027832,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "update_8",
+      "operation_type": "update",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 24.9788761138916,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "update_9",
+      "operation_type": "update",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 81.75492286682129,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "update_10",
+      "operation_type": "update",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 19.90032196044922,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "update_11",
+      "operation_type": "update",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 29.470205307006836,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "update_12",
+      "operation_type": "update",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 25.429964065551758,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "update_13",
+      "operation_type": "update",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 24.384021759033203,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "update_14",
+      "operation_type": "update",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 23.59294891357422,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "update_15",
+      "operation_type": "update",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 79.33378219604492,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "update_16",
+      "operation_type": "update",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 26.507139205932617,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "update_17",
+      "operation_type": "update",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 21.892309188842773,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "update_18",
+      "operation_type": "update",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 22.44400978088379,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "update_19",
+      "operation_type": "update",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 28.733015060424805,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    },
+    {
+      "operation_id": "update_20",
+      "operation_type": "update",
+      "collection": "poc_test_77113f18",
+      "latency_ms": 24.705886840820312,
+      "success": true,
+      "document_count": 1,
+      "error_message": null
+    }
+  ]
+}
