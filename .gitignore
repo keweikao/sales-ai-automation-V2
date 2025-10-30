@@ -39,6 +39,7 @@ env/
 .env.local
 *.lock
 .claude/
+pretrained_models/
 
 # Spec Kit-specific files
 .genreleases/
