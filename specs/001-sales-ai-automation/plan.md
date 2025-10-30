@@ -459,6 +459,13 @@ sales-ai-automation-v2/
          └─────────────────────────────────────────────────────────┘
 ```
 
+### Slack Summary & Delivery Workflow（Planned）
+1. **Thread Preview**：Agent 7 產出摘要後貼回原上傳 thread，並自動 @ 負責業務；提示可直接於 thread 補充或修訂。
+2. **送出按鈕**：Slack Block Kit 提供 `✅ 送出摘要`，觸發後端重新擷取最新 Markdown、寫入 Firestore、渲染永久客戶頁面。
+3. **永久摘要頁**：部署於 `sales.ichefpos.com/summary/{caseId}`，含 iCHEF branding、會議摘要、下一步與「聯絡我的業務」LINE 連結。
+4. **對外通知**：完成頁面生成後，透過 SMS（可選擇同步 Email）發送頁面連結與簡短問候語給客戶，並記錄發送結果。
+5. **再次修訂**：若業務於 thread 更新內容，可重新按鈕送出，系統會覆寫頁面與重新通知客戶。
+
 ### Critical Path Performance Budget
 
 | Stage | Target | Buffer | Total |
@@ -1373,11 +1380,15 @@ See `docs/deployment.md`
 - [ ] Implement button handlers (transcript, participants, questionnaire)
 - [ ] Implement conversational AI follow-up
 - [ ] Implement feedback modal
+- [ ] Implement summary review workflow（thread @業務、修改提醒、送出按鈕）
 
 ### Sprint 6: Integration & Polish (Week 11-12)
 - [ ] E2E test: Upload via Slack → Notification
 - [ ] Google Sheets daily sync function
 - [ ] GAS webhook compatibility layer
+- [ ] Render customer summary HTML page（永久連結 + LINE 聯絡按鈕）
+- [ ] Integrate SMS/Email delivery for summary links
+- [ ] Audit Firestore writes for Agent 6/7 outputs
 - [ ] Google Drive polling (Form submissions)
 - [ ] Monitoring dashboards (Cloud Monitoring)
 - [ ] Alert configuration (Slack + Email)
@@ -1534,6 +1545,14 @@ All key decisions have been confirmed by the user on 2025-01-29:
 **Alternative (Fast-Track)**:
 - Skip POCs, proceed directly to implementation (higher risk if assumptions are wrong)
 - Recommendation: **Do NOT skip POCs** - Speaker diarization performance and Gemini structured output quality are critical unknowns
+
+**Backlog / TODO**:
+- **POC 1b**: Cloud Storage leads ingestion → download → transcription pipeline → `sourceType=leads` tagging（待完成，暫時排在 POC 7 之後）
+- **POC 1 (Slack)**: 上傳來源需標記 `sourceType=slack` + `stage=opportunity`，並驗證轉錄管線與 Firestore 寫入一致（排程於 POC 7 後統一調整）
+- **Agent 6 & 7 Integration**: 已完成 prompt（agent6-coach.md, agent7-summary.md），尚需實作 Gemini 呼叫、結果驗證與 Firestore 寫入流程
+- **Slack 摘要工作流**: Thread @業務 → 修訂 → `✅ 送出` 按鈕 → 產出客戶摘要頁面（永久連結）
+- **摘要頁面與簡訊**: 建置 markdown→HTML 管線、LINE 聯絡按鈕、SMS/Email 發送與送達紀錄
+- **測試強化**: Agent 6/7 實測（含語氣模擬）、POC6 prompt 迭代（提升正/負覆蓋率）、端到端自動化測試
 
 ---
 

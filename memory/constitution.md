@@ -64,6 +64,16 @@
 
 **Settings**: Primary language: zh, Fallback: auto-detect, Minimum confidence: 0.8
 
+### VI. Traditional Chinese Communication
+**Principle**: All user-facing content and assistant responses MUST default to Traditional Chinese.
+
+**Rationale**: Stakeholders operate primarily in Traditional Chinese; consistent language usage prevents confusion and reduces translation overhead.
+
+**Implementation**:
+- MUST produce system prompts, Slack notifications, and documentation intended for users in Traditional Chinese.
+- MUST configure AI agents to respond in Traditional Chinese unless explicitly instructed otherwise.
+- SHOULD note language deviations (e.g., when quoting English text) to maintain clarity.
+
 ## Integration Requirements
 
 ### Backward Compatibility
@@ -145,4 +155,4 @@ This constitution supersedes all other development practices and decisions. All 
 
 **Compliance Review**: All features MUST comply with core principles, meet quality thresholds, include tests, be documented, and pass security review.
 
-**Version**: 1.0.0 | **Ratified**: 2025-10-27 | **Last Amended**: 2025-10-27
+**Version**: 1.0.1 | **Ratified**: 2025-10-27 | **Last Amended**: 2025-10-30

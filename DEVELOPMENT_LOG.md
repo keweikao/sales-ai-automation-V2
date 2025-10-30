@@ -962,6 +962,40 @@ All critical questions were answered by user during this session.
 
 ---
 
+### Session 7: 2025-10-30 (Agent 6/7 Prompts & Slack Summary Workflow)
+
+**Duration**: ~2 hours  
+**AI Model**: Codex (GPT-5)  
+**User**: Stephen
+
+#### Objectives Completed ✅
+
+1. ✅ 新增 Agent 6（銷售教練）與 Agent 7（客戶摘要） prompt 草稿，整合 pricing 策略、證據引用與語氣模擬需求。  
+2. ✅ 更新 Agent 5 prompt，加入正/負向證據覆蓋度評估欄位。  
+3. ✅ 在 `plan.md` 補齊 Slack 摘要審核/送出流程、永久摘要頁與 SMS 通知的實作規畫，並將相關任務加入待辦與 Sprint checklist。  
+4. ✅ 將 Traditional Chinese 溝通原則寫入 `memory/constitution.md`，同步 bump 版本至 1.0.1。  
+5. ✅ 建立 POC 1b GCS 下載腳本雛型，調整 POC 6 測試邏輯以符合 POS adoption 評估。
+
+#### Files Created/Modified
+- `analysis-service/src/agents/prompts/agent6-coach.md`
+- `analysis-service/src/agents/prompts/agent7-summary.md`
+- `analysis-service/src/agents/prompts/agent5-questionnaire.md`
+- `memory/constitution.md`
+- `specs/001-sales-ai-automation/plan.md`
+- `specs/001-sales-ai-automation/poc-tests/poc6_questionnaire/test_questionnaire_extraction.py`
+- `specs/001-sales-ai-automation/poc-tests/poc6_questionnaire/poc6_results.json`
+- `specs/001-sales-ai-automation/poc-tests/poc1b_gcs/README.md`
+- `specs/001-sales-ai-automation/poc-tests/poc1b_gcs/download_and_transcribe.py`
+
+#### Next Focus 🔭
+- 完成 Agent 6/7 程式整合（Gemini 呼叫、FireStore 寫入、Slack 傳遞）。  
+- 調整 POC 6 prompt/測試以提升正向/負向覆蓋率，重新驗證結果。  
+- 實作 Slack thread 送出按鈕、摘要頁渲染與 SMS/Email 推播。  
+- 為新 workflow 撰寫單元測試與端到端測試。  
+- 取得 `google-cloud-storage` 依賴後驗證 POC 1b GCS 流程。
+
+---
+
 ## 🔄 Session Template (for future entries)
 
 ```markdown

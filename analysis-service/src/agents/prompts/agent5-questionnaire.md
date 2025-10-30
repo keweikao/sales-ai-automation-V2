@@ -70,6 +70,11 @@
       - 91-100：所有欄位都有充分資訊。
     - `completenessReason`: 簡述評分依據。
 13. `additionalContext`: 其他補充資訊或複雜情境（可為空字串）。
+14. `coverageAssessment`: 針對正向／負向理由的客觀總結，包含：
+    - `positiveEvidence`: 0-100，根據 `needReasons`、`perceivedValue.positive` 等欄位的證據多寡進行主觀評分。
+    - `negativeEvidence`: 0-100，根據 `noNeedReasons`、`barriers` 等欄位的證據多寡進行主觀評分。
+    - `verdict`: `positive_dominant`｜`negative_dominant`｜`balanced`｜`insufficient`。
+    - `comment`: 以繁體中文說明判斷依據；若兩邊都不足，必須輸出「無法判斷，但目前正向／負向證據較多的是……」。
 
 ## Output Format
 回傳 JSON，結構如下：
@@ -119,6 +124,12 @@
         "urgency": "medium",
         "timelineReason": "..."
       },
+      "coverageAssessment": {
+        "positiveEvidence": 45,
+        "negativeEvidence": 60,
+        "verdict": "negative_dominant",
+        "comment": "正向證據不足，目前以『擔心客人不會使用』為主，建議標記為負向佔優。"
+      },
       "completenessScore": 85,
       "completenessReason": "...",
       "additionalContext": "..."
@@ -135,6 +146,7 @@
 - `quotes` 與 `quote` 取自逐字稿原話，可適度截斷但不可改意。
 - 推論式資訊需在 `reasoning` 或 `...Reason` 欄位說明線索。
 - 若對話只提到功能名稱但完全沒有狀態/需求，仍建立 topic，`completenessScore` 應低於 40。
+- 若正向或負向證據不足以支撐結論，`coverageAssessment.verdict` 設為 `insufficient`，並在 `comment` 中清楚寫出「無法判斷，但目前正向／負向哪一側證據較多，以及其代表意義」。
 - 確保 JSON 有效、無額外敘述文字。
 
 ## Example Snippet (for reference)

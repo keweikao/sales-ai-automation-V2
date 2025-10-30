@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-POC 6: Discovery Questionnaire Extraction Accuracy
+POC 6: POS Adoption Assessment Accuracy
 
-Tests Agent 5's ability to extract structured questionnaire responses from conversations.
+Tests Agent 5's ability to consolidate feature needs and evaluate POS adoption likelihood.
 
 Usage:
     export GEMINI_API_KEY="your-key"
@@ -23,218 +23,155 @@ except ImportError:
     exit(1)
 
 
-# Ground truth labels for test transcripts
 GROUND_TRUTH = {
     "test_01": {
-        "features_discussed": [
-            {
-                "feature": "掃碼點餐",
-                "current_status": "未使用",
-                "has_need": True,
-                "need_reasons": ["尖峰時段人手不足", "點餐效率低"],
-                "barriers": ["customer_adoption"],
-                "implementation_willingness": "high"
-            },
-            {
-                "feature": "POS點餐系統",
-                "current_status": "使用中",
-                "has_need": True,
-                "need_reasons": ["需要整合掃碼點餐"],
-                "barriers": [],
-                "implementation_willingness": "high"
-            }
-        ]
+        "features": [
+            {"feature": "掃碼點餐", "priority": "high", "status": "未使用"},
+            {"feature": "POS點餐系統", "priority": "medium", "status": "使用中"}
+        ],
+        "adoption": {
+            "stage": "high",
+            "positive": ["尖峰時段人手不足", "想縮短等候時間"],
+            "negative": ["擔心客人不會掃碼"]
+        }
     },
     "test_02": {
-        "features_discussed": [
-            {
-                "feature": "POS點餐系統",
-                "current_status": "未使用",
-                "has_need": True,
-                "need_reasons": ["提升點餐效率", "減少人力成本"],
-                "barriers": ["budget"],
-                "implementation_willingness": "medium"
-            }
-        ]
+        "features": [
+            {"feature": "POS點餐系統", "priority": "medium", "status": "未使用"},
+            {"feature": "成本控管", "priority": "high", "status": "未使用"},
+            {"feature": "庫存管理", "priority": "high", "status": "未使用"}
+        ],
+        "adoption": {
+            "stage": "medium",
+            "positive": ["想掌握成本", "想提升效率"],
+            "negative": ["預算壓力"]
+        }
     },
     "test_03": {
-        "features_discussed": [
-            {
-                "feature": "掃碼點餐",
-                "current_status": "考慮中",
-                "has_need": True,
-                "need_reasons": ["自助點餐需求"],
-                "barriers": [],
-                "implementation_willingness": "high"
-            },
-            {
-                "feature": "線上訂位管理",
-                "current_status": "未使用",
-                "has_need": True,
-                "need_reasons": ["訂位管理混亂"],
-                "barriers": [],
-                "implementation_willingness": "high"
-            },
-            {
-                "feature": "外送平台整合",
-                "current_status": "考慮中",
-                "has_need": True,
-                "need_reasons": ["外送訂單量增加"],
-                "barriers": [],
-                "implementation_willingness": "medium"
-            }
-        ]
+        "features": [
+            {"feature": "掃碼點餐", "priority": "medium", "status": "考慮中"},
+            {"feature": "線上訂位管理", "priority": "medium", "status": "未使用"},
+            {"feature": "外送平台整合", "priority": "medium", "status": "考慮中"},
+            {"feature": "總部系統", "priority": "high", "status": "未使用"}
+        ],
+        "adoption": {
+            "stage": "high",
+            "positive": ["需要整合分店資料", "需要統一報表"],
+            "negative": ["舊系統整合難度"]
+        }
     },
     "test_05": {
-        "features_discussed": [
-            {
-                "feature": "線上訂位管理",
-                "current_status": "未使用",
-                "has_need": True,
-                "need_reasons": ["訂位管理需求", "減少電話訂位負擔"],
-                "barriers": [],
-                "implementation_willingness": "high"
-            }
-        ]
+        "features": [
+            {"feature": "線上訂位管理", "priority": "high", "status": "未使用"},
+            {"feature": "掃碼點餐", "priority": "medium", "status": "未使用"}
+        ],
+        "adoption": {
+            "stage": "high",
+            "positive": ["電話訂位太多", "人力不足"],
+            "negative": []
+        }
     },
     "test_06": {
-        "features_discussed": [
-            {
-                "feature": "掃碼點餐",
-                "current_status": "未使用",
-                "has_need": False,
-                "need_reasons": [],
-                "barriers": ["tech_resistance", "customer_adoption"],
-                "implementation_willingness": "low"
-            },
-            {
-                "feature": "POS點餐系統",
-                "current_status": "使用中",
-                "has_need": False,
-                "need_reasons": [],
-                "barriers": ["tech_resistance"],
-                "implementation_willingness": "low"
-            }
-        ]
+        "features": [
+            {"feature": "掃碼點餐", "priority": "low", "status": "未使用"},
+            {"feature": "POS點餐系統", "priority": "low", "status": "使用中"}
+        ],
+        "adoption": {
+            "stage": "low",
+            "positive": [],
+            "negative": ["老客人不習慣科技", "維持人情味", "不想減少人力"]
+        }
     },
     "test_07": {
-        "features_discussed": [
-            {
-                "feature": "外送平台整合",
-                "current_status": "未使用",
-                "has_need": True,
-                "need_reasons": ["外送訂單多", "需要整合管理"],
-                "barriers": [],
-                "implementation_willingness": "high"
-            }
-        ]
+        "features": [
+            {"feature": "外送平台整合", "priority": "high", "status": "未使用"},
+            {"feature": "線上點餐接單", "priority": "medium", "status": "未使用"}
+        ],
+        "adoption": {
+            "stage": "high",
+            "positive": ["外送平台很多", "想集中管理訂單"],
+            "negative": []
+        }
     }
 }
 
 
-AGENT5_PROMPT_TEMPLATE = """# Agent 5: Discovery Questionnaire Analyzer
+AGENT5_PROMPT_TEMPLATE = """# Agent 5: POS Adoption Assessment
 
-## Role
-You are a sales analyst extracting structured questionnaire responses from sales conversations.
+## 角色
+你是 iCHEF 的銷售分析專家，負責閱讀餐飲業務對話，統整客戶所有功能需求並評估「是否會採用 iCHEF POS」的可能性。
 
-## iCHEF Feature Catalog (22 features, 6 categories)
+## 目標
+1. 收整對話中提到的所有功能需求（依 iCHEF 產品目錄分類）。
+2. 分析這些需求如何影響 POS 導入意願。
+3. 明確指出「成交／不成交」的關鍵因素與引用。
 
-### 1️⃣ 點餐與訂單管理
-1. 掃碼點餐（QR Code 掃碼點餐）
-2. 多人掃碼點餐
-3. 套餐加價購
-4. 智慧菜單推薦
-5. POS點餐系統
-6. 線上點餐接單
+## iCHEF 產品分類（摘自 product-catalog.yaml）
+- 點餐與訂單管理：掃碼點餐、多⼈掃碼、套餐加價購、智慧菜單推薦、POS點餐系統、線上點餐接單
+- 線上整合服務：線上訂位管理、線上外帶、雲端餐廳、Google整合、LINE整合、外送平台整合、聯絡式外帶服務
+- 成本與庫存：會計系統、庫存管理、成本控管
+- 業績分析：銷售分析報表、經營數據管理
+- 客戶關係：零秒集點、會員管理系統
+- 企業級功能：總部系統、連鎖品牌管理
+- 其他需求：對話中出現但未列於清單的功能
 
-### 2️⃣ 線上整合服務
-7. 線上訂位管理
-8. 線上外帶自取
-9. 雲端餐廳（Online Store）
-10. Google整合
-11. LINE整合
-12. 外送平台整合
-13. 聯絡式外帶服務
-
-### 3️⃣ 成本與庫存管理
-14. 成本控管
-15. 庫存管理
-16. 帳款管理
-
-### 4️⃣ 業績與銷售分析
-17. 銷售分析
-18. 報表生成功能
-
-### 5️⃣ 客戶關係管理
-19. 零秒集點（忠誠點數系統 2.0）
-20. 會員管理
-
-### 6️⃣ 企業級功能
-21. 總部系統
-22. 連鎖品牌管理
-
-## Task
-For EACH feature mentioned in the conversation (explicitly or implicitly), extract structured questionnaire.
-
-## Output Format (JSON)
-Return a JSON object with this EXACT structure:
-
-{{
-  "discoveryQuestionnaires": [
-    {{
-      "topic": "掃碼點餐",
-      "featureCategory": "點餐與訂單管理",
-      "currentStatus": "使用中" | "未使用" | "考慮中" | "曾使用過",
-      "hasNeed": true | false | null,
-      "needReasons": [
-        {{
+## 輸出格式（JSON ONLY）
+請輸出以下結構：
+{
+  "posAdoptionSummary": {
+    "requiredFeatures": [
+      {
+        "feature": "掃碼點餐",
+        "featureCategory": "點餐與訂單管理",
+        "currentStatus": "未使用" | "使用中" | "考慮中" | "曾使用過",
+        "priority": "high" | "medium" | "low",
+        "evidence": "引用對話原句（<=20字）"
+      }
+    ],
+    "adoptionLikelihood": {
+      "stage": "high" | "medium" | "low",
+      "score": 0-100,
+      "confidence": 0-100,
+      "summary": "一句話摘要判斷依據"
+    },
+    "closingReasons": {
+      "positiveDrivers": [
+        {
           "reason": "尖峰時段人手不足",
-          "quote": "客人點餐都要等很久",
-          "confidence": 85
-        }}
+          "quote": "尖峰時段服務生不夠",
+          "impact": "high" | "medium" | "low"
+        }
       ],
-      "noNeedReasons": [],
-      "perceivedValue": {{
-        "score": 75,
-        "aspects": [
-          {{
-            "aspect": "省人力",
-            "sentiment": "positive"
-          }}
-        ]
-      }},
-      "implementationWillingness": "high" | "medium" | "low" | "none",
-      "barriers": [
-        {{
-          "type": "customer_adoption" | "budget" | "tech_resistance" | "integration" | "training",
-          "severity": "high" | "medium" | "low",
-          "detail": "有些老客人不習慣"
-        }}
-      ],
-      "timeline": {{
-        "mentionedTimeline": "一個月內",
-        "urgency": "high" | "medium" | "low"
-      }},
-      "completenessScore": 80,
-      "additionalContext": "客戶很有興趣，準備參訪其他餐廳"
-    }}
-  ]
-}}
+      "negativeFactors": [
+        {
+          "reason": "擔心客人不會掃碼",
+          "quote": "老人家不會用手機掃碼",
+          "severity": "high" | "medium" | "low"
+        }
+      ]
+    },
+    "recommendedNextSteps": [
+      {
+        "action": "安排成功案例參訪",
+        "owner": "sales" | "customer",
+        "urgency": "immediate" | "upcoming" | "low",
+        "rationale": "引用或原因（<=25字）"
+      }
+    ]
+  }
+}
 
-## Instructions
-1. **Topic Detection**: Identify ALL features discussed (even if just mentioned)
-2. **Implicit Inference**: Infer status/needs from context
-   - Example: "客人不會用手機" → barrier: customer_adoption
-   - Example: "尖峰時段很忙" → need_reason: 人手不足
-3. **Confidence Scoring**: Assign 0-100 confidence to each extracted reason
-   - 90-100: Explicitly stated
-   - 70-89: Strong implication
-   - 50-69: Weak implication
-   - <50: Speculative
-4. **Handle Ambiguity**: If unclear, set hasNeed=null and explain in additionalContext
-5. **Completeness**: Calculate % of questionnaire fields that were answered
+## 判斷準則
+- **priority**：以客戶語氣與痛點嚴重程度判斷（high=關鍵痛點、medium=明確需求、low=潛在/附帶）。
+- **stage**：high=積極導入、medium=觀望但願意討論、low=明確排斥。
+- **score**：0-100，對應 stage（high>=70、medium=40-69、low<40）。
+- **quote**：必須節錄逐字稿原文，保持繁體中文。
+- 若無負向因素，可回傳空陣列。
 
-Return ONLY valid JSON. No markdown, no explanation.
+## 請務必
+- 僅根據逐字稿內容推論，禁止臆測。
+- 所有欄位使用繁體中文，JSON 中不得包含解說文字。
+- 若對話無法判斷，將 `stage` 設為 "medium"、`confidence` <= 50，並在 summary 補充原因。
 
 ---
 
@@ -263,7 +200,7 @@ class QuestionnaireExtractor:
 
     def extract_questionnaire(self, transcript: str) -> Dict:
         """Extract questionnaire from transcript using Agent 5"""
-        prompt = AGENT5_PROMPT_TEMPLATE.format(transcript=transcript)
+        prompt = AGENT5_PROMPT_TEMPLATE.replace("{transcript}", transcript)
 
         start_time = time.time()
         response = self.model.generate_content(prompt)
@@ -297,209 +234,143 @@ def load_transcript(file_path: str) -> Tuple[str, str]:
     return file_id, transcript
 
 
-def test_topic_detection(test_results: List[Dict], ground_truth: Dict) -> Dict:
-    """Test if Agent 5 finds all discussed features"""
+def normalize(text: str) -> str:
+    return text.replace(" ", "").replace("\n", "").lower()
 
+
+def evaluate_feature_coverage(test_results: List[Dict], ground_truth: Dict) -> Dict:
     print(f"\n{'='*60}")
-    print("TEST 1: TOPIC DETECTION")
+    print("TEST 1: 功能需求涵蓋率")
     print(f"{'='*60}\n")
 
-    results = {
-        "total_features": 0,
-        "detected_features": 0,
-        "missed_features": [],
-        "false_positives": [],
-        "recall_scores": []
-    }
+    total_expected = 0
+    total_detected = 0
+    detail: List[Dict] = []
 
     for test_result in test_results:
         file_id = test_result["file_id"]
+        truth = ground_truth.get(file_id)
 
-        if file_id not in ground_truth:
-            print(f"⚠️  No ground truth for {file_id}, skipping")
+        if not truth:
+            print(f"⚠️  {file_id}: 無對照資料，略過")
             continue
+
+        expected = truth["features"]
+        total_expected += len(expected)
 
         if not test_result["success"]:
-            print(f"❌ {file_id}: Extraction failed")
+            print(f"❌ {file_id}: 提取失敗 ({test_result.get('error')})")
+            detail.append({
+                "file_id": file_id,
+                "matched": 0,
+                "expected": len(expected),
+                "missed": [f['feature'] for f in expected],
+                "extra": []
+            })
             continue
 
-        gt = ground_truth[file_id]
-        agent_response = test_result["result"]
+        predicted_items = test_result["result"].get("posAdoptionSummary", {}).get("requiredFeatures", [])
+        predicted_names = {item.get("feature") for item in predicted_items}
 
-        detected_topics = {q["topic"] for q in agent_response.get("discoveryQuestionnaires", [])}
-        expected_topics = {f["feature"] for f in gt["features_discussed"]}
+        matched = [f for f in expected if f["feature"] in predicted_names]
+        missed = [f["feature"] for f in expected if f["feature"] not in predicted_names]
+        extra = [name for name in predicted_names if name not in {f["feature"] for f in expected}]
 
-        results["total_features"] += len(expected_topics)
-        detected_count = len(detected_topics & expected_topics)
-        results["detected_features"] += detected_count
+        total_detected += len(matched)
 
-        recall = detected_count / len(expected_topics) * 100 if expected_topics else 0
-        results["recall_scores"].append(recall)
-
-        missed = expected_topics - detected_topics
-        false_pos = detected_topics - expected_topics
-
-        status = "✅" if recall == 100 else "⚠️" if recall >= 75 else "❌"
-        print(f"{status} {file_id}: {recall:.1f}% recall ({detected_count}/{len(expected_topics)} features)")
-
+        status = "✅" if not missed else "⚠️" if matched else "❌"
+        print(f"{status} {file_id}: {len(matched)}/{len(expected)} 功能被辨識")
         if missed:
             print(f"   Missed: {', '.join(missed)}")
-            results["missed_features"].append({
-                "file_id": file_id,
-                "missed": list(missed)
-            })
+        if extra:
+            print(f"   Extra: {', '.join(extra)}")
 
-        if false_pos:
-            print(f"   False positives: {', '.join(false_pos)}")
-            results["false_positives"].append({
-                "file_id": file_id,
-                "false_positives": list(false_pos)
-            })
+        detail.append({
+            "file_id": file_id,
+            "matched": len(matched),
+            "expected": len(expected),
+            "missed": missed,
+            "extra": extra
+        })
 
-    overall_recall = results["detected_features"] / results["total_features"] * 100 if results["total_features"] > 0 else 0
-    avg_recall = sum(results["recall_scores"]) / len(results["recall_scores"]) if results["recall_scores"] else 0
+    recall = (total_detected / total_expected * 100) if total_expected else 0
+    print(f"\n整體功能涵蓋率: {recall:.1f}%")
+    print("目標 >85%，Fallback >75%")
 
+    return {
+        "recall": recall,
+        "detail": detail,
+        "total_expected": total_expected,
+        "total_detected": total_detected
+    }
+
+
+def match_reasons(predicted: List[Dict], expected: List[str]) -> float:
+    if not expected:
+        return 1.0 if not predicted else 0.0
+    predicted_texts = [normalize(item.get("reason", "") + item.get("quote", "")) for item in predicted]
+    hits = 0
+    for target in expected:
+        target_norm = normalize(target)
+        if any(target_norm in text for text in predicted_texts):
+            hits += 1
+    return hits / len(expected)
+
+
+def evaluate_adoption_analysis(test_results: List[Dict], ground_truth: Dict) -> Dict:
     print(f"\n{'='*60}")
-    print(f"Overall Topic Detection Recall: {overall_recall:.1f}%")
-    print(f"Average Recall per Transcript: {avg_recall:.1f}%")
-    print(f"Success Criteria: >85% (Fallback: >75%)")
-
-    if overall_recall >= 85:
-        print("✅ PASS - Exceeds target")
-    elif overall_recall >= 75:
-        print("⚠️  PASS - Meets fallback threshold")
-    else:
-        print("❌ FAIL - Below threshold")
-
-    return results
-
-
-def test_extraction_accuracy(test_results: List[Dict], ground_truth: Dict) -> Dict:
-    """Test if extracted responses match ground truth"""
-
-    print(f"\n{'='*60}")
-    print("TEST 2: RESPONSE EXTRACTION ACCURACY")
+    print("TEST 2: POS 導入可能性判斷")
     print(f"{'='*60}\n")
 
-    accuracy_scores = []
-    field_accuracies = {
-        "currentStatus": [],
-        "hasNeed": [],
-        "needReasons": [],
-        "barriers": [],
-        "implementationWillingness": []
-    }
+    stage_matches = []
+    positive_coverages = []
+    negative_coverages = []
+    summaries = []
 
     for test_result in test_results:
         file_id = test_result["file_id"]
-
-        if file_id not in ground_truth or not test_result["success"]:
+        truth = ground_truth.get(file_id)
+        if not truth or not test_result["success"]:
             continue
 
-        gt = ground_truth[file_id]
-        agent_response = test_result["result"]
+        summary = test_result["result"].get("posAdoptionSummary", {})
+        adoption = summary.get("adoptionLikelihood", {})
+        closing = summary.get("closingReasons", {})
+        positives = closing.get("positiveDrivers", [])
+        negatives = closing.get("negativeFactors", [])
 
-        for gt_feature in gt["features_discussed"]:
-            topic = gt_feature["feature"]
-            agent_questionnaire = next(
-                (q for q in agent_response.get("discoveryQuestionnaires", []) if q["topic"] == topic),
-                None
-            )
+        stage_correct = adoption.get("stage") == truth["adoption"]["stage"]
+        stage_matches.append(1 if stage_correct else 0)
 
-            if not agent_questionnaire:
-                accuracy_scores.append(0)
-                print(f"❌ {file_id} - {topic}: Not detected")
-                continue
+        pos_score = match_reasons(positives, truth["adoption"]["positive"])
+        neg_score = match_reasons(negatives, truth["adoption"]["negative"])
+        positive_coverages.append(pos_score)
+        negative_coverages.append(neg_score)
 
-            # Calculate field-level accuracy
-            correct_fields = 0
-            total_fields = 0
+        status = "✅" if stage_correct and pos_score >= 0.7 and neg_score >= 0.7 else "⚠️" if stage_correct else "❌"
+        print(f"{status} {file_id}: stage={'正確' if stage_correct else '錯誤'} pos={pos_score*100:.0f}% neg={neg_score*100:.0f}%")
 
-            # Check currentStatus
-            if "current_status" in gt_feature:
-                total_fields += 1
-                if agent_questionnaire.get("currentStatus") == gt_feature["current_status"]:
-                    correct_fields += 1
-                    field_accuracies["currentStatus"].append(1)
-                else:
-                    field_accuracies["currentStatus"].append(0)
+        summaries.append({
+            "file_id": file_id,
+            "stage_correct": stage_correct,
+            "positive_coverage": pos_score,
+            "negative_coverage": neg_score
+        })
 
-            # Check hasNeed
-            if "has_need" in gt_feature:
-                total_fields += 1
-                if agent_questionnaire.get("hasNeed") == gt_feature["has_need"]:
-                    correct_fields += 1
-                    field_accuracies["hasNeed"].append(1)
-                else:
-                    field_accuracies["hasNeed"].append(0)
+    stage_accuracy = sum(stage_matches) / len(stage_matches) * 100 if stage_matches else 0
+    positive_coverage = sum(positive_coverages) / len(positive_coverages) * 100 if positive_coverages else 0
+    negative_coverage = sum(negative_coverages) / len(negative_coverages) * 100 if negative_coverages else 0
 
-            # Check needReasons (partial credit for overlap)
-            if gt_feature.get("need_reasons"):
-                total_fields += 1
-                agent_reasons = [r.get("reason", "") for r in agent_questionnaire.get("needReasons", [])]
-
-                # Fuzzy matching: check if any keyword overlaps
-                matches = 0
-                for gt_reason in gt_feature["need_reasons"]:
-                    for agent_reason in agent_reasons:
-                        if any(keyword in agent_reason for keyword in gt_reason.split()):
-                            matches += 1
-                            break
-
-                reason_score = matches / len(gt_feature["need_reasons"]) if gt_feature["need_reasons"] else 0
-                correct_fields += reason_score
-                field_accuracies["needReasons"].append(reason_score)
-
-            # Check barriers
-            if gt_feature.get("barriers"):
-                total_fields += 1
-                agent_barriers = [b.get("type", "") for b in agent_questionnaire.get("barriers", [])]
-                gt_barriers = gt_feature["barriers"]
-
-                matches = len(set(agent_barriers) & set(gt_barriers))
-                barrier_score = matches / len(gt_barriers) if gt_barriers else 0
-                correct_fields += barrier_score
-                field_accuracies["barriers"].append(barrier_score)
-
-            # Check implementationWillingness
-            if "implementation_willingness" in gt_feature:
-                total_fields += 1
-                if agent_questionnaire.get("implementationWillingness") == gt_feature["implementation_willingness"]:
-                    correct_fields += 1
-                    field_accuracies["implementationWillingness"].append(1)
-                else:
-                    field_accuracies["implementationWillingness"].append(0)
-
-            field_accuracy = correct_fields / total_fields * 100 if total_fields > 0 else 0
-            accuracy_scores.append(field_accuracy)
-
-            status = "✅" if field_accuracy >= 80 else "⚠️" if field_accuracy >= 60 else "❌"
-            print(f"{status} {file_id} - {topic}: {field_accuracy:.1f}% accuracy")
-
-    avg_accuracy = sum(accuracy_scores) / len(accuracy_scores) if accuracy_scores else 0
-
-    print(f"\n{'='*60}")
-    print(f"Average Extraction Accuracy: {avg_accuracy:.1f}%")
-    print(f"Success Criteria: >75% (Fallback: >65%)")
-
-    # Field-level breakdown
-    print(f"\nField-Level Accuracy:")
-    for field, scores in field_accuracies.items():
-        if scores:
-            avg = sum(scores) / len(scores) * 100
-            print(f"  {field}: {avg:.1f}%")
-
-    if avg_accuracy >= 75:
-        print("\n✅ PASS - Exceeds target")
-    elif avg_accuracy >= 65:
-        print("\n⚠️  PASS - Meets fallback threshold")
-    else:
-        print("\n❌ FAIL - Below threshold")
+    print(f"\nStage 判斷正確率: {stage_accuracy:.1f}%")
+    print(f"成交關鍵覆蓋率: {positive_coverage:.1f}%")
+    print(f"不成交關鍵覆蓋率: {negative_coverage:.1f}%")
+    print("目標：Stage >80%，正／負向覆蓋 >70%")
 
     return {
-        "average_accuracy": avg_accuracy,
-        "accuracy_scores": accuracy_scores,
-        "field_accuracies": field_accuracies
+        "stage_accuracy": stage_accuracy,
+        "positive_coverage": positive_coverage,
+        "negative_coverage": negative_coverage,
+        "summaries": summaries
     }
 
 
@@ -551,7 +422,7 @@ def main():
         total_duration += result["duration"]
 
         if result["success"]:
-            num_features = len(result["result"].get("discoveryQuestionnaires", []))
+            num_features = len(result["result"].get("posAdoptionSummary", {}).get("requiredFeatures", []))
             print(f"✅ {result['duration']:.2f}s, {num_features} features")
         else:
             print(f"❌ {result.get('error', 'Unknown error')}")
@@ -559,42 +430,44 @@ def main():
     print(f"\nTotal extraction time: {total_duration:.2f}s")
     print(f"Average time per transcript: {total_duration/len(test_results):.2f}s")
 
-    # Run tests
-    topic_results = test_topic_detection(test_results, GROUND_TRUTH)
-    extraction_results = test_extraction_accuracy(test_results, GROUND_TRUTH)
+    # Run evaluations
+    feature_results = evaluate_feature_coverage(test_results, GROUND_TRUTH)
+    adoption_results = evaluate_adoption_analysis(test_results, GROUND_TRUTH)
 
     # Overall assessment
     print(f"\n{'='*60}")
     print("POC 6 OVERALL ASSESSMENT")
     print(f"{'='*60}\n")
 
-    topic_recall = topic_results["detected_features"] / topic_results["total_features"] * 100 if topic_results["total_features"] > 0 else 0
-    extraction_accuracy = extraction_results["average_accuracy"]
+    topic_recall = feature_results["recall"]
+    stage_accuracy = adoption_results["stage_accuracy"]
+    positive_coverage = adoption_results["positive_coverage"]
+    negative_coverage = adoption_results["negative_coverage"]
 
-    overall_pass = topic_recall >= 75 and extraction_accuracy >= 65
+    overall_pass = (
+        topic_recall >= 80 and
+        stage_accuracy >= 80 and
+        positive_coverage >= 70 and
+        negative_coverage >= 70
+    )
 
-    print(f"Topic Detection Recall: {topic_recall:.1f}% (Target: >85%, Fallback: >75%)")
-    print(f"Extraction Accuracy: {extraction_accuracy:.1f}% (Target: >75%, Fallback: >65%)")
-    print(f"\nOverall Result: {'✅ PASS' if overall_pass else '❌ FAIL'}")
+    print(f"功能涵蓋率: {topic_recall:.1f}% (目標 >85%，Fallback >75%)")
+    print(f"Stage 判斷正確率: {stage_accuracy:.1f}% (目標 >80%)")
+    print(f"成交關鍵覆蓋率: {positive_coverage:.1f}% (目標 >70%)")
+    print(f"不成交關鍵覆蓋率: {negative_coverage:.1f}% (目標 >70%)")
+    print(f"\n整體結果: {'✅ PASS' if overall_pass else '❌ FAIL'}")
 
     # Save results
     results_summary = {
         "test_count": len(test_results),
         "total_duration": total_duration,
-        "topic_detection": {
-            "recall": topic_recall,
-            "total_features": topic_results["total_features"],
-            "detected_features": topic_results["detected_features"],
-            "missed": topic_results["missed_features"],
-            "false_positives": topic_results["false_positives"]
-        },
-        "extraction_accuracy": {
-            "average": extraction_accuracy,
-            "scores": extraction_results["accuracy_scores"],
-            "field_accuracies": {
-                field: sum(scores) / len(scores) * 100 if scores else 0
-                for field, scores in extraction_results["field_accuracies"].items()
-            }
+        "feature_coverage": feature_results,
+        "adoption_analysis": adoption_results,
+        "metrics": {
+            "feature_recall": topic_recall,
+            "stage_accuracy": stage_accuracy,
+            "positive_coverage": positive_coverage,
+            "negative_coverage": negative_coverage
         },
         "overall_pass": overall_pass
     }
