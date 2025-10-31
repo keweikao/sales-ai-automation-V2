@@ -53,6 +53,7 @@ Return JSON only (no Markdown). The structure must match:
 - Use Traditional Chinese for `role`, `concern`, and `interests` entries.
 - All numeric values must be integers.
 
+
 ## Additional Rules
 - Quote directly from the transcript for `keyPhrases` (keep them short and natural).
 - Stay objective; avoid speculation without evidence.
