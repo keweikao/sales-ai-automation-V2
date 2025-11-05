@@ -15,12 +15,14 @@ This file tracks all development sessions to enable seamless continuation across
 **Current Status**: ✅ Code integration completed, ready to deploy to production
 
 **Next Steps**:
+
 - Deploy Agent 8 to Cloud Run production environment
 - Configure Slack App `/ask-agent8` command
 - Set up manager permissions in Firestore
 - User testing and feedback collection
 
 **Completed in This Phase**:
+
 - ✅ Agent 8 POC (POC 8) - All tests passed, GO decision
 - ✅ Agent 8 Phase 1 MVP integration - Code merged to slack-service
 - ✅ Permission management system - Firestore-based
@@ -38,7 +40,8 @@ This file tracks all development sessions to enable seamless continuation across
 
 ## 📌 Outstanding Work Tracker（最後檢視：2025-11-05）
 
-**Pending（待完成）**
+### Pending（待完成）
+
 - [ ] Transcription service Cloud Run dev 部署驗證（docs/cloud-run-deployment.md 更新後需實測）
 - [ ] 部署 Agent 8 至 Cloud Run 並記錄驗證結果（DEVELOPMENT_LOG.md:17）
 - [ ] 設定 Slack `/ask-agent8` 指令與權限（DEVELOPMENT_LOG.md:18）
@@ -66,7 +69,8 @@ This file tracks all development sessions to enable seamless continuation across
 - [ ] 說話者標記實機驗證（pyannote token / SpeechBrain fallback）並更新結果（specs/001-sales-ai-automation/plan.md:1580）
 - [ ] POC1 Whisper regression（含品質評分）記錄於 `poc1_optimized_results.json`
 
-**Completed（已確認）**
+### Completed（已確認）
+
 - [x] Agent 8 POC（POC 8）通過並記錄於本檔案（DEVELOPMENT_LOG.md:24）
 - [x] Agent 8 Phase 1 MVP 程式碼整合完成（DEVELOPMENT_LOG.md:25）
 - [x] Firestore 權限管理系統建立（DEVELOPMENT_LOG.md:26）
@@ -1603,16 +1607,22 @@ All critical questions were answered by user during this session.
 }
 ```
 
-##### 4. Slack Integration Approach
+#### 4. Slack Integration Approach
+
 **Decision**: 復用現有 slack-service，不創建新的 Slack App
+
 **Rationale**:
+
 - 降低維護成本
 - 統一用戶體驗
 - 共用基礎設施
+
 **Implementation**: 在現有 `main.py` 中註冊 `/ask-agent8` 命令
 
-##### 5. Prompt Optimization (v2)
+#### 5. Prompt Optimization (v2)
+
 **Decision**: 創建優化版 Prompt v2
+
 **Key Improvements**:
 - 強化繁體中文要求（避免簡體中文和大陸用語）
 - 優化回答結構（簡短總結 + 數據 + 洞察 + 建議）
