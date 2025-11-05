@@ -166,7 +166,9 @@ class TranscriptionMerger:
                     "chunk_id": r["chunk_id"],
                     "success": r["success"],
                     "segments_count": len(r.get("segments", [])),
-                    "processing_time": r.get("processing_time", 0)
+                    "processing_time": r.get("processing_time", 0),
+                    "language": r.get("language"),
+                    "language_probability": r.get("language_probability"),
                 }
                 for r in chunk_results
             ]

@@ -3,8 +3,8 @@
 
 # Core dependencies
 faster-whisper==1.2.0
-torch==2.9.0
-torchaudio==2.9.0
+torch>=2.0.0
+torchaudio>=2.0.0
 
 # VAD
 # Note: silero-vad will be installed separately or use built-in faster-whisper VAD
@@ -16,6 +16,12 @@ soundfile==0.12.1
 # Utilities
 numpy>=1.24.0
 typing-extensions>=4.8.0
+importlib-metadata>=3.6.0
+
+# Web Server
+Flask>=2.2.0
+gunicorn>=21.2.0
+google-cloud-storage>=2.10.0
 
 # Optional: Speaker diarization
 pyannote.audio==3.1.1

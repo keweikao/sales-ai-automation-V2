@@ -1,0 +1,60 @@
+{
+  "customerSummary": {
+    "summary": "林老闆目前暫時不考慮更換 POS，主因是每月 3,500 元費用偏高且員工抗拒學習新系統。下一步我們需提供租賃/分期方案與顧問陪跑計畫，待其評估後再約訪。",
+    "keyDecisions": [
+      {
+        "title": "維持現有系統暫不導入",
+        "speakerId": "Speaker 2",
+        "timestamp": "00:07:12",
+        "quote": "暫時不考慮換系統，成本太高。"
+      },
+      {
+        "title": "若有 2,000 元以下試用可再討論",
+        "speakerId": "Speaker 2",
+        "timestamp": "00:08:05",
+        "quote": "能不能先給我一個比較低的試用價？"
+      }
+    ],
+    "nextSteps": {
+      "customer": [
+        {
+          "description": "整理目前 POS 支出與員工人力成本，供後續 ROI 評估",
+          "owner": "林老闆",
+          "dueDate": "2025-11-15"
+        }
+      ],
+      "ichef": [
+        {
+          "description": "7 日內寄出租賃方案、折扣試算與顧問陪跑計畫",
+          "owner": "Kevin",
+          "dueDate": "2025-11-07"
+        },
+        {
+          "description": "安排低成本成功案例分享會議",
+          "owner": "Kevin",
+          "dueDate": "2025-11-12"
+        }
+      ]
+    },
+    "upcomingMilestone": {
+      "status": "proposed",
+      "date": "2025-11-20",
+      "note": "若租賃方案可接受，重新安排提案會議"
+    },
+    "contacts": {
+      "customer": {
+        "name": "林老闆",
+        "role": "連鎖餐廳創辦人",
+        "email": null,
+        "phone": "02-0000-0000"
+      },
+      "ichef": {
+        "name": "Kevin",
+        "role": "iCHEF 業務經理",
+        "email": "kevin@ichefpos.com",
+        "phone": null
+      }
+    }
+  },
+  "markdown": "## 摘要\n- **現況**：林老闆暫不更換 POS，認為月費 3,500 元太高。\n- **主要原因**：成本壓力＋擔心員工排斥新系統。\n- **下一步**：提供租賃折扣與顧問陪跑計畫，協助做 ROI 評估。\n\n## 重點決議\n- **維持現況暫不導入（Speaker 2, 00:07:12）**：「暫時不考慮換系統，成本太高。」\n- **若有低價試用可再討論（Speaker 2, 00:08:05）**：「能不能先給我一個比較低的試用價？」\n\n## 待跟進事項\n- **客戶**：林老闆 — 整理現有 POS 成本與人力資料（2025-11-15）。\n- **iCHEF**：Kevin — 7 日內寄出租賃方案與顧問陪跑計畫；安排低成本案例分享（2025-11-07／2025-11-12）。\n\n## 下一步\n- **建議里程碑**：2025-11-20 視客戶接受度再安排提案會議。\n- **提醒**：若客戶仍猶豫，建議準備「低負擔起步」成功案例佐證。\n\n## 聯絡窗口\n- **客戶**：林老闆（連鎖餐廳創辦人）｜電話：02-0000-0000\n- **iCHEF**：Kevin（iCHEF 業務經理）｜Email：kevin@ichefpos.com"
+}

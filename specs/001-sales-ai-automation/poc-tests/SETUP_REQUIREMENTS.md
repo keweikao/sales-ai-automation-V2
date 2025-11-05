@@ -26,9 +26,10 @@
 2. Create new project or select existing project
 3. **Record your Project ID** (e.g., `sales-ai-automation-poc`)
 
-   ```bash
-   export GCP_PROJECT_ID="your-project-id"
-   ```
+```bash
+export GCP_PROJECT_ID="your-project-id"
+
+```
 
 ### 1.2 Enable Billing
 
@@ -50,6 +51,7 @@ gcloud services enable aiplatform.googleapis.com
 ```
 
 **Or via Console**:
+
 - Go to **APIs & Services** → **Enable APIs and Services**
 - Search and enable:
   - ✅ Cloud Firestore API
@@ -69,22 +71,23 @@ gcloud services enable aiplatform.googleapis.com
 ```bash
 # Create service account
 gcloud iam service-accounts create poc-test-sa \
-    --display-name="POC Test Service Account"
+ --display-name="POC Test Service Account"
 
 # Grant necessary roles
 gcloud projects add-iam-policy-binding $GCP_PROJECT_ID \
-    --member="serviceAccount:poc-test-sa@${GCP_PROJECT_ID}.iam.gserviceaccount.com" \
-    --role="roles/datastore.user"
+ --member="serviceAccount:poc-test-sa@${GCP_PROJECT_ID}.iam.gserviceaccount.com" \
+ --role="roles/datastore.user"
 
 # Create and download key
 gcloud iam service-accounts keys create ~/poc-test-sa-key.json \
-    --iam-account=poc-test-sa@${GCP_PROJECT_ID}.iam.gserviceaccount.com
+ --iam-account=poc-test-sa@${GCP_PROJECT_ID}.iam.gserviceaccount.com
 
 # Set environment variable
 export GOOGLE_APPLICATION_CREDENTIALS="$HOME/poc-test-sa-key.json"
 ```
 
 **Record**:
+
 - ✅ GCP Project ID: `_______________`
 - ✅ Service Account Key Path: `_______________`
 
@@ -99,9 +102,9 @@ export GOOGLE_APPLICATION_CREDENTIALS="$HOME/poc-test-sa-key.json"
 3. Create API key for your GCP project
 4. **Copy and save the API key** (starts with `AIza...`)
 
-   ```bash
-   export GEMINI_API_KEY="AIza..."
-   ```
+```bash
+export GEMINI_API_KEY="AIza..."
+```
 
 ### 2.2 Verify API Access
 
@@ -109,13 +112,14 @@ Test the API key works:
 
 ```bash
 curl -H "Content-Type: application/json" \
-     -d '{"contents":[{"parts":[{"text":"Hello"}]}]}' \
-     -X POST "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}"
+  -d '{"contents":[{"parts":[{"text":"Hello"}]}]}' \
+  -X POST "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}"
 ```
 
 Expected: JSON response with generated text.
 
 **Record**:
+
 - ✅ Gemini API Key: `AIza_______________` (keep secret!)
 
 ---
@@ -146,9 +150,9 @@ Expected: JSON response with generated text.
    - Click **Generate**
    - **Copy and save token** (starts with `xapp-...`)
 
-   ```bash
-   export SLACK_APP_TOKEN="xapp-..."
-   ```
+```bash
+export SLACK_APP_TOKEN="xapp-..."
+```
 
 ### 3.4 Configure OAuth Scopes
 
@@ -187,8 +191,8 @@ Expected: JSON response with generated text.
 3. Review permissions → Click **Allow**
 4. **Copy Bot User OAuth Token** (starts with `xoxb-...`)
 
-   ```bash
-   export SLACK_BOT_TOKEN="xoxb-..."
+```bash
+export SLACK_BOT_TOKEN="xoxb-..."
    ```
 
 ### 3.8 Get Test Channel ID
@@ -198,18 +202,21 @@ Expected: JSON response with generated text.
 3. Click channel name → Scroll to bottom
 4. **Copy Channel ID** (starts with `C...`)
 
-   ```bash
-   export SLACK_TEST_CHANNEL="C..."
-   ```
+```bash
+export SLACK_TEST_CHANNEL="C..."
+
+```
 
 ### 3.9 Invite Bot to Channel
 
 In Slack, type in `#sales-ai-test`:
-```
+
+```text
 /invite @Sales AI POC
-```
+```text
 
 **Record**:
+
 - ✅ Slack Bot Token: `xoxb-_______________` (keep secret!)
 - ✅ Slack App Token: `xapp-_______________` (keep secret!)
 - ✅ Slack Test Channel ID: `C_______________`
@@ -236,15 +243,17 @@ Prepare **10 test audio files** with variety:
 | test_10.m4a | 25 min | 3 | 中文 | Discovery call |
 
 **Where to get test audio**:
+
 - Option A: Use real sales call recordings (anonymized)
 - Option B: Record mock sales calls with team members
 - Option C: Use existing recordings from legacy system
 
 **Store in**:
+
 ```bash
 mkdir -p ~/sales-ai-automation-V2/test-data/audio
 # Copy files to this directory
-```
+```text
 
 ### 4.2 Transcripts (for POC 2, 3, 6)
 
@@ -253,39 +262,42 @@ Prepare **30 test transcripts** with variety:
 Create in: `~/sales-ai-automation-V2/test-data/transcripts/`
 
 **Transcript format** (JSON):
+
 ```json
 {
   "fileId": "test_01",
   "duration": 1200,
   "text": "完整逐字稿內容...",
   "speakers": [
-    {
-      "speaker": "業務",
-      "startTime": 0.0,
-      "endTime": 5.2,
-      "text": "您好，我是 iCHEF 的業務..."
-    },
-    {
-      "speaker": "客戶",
-      "startTime": 5.5,
-      "endTime": 12.1,
-      "text": "你好，我們是餐廳老闆..."
-    }
+ {
+   "speaker": "業務",
+   "startTime": 0.0,
+   "endTime": 5.2,
+   "text": "您好，我是 iCHEF 的業務..."
+ },
+ {
+   "speaker": "客戶",
+   "startTime": 5.5,
+   "endTime": 12.1,
+   "text": "你好，我們是餐廳老闆..."
+ }
   ]
 }
-```
+```text
 
 **Variety needed**:
+
 - 10 files: Positive sentiment (interested customer)
 - 10 files: Neutral sentiment (information gathering)
 - 10 files: Negative sentiment (skeptical, budget concerns)
 - Include mentions of iCHEF 22 features (掃碼點餐, 線上訂位, POS系統, etc.)
 
 **Generate transcripts**:
+
 ```bash
 # If you have audio files, transcribe them first using POC 1
 # Or manually create test transcripts based on common sales scenarios
-```
+```text
 
 ### 4.3 Test Scenarios Template
 
@@ -294,24 +306,25 @@ Create test scenarios file: `test-data/scenarios.json`
 ```json
 [
   {
-    "id": "scenario_01",
-    "title": "高興趣客戶，尖峰人力不足",
-    "description": "客戶明確表示尖峰時段人手不足，對掃碼點餐很有興趣",
-    "expected_needs": ["掃碼點餐", "POS點餐系統"],
-    "expected_sentiment": "positive"
+ "id": "scenario_01",
+ "title": "高興趣客戶，尖峰人力不足",
+ "description": "客戶明確表示尖峰時段人手不足，對掃碼點餐很有興趣",
+ "expected_needs": ["掃碼點餐", "POS點餐系統"],
+ "expected_sentiment": "positive"
   },
   {
-    "id": "scenario_02",
-    "title": "預算限制，先了解功能",
-    "description": "客戶預算有限，想先了解基本功能和價格",
-    "expected_needs": ["POS點餐系統"],
-    "expected_barriers": ["budget"],
-    "expected_sentiment": "neutral"
+ "id": "scenario_02",
+ "title": "預算限制，先了解功能",
+ "description": "客戶預算有限，想先了解基本功能和價格",
+ "expected_needs": ["POS點餐系統"],
+ "expected_barriers": ["budget"],
+ "expected_sentiment": "neutral"
   }
 ]
-```
+```text
 
 **Record**:
+
 - ✅ Audio files prepared: `_____ / 10`
 - ✅ Transcripts prepared: `_____ / 30`
 - ✅ Test scenarios created: Yes / No
@@ -333,7 +346,7 @@ brew install python@3.9
 # Ubuntu/Debian
 sudo apt-get update
 sudo apt-get install python3.9 python3.9-venv python3-pip
-```
+```text
 
 ### 5.2 Create Virtual Environment
 
@@ -346,7 +359,7 @@ python3 -m venv poc-venv
 # Activate virtual environment
 source poc-venv/bin/activate  # On macOS/Linux
 # poc-venv\Scripts\activate  # On Windows
-```
+```text
 
 ### 5.3 Install Dependencies
 
@@ -368,23 +381,26 @@ pip install pyannote.audio==3.1.1
 
 # For testing utilities
 pip install pytest==7.4.3
-```
+```text
 
 ### 5.4 Install System Dependencies
 
 **macOS**:
+
 ```bash
 # Install ffmpeg (for audio processing)
 brew install ffmpeg
-```
+```text
 
 **Ubuntu/Debian**:
+
 ```bash
 sudo apt-get update
 sudo apt-get install ffmpeg
-```
+```text
 
 **Windows**:
+
 - Download ffmpeg from [ffmpeg.org](https://ffmpeg.org/download.html)
 - Add to PATH
 
@@ -412,14 +428,16 @@ export SLACK_TEST_CHANNEL="C..."
 export TEST_AUDIO_DIR="$HOME/Desktop/sales-ai-automation-V2/test-data/audio"
 export TEST_TRANSCRIPT_DIR="$HOME/Desktop/sales-ai-automation-V2/test-data/transcripts"
 EOF
-```
+```text
 
 Load environment variables:
+
 ```bash
 source .env
-```
+```text
 
 **Record**:
+
 - ✅ Python 3.9+ installed: Yes / No
 - ✅ Virtual environment created: Yes / No
 - ✅ Dependencies installed: Yes / No
@@ -481,9 +499,9 @@ echo ""
 # Test Gemini API
 echo "✓ Gemini API:"
 curl -s -H "Content-Type: application/json" \
-     -d '{"contents":[{"parts":[{"text":"Hi"}]}]}' \
-     "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}" \
-     | grep -q "candidates" && echo "  API Key: VALID" || echo "  API Key: INVALID"
+  -d '{"contents":[{"parts":[{"text":"Hi"}]}]}' \
+  "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}" \
+  | grep -q "candidates" && echo "  API Key: VALID" || echo "  API Key: INVALID"
 echo ""
 
 echo "=== Setup Verification Complete ==="
@@ -491,7 +509,7 @@ EOF
 
 chmod +x verify_setup.sh
 ./verify_setup.sh
-```
+```text
 
 Expected output: All items should show ✓ OK or valid status.
 
@@ -531,7 +549,7 @@ python test_firestore_performance.py
 # POC 6: Questionnaire Extraction (10-15 min)
 cd ../poc6_questionnaire
 python test_questionnaire.py
-```
+```text
 
 **Total POC Execution Time**: ~40-70 minutes
 
@@ -542,21 +560,23 @@ python test_questionnaire.py
 ### Issue: GCP Permission Denied
 
 **Solution**:
+
 ```bash
 # Verify service account has correct roles
 gcloud projects get-iam-policy $GCP_PROJECT_ID \
-    --flatten="bindings[].members" \
-    --filter="bindings.members:poc-test-sa@*"
+ --flatten="bindings[].members" \
+ --filter="bindings.members:poc-test-sa@*"
 
 # Re-grant roles if needed
 gcloud projects add-iam-policy-binding $GCP_PROJECT_ID \
-    --member="serviceAccount:poc-test-sa@${GCP_PROJECT_ID}.iam.gserviceaccount.com" \
-    --role="roles/datastore.user"
-```
+ --member="serviceAccount:poc-test-sa@${GCP_PROJECT_ID}.iam.gserviceaccount.com" \
+ --role="roles/datastore.user"
+```text
 
 ### Issue: Gemini API Rate Limit
 
 **Solution**:
+
 - Free tier: 15 requests/minute
 - Add delays between tests: `time.sleep(5)`
 - Or upgrade to paid tier
@@ -564,6 +584,7 @@ gcloud projects add-iam-policy-binding $GCP_PROJECT_ID \
 ### Issue: Slack Socket Mode Connection Failed
 
 **Solution**:
+
 1. Verify App-Level Token has `connections:write` scope
 2. Verify Bot Token starts with `xoxb-`
 3. Verify App-Level Token starts with `xapp-`
@@ -573,25 +594,28 @@ gcloud projects add-iam-policy-binding $GCP_PROJECT_ID \
 ### Issue: Faster-Whisper CUDA Not Available
 
 **Solution**:
+
 ```bash
 # Check CUDA availability
 python3 -c "import torch; print(f'CUDA available: {torch.cuda.is_available()}')"
 
 # If False, Whisper will use CPU (slower but works)
 # For POC, CPU is acceptable
-```
+```text
 
 ---
 
 ## 📞 Need Help?
 
 **Before running POCs**:
+
 1. Complete this checklist
 2. Run verification script
 3. Fix any issues found
 4. Then proceed to POC execution
 
 **During POC execution**:
+
 - Check logs in console output
 - Results saved to `poc*_results.json`
 - Errors logged with detailed messages

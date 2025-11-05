@@ -1,0 +1,55 @@
+{
+  "customerSummary": {
+    "summary": "雙方僅完成初次寒暄，客戶尚未透露餐廳痛點與預算。需要安排後續探索會議並寄出問卷，確認決策人與時程。",
+    "keyDecisions": [
+      {
+        "title": "同意日後再深入討論",
+        "speakerId": "Speaker 2",
+        "timestamp": "00:04:10",
+        "quote": "那我們改天再約時間細聊。"
+      },
+      {
+        "title": "尚未提供具體需求或預算",
+        "speakerId": "Speaker 2",
+        "timestamp": "00:03:05",
+        "quote": "功能細節我還不熟，要先了解一下。"
+      }
+    ],
+    "nextSteps": {
+      "customer": [
+        {
+          "description": "確認參會人員並提供可以討論的時段",
+          "owner": "待確認",
+          "dueDate": null
+        }
+      ],
+      "ichef": [
+        {
+          "description": "寄送產品型錄與探索問卷，整理預計討論議題",
+          "owner": "Kevin",
+          "dueDate": "2025-11-02"
+        }
+      ]
+    },
+    "upcomingMilestone": {
+      "status": "pending",
+      "date": null,
+      "note": "待客戶回覆後排定探索會議（建議 2025-11 上旬）"
+    },
+    "contacts": {
+      "customer": {
+        "name": "UNKNOWN",
+        "role": "待確認",
+        "email": null,
+        "phone": null
+      },
+      "ichef": {
+        "name": "Kevin",
+        "role": "iCHEF 業務經理",
+        "email": "kevin@ichefpos.com",
+        "phone": null
+      }
+    }
+  },
+  "markdown": "## 摘要\n- **現況**：僅進行初次寒暄，尚未取得具體需求與預算資訊。\n- **待確認**：決策人、導入時程與痛點仍未知。\n- **下一步**：寄送問卷與型錄，安排探索會議。\n\n## 重點決議\n- **同意日後再深入討論（Speaker 2, 00:04:10）**：「那我們改天再約時間細聊。」\n- **尚未提供需求與預算（Speaker 2, 00:03:05）**：「功能細節我還不熟，要先了解一下。」\n\n## 待跟進事項\n- **客戶**：待確認 — 回覆可參加的決策成員與時間（待定）。\n- **iCHEF**：Kevin — 寄送型錄 + 問卷並整理議題（2025-11-02）。\n\n## 下一步\n- **建議里程碑**：收到回覆後 7 日內安排探索會議。\n- **提醒**：準備針對痛點的情境問題，協助客戶釐清需求。\n\n## 聯絡窗口\n- **客戶**：待確認（角色待補）\n- **iCHEF**：Kevin（iCHEF 業務經理）｜Email：kevin@ichefpos.com"
+}

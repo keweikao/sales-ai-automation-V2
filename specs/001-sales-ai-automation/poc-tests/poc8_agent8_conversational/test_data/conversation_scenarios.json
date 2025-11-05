@@ -1,0 +1,295 @@
+{
+  "scenarios": [
+    {
+      "scenarioId": "S001",
+      "description": "團隊概況追問個人細節",
+      "turns": [
+        {
+          "turn": 1,
+          "userQuestion": "今天團隊表現如何？",
+          "expectedType": "team_overview",
+          "context": {}
+        },
+        {
+          "turn": 2,
+          "userQuestion": "王小明的案件詳細情況？",
+          "expectedType": "sales_rep_performance",
+          "context": {
+            "previousMention": "王小明"
+          }
+        },
+        {
+          "turn": 3,
+          "userQuestion": "他最好的案件是哪個？",
+          "expectedType": "case_details",
+          "context": {
+            "referTo": "王小明"
+          }
+        }
+      ]
+    },
+    {
+      "scenarioId": "S002",
+      "description": "低健康度案件深入分析",
+      "turns": [
+        {
+          "turn": 1,
+          "userQuestion": "有哪些案件需要我關注？",
+          "expectedType": "team_overview",
+          "context": {}
+        },
+        {
+          "turn": 2,
+          "userQuestion": "#202501-IC003 的詳細情況？",
+          "expectedType": "case_details",
+          "context": {
+            "caseIdFrom": "previous_answer"
+          }
+        },
+        {
+          "turn": 3,
+          "userQuestion": "我應該怎麼幫他？",
+          "expectedType": "case_details",
+          "context": {
+            "referTo": "202501-IC003",
+            "focus": "action_plan"
+          }
+        }
+      ]
+    },
+    {
+      "scenarioId": "S003",
+      "description": "競品情報追問應對策略",
+      "turns": [
+        {
+          "turn": 1,
+          "userQuestion": "Eats365 最近被提到幾次？",
+          "expectedType": "competitor_intelligence",
+          "context": {}
+        },
+        {
+          "turn": 2,
+          "userQuestion": "客戶怎麼評價他們？",
+          "expectedType": "competitor_intelligence",
+          "context": {
+            "competitor": "Eats365"
+          }
+        },
+        {
+          "turn": 3,
+          "userQuestion": "我們該如何應對？",
+          "expectedType": "competitor_intelligence",
+          "context": {
+            "competitor": "Eats365",
+            "focus": "strategy"
+          }
+        }
+      ]
+    },
+    {
+      "scenarioId": "S004",
+      "description": "個人業務績效深入分析",
+      "turns": [
+        {
+          "turn": 1,
+          "userQuestion": "陳美玲本週表現如何？",
+          "expectedType": "sales_rep_performance",
+          "context": {}
+        },
+        {
+          "turn": 2,
+          "userQuestion": "她的主要問題是什麼？",
+          "expectedType": "sales_rep_performance",
+          "context": {
+            "salesRep": "陳美玲",
+            "focus": "challenges"
+          }
+        },
+        {
+          "turn": 3,
+          "userQuestion": "跟上週比有進步嗎？",
+          "expectedType": "trend_comparison",
+          "context": {
+            "salesRep": "陳美玲",
+            "compare": ["this_week", "last_week"]
+          }
+        }
+      ]
+    },
+    {
+      "scenarioId": "S005",
+      "description": "產品需求追問客戶類型",
+      "turns": [
+        {
+          "turn": 1,
+          "userQuestion": "掃碼點餐功能的需求如何？",
+          "expectedType": "product_demand",
+          "context": {}
+        },
+        {
+          "turn": 2,
+          "userQuestion": "哪些客戶最想要這個功能？",
+          "expectedType": "product_demand",
+          "context": {
+            "feature": "掃碼點餐",
+            "focus": "customer_types"
+          }
+        },
+        {
+          "turn": 3,
+          "userQuestion": "主要障礙是什麼？",
+          "expectedType": "product_demand",
+          "context": {
+            "feature": "掃碼點餐",
+            "focus": "barriers"
+          }
+        }
+      ]
+    },
+    {
+      "scenarioId": "S006",
+      "description": "案件詳情追問業務表現",
+      "turns": [
+        {
+          "turn": 1,
+          "userQuestion": "健康度低於 50 的案件有哪些？",
+          "expectedType": "case_details",
+          "context": {}
+        },
+        {
+          "turn": 2,
+          "userQuestion": "這些案件的業務是誰？",
+          "expectedType": "case_details",
+          "context": {
+            "casesFrom": "previous_answer",
+            "focus": "sales_reps"
+          }
+        },
+        {
+          "turn": 3,
+          "userQuestion": "他們需要什麼培訓？",
+          "expectedType": "sales_rep_performance",
+          "context": {
+            "salesRepsFrom": "previous_answer",
+            "focus": "training_needs"
+          }
+        }
+      ]
+    },
+    {
+      "scenarioId": "S007",
+      "description": "趨勢分析追問原因",
+      "turns": [
+        {
+          "turn": 1,
+          "userQuestion": "本週 vs 上週，健康度有什麼變化？",
+          "expectedType": "trend_comparison",
+          "context": {}
+        },
+        {
+          "turn": 2,
+          "userQuestion": "為什麼會這樣？",
+          "expectedType": "trend_comparison",
+          "context": {
+            "focus": "root_causes"
+          }
+        },
+        {
+          "turn": 3,
+          "userQuestion": "哪個業務帶動了這個變化？",
+          "expectedType": "sales_rep_performance",
+          "context": {
+            "contributorsFrom": "previous_answer"
+          }
+        }
+      ]
+    },
+    {
+      "scenarioId": "S008",
+      "description": "業務對比分析",
+      "turns": [
+        {
+          "turn": 1,
+          "userQuestion": "王小明本週表現如何？",
+          "expectedType": "sales_rep_performance",
+          "context": {}
+        },
+        {
+          "turn": 2,
+          "userQuestion": "李大華呢？",
+          "expectedType": "sales_rep_performance",
+          "context": {
+            "timeRange": "this_week"
+          }
+        },
+        {
+          "turn": 3,
+          "userQuestion": "他們兩個比較誰比較好？",
+          "expectedType": "trend_comparison",
+          "context": {
+            "compare": ["王小明", "李大華"]
+          }
+        }
+      ]
+    },
+    {
+      "scenarioId": "S009",
+      "description": "功能需求追問成功案例",
+      "turns": [
+        {
+          "turn": 1,
+          "userQuestion": "庫存管理功能有多少客戶想要？",
+          "expectedType": "product_demand",
+          "context": {}
+        },
+        {
+          "turn": 2,
+          "userQuestion": "哪些案件提到這個需求？",
+          "expectedType": "case_details",
+          "context": {
+            "feature": "庫存管理"
+          }
+        },
+        {
+          "turn": 3,
+          "userQuestion": "這些案件的健康度怎麼樣？",
+          "expectedType": "case_details",
+          "context": {
+            "casesFrom": "previous_answer",
+            "focus": "health_scores"
+          }
+        }
+      ]
+    },
+    {
+      "scenarioId": "S010",
+      "description": "高優先級案件跟進",
+      "turns": [
+        {
+          "turn": 1,
+          "userQuestion": "有哪些案件快要成交了？",
+          "expectedType": "case_details",
+          "context": {}
+        },
+        {
+          "turn": 2,
+          "userQuestion": "第一個案件的下一步是什麼？",
+          "expectedType": "case_details",
+          "context": {
+            "caseFrom": "first_in_previous_answer",
+            "focus": "next_steps"
+          }
+        },
+        {
+          "turn": 3,
+          "userQuestion": "這個業務需要我的支援嗎？",
+          "expectedType": "case_details",
+          "context": {
+            "caseFrom": "previous_answer",
+            "focus": "manager_support"
+          }
+        }
+      ]
+    }
+  ]
+}

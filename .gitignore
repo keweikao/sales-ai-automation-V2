@@ -40,6 +40,17 @@ env/
 *.lock
 .claude/
 pretrained_models/
+tmp/
+
+# Service account keys (sensitive)
+*service-account*.json
+*-?????????????????????.json
+sales-ai-automation-v2-*.json
+
+# Test data (large files)
+test-data/audio/*.m4a
+test-data/audio/*.mp3
+test-data/audio/*_chunks/
 
 # Spec Kit-specific files
 .genreleases/

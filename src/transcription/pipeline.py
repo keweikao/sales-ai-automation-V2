@@ -15,6 +15,7 @@ from .chunking.chunker import AudioChunker
 from .parallel.transcriber import ParallelTranscriber
 from .merging.merger import TranscriptionMerger
 from .diarization import create_diarizer
+from .quality import calculate_transcription_quality
 
 logger = logging.getLogger(__name__)
 
@@ -199,6 +200,26 @@ class OptimizedTranscriptionPipeline:
         elif self.enable_diarization and not diarizer:
             merged_result["diarization_error"] = self.diarization_error
 
+        # 計算品質評分（FR-010）
+        quality = calculate_transcription_quality(
+            merged_result=merged_result,
+            chunk_results=chunk_results,
+            audio_info=audio_info,
+            diarization_enabled=self.enable_diarization,
+        )
+        merged_result["quality"] = quality
+
+        stats = merged_result.setdefault("statistics", {})
+        stats.update(
+            {
+                "characters": quality["diagnostics"]["characters"],
+                "char_per_second": quality["components"]["char_time_ratio"]["value"],
+                "unique_segment_ratio": quality["components"]["repetition"].get(
+                    "unique_segment_ratio"
+                ),
+            }
+        )
+
         # 儲存結果
         if save_transcription and merged_result["success"]:
             self._save_results(audio_path, merged_result, output_formats)
@@ -363,6 +384,25 @@ class OptimizedTranscriptionPipeline:
             logger.info(f"Total Segments: {stats['total_segments']}")
             logger.info(f"Text Length: {len(result['full_text'])} characters")
             logger.info(f"VAD Enabled: {stats['vad_enabled']}")
+            if result.get("quality"):
+                quality = result["quality"]
+                logger.info(f"Quality Score: {quality['score']:.1f}/100")
+                language_component = quality["components"].get("language_confidence", {})
+                char_component = quality["components"].get("char_time_ratio", {})
+                logger.info(
+                    "  ├─ Language confidence: %.1f%% (detected=%s)",
+                    language_component.get("score", 0.0),
+                    language_component.get("detected_language"),
+                )
+                logger.info(
+                    "  ├─ Characters/sec: %.2f",
+                    char_component.get("value", 0.0),
+                )
+                repetition_component = quality["components"].get("repetition", {})
+                logger.info(
+                    "  └─ Unique segment ratio: %.2f",
+                    repetition_component.get("unique_segment_ratio", 0.0),
+                )
 
             # 計算節省的時間
             if pipeline_time < audio_duration:

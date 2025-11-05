@@ -22,14 +22,18 @@ and reasonable cost.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `WHISPER_MODEL_SIZE` | `tiny` | Whisper weights to load (`tiny`, `small`, `medium`…) |
-| `WHISPER_DEVICE` | `cpu` | Execution device (`cpu` or `cuda`) |
-| `WHISPER_COMPUTE_TYPE` | `int8` | Compute precision (`int8`, `float16`, `float32`) |
-| `VAD_PRESET` | `meeting` | VAD configuration preset |
-| `TRANSCRIBE_WORKERS` | `1` | Worker count passed to the transcription pipeline |
-| `ENABLE_DIARIZATION` | `false` | Enable speaker diarization warm-up |
-| `HUGGINGFACE_TOKEN` | _(secret)_ | Token required for pyannote models (store in Secret Manager) |
-| `DIARIZATION_ALLOW_OVERLAP` | `false` | Whether diarization keeps overlapping speakers |
+| `MODEL_SIZE` | `medium` | Faster-Whisper weights (`tiny`, `base`, `small`, `medium`, `large-v3`) |
+| `DEVICE` | `cpu` | Execution device (`cpu` or `cuda`) |
+| `COMPUTE_TYPE` | `int8` | Precision mode (`int8`, `float16`, `float32`) |
+| `MAX_WORKERS` | `3` | Parallel chunk workers (increase to 6 on ≥8 CPU) |
+| `TARGET_CHUNK_DURATION` | `600` | Target chunk length in seconds (default 10 分鐘) |
+| `OVERLAP_DURATION` | `2` | Overlap between chunks in seconds |
+| `VAD_PRESET` | `meeting` | VAD preset (`meeting`, `presentation`, `noisy`) |
+| `TRANSCRIPTION_LANGUAGE` | `zh` | Primary language hint passed to Whisper |
+| `ENABLE_DIARIZATION` | `false` | Enable speaker diarization post-processing |
+| `DIARIZATION_MODEL` | `pyannote/speaker-diarization` | Hugging Face model id |
+| `DIARIZATION_ALLOW_OVERLAP` | `false` | Keep overlapping speakers if model supports it |
+| `HUGGINGFACE_TOKEN` | *(secret)* | Token for pyannote model downloads (store in Secret Manager) |
 
 ## Recommended Cloud Run Settings
 
@@ -56,8 +60,9 @@ gcloud run deploy sales-ai-transcriber \
   --max-instances=10 \
   --cpu-boost \
   --execution-environment=gen2 \
-  --set-env-vars=WHISPER_MODEL_SIZE=medium,WHISPER_COMPUTE_TYPE=int8 \
-  --set-env-vars=TRANSCRIBE_WORKERS=1,VAD_PRESET=meeting \
+  --set-env-vars=MODEL_SIZE=medium,COMPUTE_TYPE=int8,DEVICE=cpu \
+  --set-env-vars=MAX_WORKERS=6,VAD_PRESET=meeting,TARGET_CHUNK_DURATION=600 \
+  --set-env-vars=ENABLE_DIARIZATION=true,DIARIZATION_MODEL=pyannote/speaker-diarization \
   --set-secrets=HUGGINGFACE_TOKEN=projects/PROJECT_NUM/secrets/pyannote-token:latest
 ```
 
@@ -75,6 +80,19 @@ main command:
 
 Warm-up failures are logged but do **not** stop the container. Review
 Cloud Logging for warnings about missing tokens or model downloads.
+
+## Quality Metrics (FR-010)
+
+每次轉錄完成後，服務會回傳 `quality` 欄位，內容包含：
+
+- `score`：整體品質分數（0-100）
+- `language_confidence`：語言偵測信心（平均 chunk 機率）
+- `coherence`：平均段落長度與一致性
+- `char_time_ratio`：每秒字數（合理範圍 2-4 字/秒）
+- `repetition`：重複段落比例
+- `speaker_separation`：說話者標註覆蓋率（啟用 diarization 時）
+
+建議在 Cloud Logging / Monitoring 建立儀表板或警報，當品質分數低於門檻（如 85 分）時通知維運與產品負責人。
 
 ## Verification Checklist
 

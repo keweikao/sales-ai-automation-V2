@@ -1,0 +1,81 @@
+{
+  "structured": {
+    "keyDecisionMaker": {
+      "name": "UNKNOWN",
+      "role": "UNKNOWN",
+      "primaryConcerns": [
+        "資訊不足，尚未明確表態需求"
+      ]
+    },
+    "dealHealth": {
+      "score": 52,
+      "sentiment": "neutral",
+      "reasoning": "對話僅觸及初步興趣；Agent2 只取得零碎正負訊號。"
+    },
+    "recommendedBundle": {
+      "products": [
+        "掃碼點餐"
+      ],
+      "pricingStrategy": "初步估算，建議先寄產品型錄與費用範圍。",
+      "pricingDirection": "match_baseline",
+      "referencePoint": "尚未提及預算，暫以標準 3,500 元方案作為參考。",
+      "totalEstimate": {
+        "currency": "TWD",
+        "min": 0,
+        "max": 0,
+        "notes": "僅提供標準方案區間，待下次訪談確認。"
+      },
+      "pricingNotes": [
+        {
+          "type": "software",
+          "detail": "尚未談到價格，需在後續會議釐清月費與導入範圍。",
+          "evidence": "客戶只表示『改天再聊細節』。"
+        }
+      ]
+    },
+    "competitivePositioning": null,
+    "salesStage": "教育培養型",
+    "maximumRisk": {
+      "risk": "未掌握決策團隊與需求，容易失去追蹤。",
+      "mitigation": "下次會議前整理問題清單，確認決策者、預算、導入時程。"
+    },
+    "nextActions": [
+      {
+        "action": "24 小時內寄出產品型錄與功能介紹，確認是否有其他成員需參加。",
+        "deadline": "within 24h",
+        "priority": 1
+      },
+      {
+        "action": "安排 30 分鐘探索會議，蒐集痛點與預算資訊。",
+        "deadline": "within 5d",
+        "priority": 2
+      },
+      {
+        "action": "準備導入前問卷草稿，協助客戶梳理需求。",
+        "deadline": "before 2025-11-10",
+        "priority": 3
+      }
+    ],
+    "talkTracks": [
+      {
+        "situation": "客戶尚未明確需求",
+        "response": "「先讓我寄一份整理過的問卷，您填寫後我們再針對實際痛點調整方案。」"
+      },
+      {
+        "situation": "需要了解價值",
+        "response": "「下一次我們一起看哪些流程最耗時，我會對照其他餐廳的案例給您參考。」"
+      }
+    ],
+    "repFeedback": {
+      "strengths": [
+        "成功取得初步接觸並安排後續討論。",
+        "維持友善語氣讓客戶願意再約時間。"
+      ],
+      "improvements": [
+        "缺少具體需求與決策資訊，應儘早追問。",
+        "可提前準備價值案例，避免對話空泛。"
+      ]
+    }
+  },
+  "rawOutput": "## 30秒快速掃描\n- **痛點**：尚未明確揭露。\n- **預算**：未提及。\n- **時程**：需再安排探索會議。\n- **決策權**：未知，需確認參與者。\n\n## 三個關鍵\n- **最在乎**：想先了解功能再決定。\n- **最大顧慮**：資訊不足。\n- **突破口**：寄送問卷與案例資料。\n\n## 成交階段判斷\n- **教育培養型**：仍在了解階段，需要更多資訊。\n\n## 最大風險\n- **風險**：缺乏決策資訊導致跟進失焦。\n- **機會**：主動提供問卷與案例建立信任。\n\n## 下一步行動\n- 寄型錄、安排探索會、準備問卷草稿。\n\n## 業務員改進建議\n- **問題**：未能確認決策人與預算。\n- **證據**：「改天再聊細節」未引導深入。\n- **示範**：可先詢問「誰會參與決策」並預約時間。\n- **效果**：掌握決策流程後，轉換率可提升 8%。"
+}

@@ -12,23 +12,27 @@ Build a scalable, cost-optimized sales AI automation system that processes 200-2
 
 **Language/Version**: Python 3.11+, TypeScript (Google Apps Script compatibility layer)
 **Primary Dependencies**:
+
 - Backend: FastAPI, faster-whisper, google-cloud-firestore, google-cloud-storage, google-cloud-tasks, slack-bolt
 - AI: google-generativeai (Gemini 2.0 Flash)
 - Audio: ffmpeg, pydub
 - Testing: pytest, pytest-asyncio, httpx
 
 **Storage**:
+
 - Primary: Google Cloud Firestore (document database)
 - Audio: Google Cloud Storage (with 7-day lifecycle deletion)
 - Reporting: Google Sheets (daily sync only)
 
 **Testing**:
+
 - Unit tests: pytest with fixtures
 - Integration tests: pytest with TestClient (FastAPI)
 - Contract tests: Gemini agent output validation
 - E2E tests: Slack interaction simulation
 
 **Target Platform**:
+
 - Cloud Run (serverless containers, 0-10 instances auto-scaling)
 - Cloud Functions Gen2 (event triggers for GCS)
 - Deployment: asia-east1 (Taiwan) for latency optimization
@@ -36,6 +40,7 @@ Build a scalable, cost-optimized sales AI automation system that processes 200-2
 **Project Type**: Microservices (serverless)
 
 **Performance Goals** (Updated based on POC results):
+
 - End-to-end processing: Asynchronous (20-40 minutes for 40-min audio)
 - Transcription: ~40 minutes per 40-min audio with medium model (0.915x real-time with diarization, 91.6% quality)
 - Multi-agent analysis: <5 seconds (5 agents parallel, validated at 3.28s)
@@ -44,6 +49,7 @@ Build a scalable, cost-optimized sales AI automation system that processes 200-2
 - User experience: Upload → Background processing → Slack notification when ready
 
 **Constraints** (Updated based on POC validation):
+
 - Monthly cost: <$45 (including all 6 agents)
 - Cost per file: <$0.18
 - Transcription quality: >85% (validated at 91.6% with medium model)
@@ -53,6 +59,7 @@ Build a scalable, cost-optimized sales AI automation system that processes 200-2
 - Questionnaire extraction: AI-draft mode with human review (45% auto-accuracy, supplemented by sales rep confirmation)
 
 **Scale/Scope**:
+
 - Monthly volume: 200-250 audio files
 - Average audio duration: 40 minutes
 - Peak concurrency: 10 simultaneous uploads
@@ -77,12 +84,14 @@ Build a scalable, cost-optimized sales AI automation system that processes 200-2
 | **Monthly cost <$30** | **<$45** with multi-agent analysis | ⚠️ JUSTIFIED |
 
 **Cost Justification**: Original $30 target assumed single-agent analysis. Multi-agent architecture (6 agents) adds ~$15/month but provides:
+
 - 15-20% higher accuracy per dimension (participant ID, sentiment, needs)
 - Structured outputs for automation (questionnaire auto-completion)
 - Independent optimization per analysis type
 - ROI: Better sales coaching → higher conversion rates → justifies $15 incremental cost
 
 Breakdown:
+
 - Faster-Whisper (Cloud Run): $18-22/month
 - Gemini API (6 agents × 250 files): $12-15/month
 - Firestore: $3-5/month
@@ -188,7 +197,7 @@ specs/001-sales-ai-automation/
 │       ├── feedback-modal.json
 │       └── progress-message.json
 └── tasks.md             # Phase 2: Implementation tasks (NOT created yet)
-```
+```text
 
 ### Source Code (repository root)
 
@@ -336,7 +345,7 @@ sales-ai-automation-v2/
 ├── README.md                        # Project overview
 └── memory/
     └── constitution.md              # System principles ✅ EXISTS
-```
+```text
 
 **Structure Decision**: Microservices architecture with 4 Cloud Run services:
 
@@ -346,6 +355,7 @@ sales-ai-automation-v2/
 4. **orchestration-service**: Central workflow coordinator (receives all triggers, manages queue)
 
 **Rationale**:
+
 - **Separation of concerns**: Transcription (CPU-heavy) scales independently from analysis (API-heavy)
 - **Cost optimization**: Slack service runs minimal instances (event-driven), transcription scales to 0 when idle
 - **Independent deployment**: Can update Gemini prompts without redeploying Whisper
@@ -357,7 +367,7 @@ sales-ai-automation-v2/
 
 ### High-Level Data Flow
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                           AUDIO SOURCES                                  │
 ├─────────────────┬─────────────────┬─────────────────┬──────────────────┤
@@ -457,22 +467,126 @@ sales-ai-automation-v2/
          │  - Can click buttons: [逐字稿][參與者][問卷][追問][回饋]  │
          │  - Can type follow-up questions                         │
          └─────────────────────────────────────────────────────────┘
-```
+```text
 
-### Slack Summary & Delivery Workflow（Planned）
-1. **Thread Preview**：Agent 7 產出摘要後貼回原上傳 thread，並自動 @ 負責業務；提示可直接於 thread 補充或修訂。
-2. **送出按鈕**：Slack Block Kit 提供 `✅ 送出摘要`，觸發後端重新擷取最新 Markdown、寫入 Firestore、渲染永久客戶頁面。
-3. **永久摘要頁**：部署於 `sales.ichefpos.com/summary/{caseId}`，含 iCHEF branding、會議摘要、下一步與「聯絡我的業務」LINE 連結。
-4. **對外通知**：完成頁面生成後，透過 SMS（可選擇同步 Email）發送頁面連結與簡短問候語給客戶，並記錄發送結果。
-5. **再次修訂**：若業務於 thread 更新內容，可重新按鈕送出，系統會覆寫頁面與重新通知客戶。
+### Slack Workflow（Updated 2025-10-31）
+
+**架構決策**：所有互動僅透過業務與 Bot 的 **Direct Message（DM）**，不使用 Channel，以確保客戶資料隱私。
+
+#### 層次 1: 音檔上傳與 Agent 6 分析
+
+**用戶操作流程**：
+1. 業務在 Slack 左側找到 "Sales AI Bot" 並開啟 DM 對話
+2. 拖放音檔（m4a/mp3/wav）到對話中
+3. Bot 自動偵測並在 thread 中顯示 `[🎤 分析此錄音]` 按鈕
+4. 業務點擊按鈕，開啟 Modal 填寫：
+   - 店名（必填）
+   - 客戶編號（必填）
+   - 客戶手機（必填，用於 SMS）
+   - 備註（可選）
+5. 提交後，Bot 在 thread 回覆確認訊息並更新按鈕為 `[✓ 已開始分析]`（禁用）
+6. 系統處理 30-40 分鐘（轉錄 + Agent 1-6 分析）
+7. Bot 在同一 thread 回覆 Agent 6 銷售分析卡片
+
+**防重複機制**：
+- **Modal 開啟階段**：不鎖定，用戶可取消並重新點擊
+- **Modal 提交階段**：使用 Firestore Transaction 立即鎖定，防止並發提交
+- **Cloud 處理失敗**：保持 Slack 鎖定，Cloud Tasks 自動重試（最多 5 次）
+- **處理完成**：按鈕保持禁用狀態 `[✓ 已完成分析]`
+
+**技術要點**：
+- 僅監聽 `file_shared` 事件的 `shares.private`（DM）
+- 使用 `processed_files` collection 追蹤檔案處理狀態
+- Cloud Tasks retry policy: max_attempts=5, exponential backoff 60s-600s
+
+#### 層次 2: Agent 7 摘要審核與修改
+
+**用戶操作流程**：
+1. Agent 6 完成後，Agent 7 自動執行（約 15 秒）
+2. Bot 在同一 thread 回覆客戶摘要預覽（前 500 字元）
+3. 提供三個按鈕：
+   - `[✏️ 編輯摘要]`：開啟 Modal，可編輯完整 Markdown 內容
+   - `[👁️ 完整預覽]`：開啟 Modal，顯示完整摘要（唯讀）
+   - `[✅ 確認送出]`：生成網頁並發送 SMS 給客戶
+4. 業務可重複編輯，每次儲存後更新預覽並標記「已編輯」
+5. 確認無誤後點擊「確認送出」
+
+**編輯機制**：
+- 支援 Markdown 格式（標題、列表、粗體等）
+- 自動儲存 `lastEditedAt`、`editedBy`、`editHistory`
+- 可選功能：AI 輔助編輯（業務在 thread 中提出修改建議，AI 自動應用）
+
+#### 層次 3: 客戶摘要網頁與 SMS 發送
+
+**系統處理流程**：
+1. 更新 Firestore `status: "approved"`
+2. 將 Markdown 轉換為 HTML，套用 iCHEF branding 模板
+3. 部署到 `sales.ichefpos.com/summary/{caseId}`
+4. 透過 SMS 服務（Twilio / 三竹資訊）發送網頁連結給客戶
+5. Bot 在 thread 回覆成功訊息：
+   - SMS 發送狀態
+   - 網頁連結
+   - `[📊 查看發送紀錄]` 按鈕
+
+**網頁設計**：
+- iCHEF logo 與 branding
+- 會議摘要（含標題、內容、下一步）
+- 聯絡業務按鈕（LINE 連結）
+- 記錄客戶查看次數與時間
+
+**錯誤處理**：
+- 發送失敗時通知業務並保留重試選項
+- 記錄完整錯誤日誌到 Firestore `delivery.smsError`
+
+詳細技術實作請參考 `specs/001-sales-ai-automation/slack-workflow.md`。
 
 ### Testing & QA Considerations（新增）
+
 - **Agent 6 / 7**：新增單元測試覆蓋 prompt 整合（mock Gemini 輸出），並撰寫整合測試驗證 Firestore 寫入 `analysis.structured` / `analysis.customerSummary` 的 schema。
 - **Slack 摘要流程**：為 `✅ 送出摘要` handler 撰寫 E2E 測試（可用 Slack Bolt testing utilities），確認 thread 更新、@ mention、送出後回覆與錯誤處理。
 - **摘要頁渲染**：加入 snapshot 測試（HTML / Markdown），確保必備章節存在且 LINE 連結正確生成。
 - **SMS/Email 傳送**：以 stub provider 實作 integration test，驗證成功/失敗記錄寫入 Firestore audit collection。
 - **POC 1b（GCS leads）**：執行 `specs/001-sales-ai-automation/poc-tests/poc1b_gcs/download_and_transcribe.py` 的實測，需安裝 `google-cloud-storage`、`google-cloud-core`，並準備 staging bucket；測試時應確認 `poc1b_results.json` 的 latency、標籤與錯誤欄位。
 - **POC 6（POS adoption）**：更新後的測試腳本 `test_questionnaire_extraction.py` 需加入覆蓋率門檻檢查；建議在 CI 中提供可重播 transcript fixture 以檢測 regression。
+
+#### Automated Testing Plan — Agent 6 & 7
+
+1. **Prompt Contract Tests（單元）**
+   - 使用 pytest + fixtures 將 `analysis-service/tests/samples/sample_agent_inputs.json` 提供的資料餵入 mock Gemini 回傳（以靜態 JSON 取代 API），驗證：
+     - Agent 6 `structured` 物件符合 `analysis.structured` schema（欄位齊全、型別正確、nextActions 正好 3 筆等）。
+     - Agent 7 `customerSummary` 與 `markdown` 同步、必要章節與欄位皆存在。
+   - 工具：`pydantic` 或 `jsonschema` 自動驗證，若 schema 變動可共用 `analysis/models/structured.py`。
+   - **Status**: ✅ `analysis-service/tests/test_agent67_contract.py` 以靜態 fixtures（正向／負向／資訊不足）檢查欄位完整性與必要約束（2025-10-30）。
+
+2. **Snapshot & Markdown Tests**
+   - 針對 Agent 7 `markdown` 產出利用 snapshot（如 `pytest-syrupy`）比對，確保章節標題、bullet 結構與說話者引用格式未被意外更動。
+   - 另撰寫檢查：`## 摘要`、`## 重點決議`、`## 待跟進事項`、`## 下一步`、`## 聯絡窗口` 均存在；若缺少則測試失敗。
+
+3. **Integration Tests（Service Pipeline）**
+   - 於 analysis-service 中新增 integration 測試：
+     1. 模擬 Firestore 取得 transcript + Agents 1–5 結果 → 透過 dependency injection 將 Gemini 呼叫替換為 fixture → 執行 Agent 6 → 驗證 Firestore 寫入 `analysis.structured`。
+     2. 同理執行 Agent 7 → 驗證 `analysis.customerSummary` 與對應 markdown 存檔。
+   - 使用 `pytest-asyncio` + `respx`（或自製 stub client）攔截 HTTP 呼叫避免實際扣款。
+
+4. **CLI Harness Regression**
+   - 為 `run_agent6_agent7.py` 建立 smoke 測試：
+     - 透過 `subprocess.run` 執行腳本，改以 `--model mock` 參數觸發自定義 mock（於腳本新增選項：若 model=mock 則載入本地 JSON）。
+     - 驗證輸出檔案存在且能解析為 JSON（structured、customerSummary）。
+   - 將該測試放入 CI 但標記為 `slow`，必要時可透過環境變數關閉真實 API 呼叫。
+   - **Status**: ✅ `run_agent6_agent7.py` 新增 `--mock-scenario`，`make test-agent67` 會執行 mock smoke 測試（2025-10-30）。
+
+5. **Edge Case Fixtures**
+   - 補充至少三個測試情境：
+     - 正向高意願（目前 sample）
+     - 負向為主（客戶拒絕導入）
+     - 資料不足（Agents 1–5 輸出缺欄位）→ 驗證 Agent 6/7 能回傳 `"UNKNOWN"` 或空陣列且不崩潰。
+   - 指定 fixtures 儲存於 `analysis-service/tests/fixtures/agent67/`，並在 README 中標註更新流程。
+   - **Status**: ✅ 三種情境 fixture 已建立（positive/negative/insufficient），並於單元測試中驗證（2025-10-30）。
+
+6. **CI Integration**
+   - 新增 `make test-agent67` 指令，涵蓋上述單元 + snapshot + harness 流程。
+   - 在 GitHub Actions/`lint-and-test.yml` 中加入 matrix job，於推送與 PR 時執行 mock 測試；選擇性地對主幹或 nightly workflow 執行真實 Gemini 端對端測試（需使用低溫度 + 較高超時控制）。
+   - **Status**: ✅ `Makefile` target 完成，`.github/workflows/lint.yml` 現已呼叫 `make test-agent67` 於 CI 中執行（2025-10-30）。
 
 ### Critical Path Performance Budget
 
@@ -502,6 +616,7 @@ sales-ai-automation-v2/
 **Test Results (2025-10-29)**:
 
 **Large-v3 Model Test**:
+
 - Test audio: 25.4 minutes (1521 seconds)
 - Processing time: 49.2 minutes (2951 seconds)
 - Speed ratio: 1.940x (too slow)
@@ -509,6 +624,7 @@ sales-ai-automation-v2/
 - Language confidence: 100%
 
 **Medium Model Test** (Recommended):
+
 - Test audio: 25.4 minutes (1521 seconds)
 - Processing time: 23.2 minutes (1392 seconds)
 - Speed ratio: 0.915x (2.12x faster than large-v3)
@@ -518,6 +634,7 @@ sales-ai-automation-v2/
 **Decision**: ✅ **Use Medium model + Asynchronous processing**
 
 **Rationale**:
+
 - Medium model provides 91.6% quality (well above 85% target)
 - 2.12x speed improvement over large-v3
 - For 40-min audio: ~37 minutes processing time (acceptable for async workflow)
@@ -525,6 +642,7 @@ sales-ai-automation-v2/
 - User experience: Upload → Background processing → Slack notification when ready
 
 **Architecture Impact**:
+
 - Change from synchronous (<5 min) to asynchronous (20-40 min) processing
 - Users receive Slack notification when transcription completes
 - No real-time expectation, acceptable for sales workflow
@@ -553,12 +671,14 @@ sales-ai-automation-v2/
 **Decision**: ✅ **Parallel execution validated, far exceeds performance targets**
 
 **Key Findings**:
+
 - Parallel execution 3.1x faster than sequential
 - All 5 agents complete in 3.28 seconds (12x faster than 40s target)
 - No rate limiting issues with concurrent requests
 - 100% success rate, 0% errors
 
 **Architecture Impact**:
+
 - Confirmed: Use `asyncio.gather()` for parallel agent execution
 - No need for token bucket or queueing (no rate limits encountered)
 - Multi-agent analysis contributes <5 seconds to total processing time (negligible)
@@ -574,6 +694,7 @@ sales-ai-automation-v2/
 **Model Used**: Gemini 2.0 Flash with JSON Mode
 **Test Cases**: 10 iterations (5 × Agent 1, 5 × Agent 5)
 **Configuration**:
+
 - `response_mime_type: "application/json"`
 - `temperature: 0.1`
 - `max_output_tokens: 8192`
@@ -588,6 +709,7 @@ sales-ai-automation-v2/
 **Decision**: ✅ **Gemini 2.0 Flash JSON Mode validated with optimized prompts**
 
 **Key Optimizations**:
+
 1. **Enable JSON Mode**: `response_mime_type: "application/json"` guarantees valid JSON
 2. **Explicit Schema in Prompt**: Define complete JSON structure with field constraints
 3. **Provide Examples**: Include full example JSON in prompt
@@ -595,11 +717,13 @@ sales-ai-automation-v2/
 5. **Mark Required Fields**: Clearly indicate mandatory vs optional fields
 
 **Prompt Design Best Practices**:
+
 - More important than model parameters for schema compliance
 - Complete schema definition in prompt → 100% compliance
 - Examples reduce hallucination and improve structure consistency
 
 **Architecture Impact**:
+
 - Use Gemini 2.0 Flash (not 1.5 Flash) for all agents
 - JSON Mode enabled for all structured outputs
 - No need for function calling fallback
@@ -612,6 +736,7 @@ sales-ai-automation-v2/
 **Question**: Can Slack Block Kit + FastAPI handle interactive buttons, modals, and threaded conversations?
 
 **Approach**:
+
 1. Implement prototype Slack app with:
    - Slash command `/test-upload`
    - Interactive message with 5 buttons
@@ -623,6 +748,7 @@ sales-ai-automation-v2/
    - Threaded conversation context retrieval (target: <500ms)
 
 **Success Criteria**:
+
 - All interactions respond within 3s (Slack timeout)
 - Thread context retrieval <500ms
 - No dropped events under load (10 simultaneous interactions)
@@ -636,6 +762,7 @@ sales-ai-automation-v2/
 **Question**: Can Firestore handle real-time queries for 200-250 cases/month with complex filters?
 
 **Approach**:
+
 1. Design Firestore schema (see Phase 1)
 2. Seed 1000 test cases
 3. Test queries:
@@ -648,6 +775,7 @@ sales-ai-automation-v2/
    - Index requirements
 
 **Success Criteria**:
+
 - Case fetch by ID: <100ms
 - Complex filters: <300ms
 - Monthly Firestore cost: <$5
@@ -661,6 +789,7 @@ sales-ai-automation-v2/
 **Question**: Can Agent 5 accurately extract questionnaire responses from conversation without explicit Q&A structure?
 
 **Approach**:
+
 1. Create 15 test transcripts with varying explicitness:
    - Explicit: "我們有用掃碼點餐" → current_status: "使用中"
    - Implicit: "客人都老人家不會用手機" → barriers: ["customer_adoption"]
@@ -673,6 +802,7 @@ sales-ai-automation-v2/
    - Completeness score accuracy
 
 **Success Criteria**:
+
 - Topic detection recall: >85% (finds 85% of discussed features)
 - Response accuracy: >75% (responses match ground truth)
 - Confidence calibration: High confidence (>80) → >90% accurate
@@ -688,6 +818,7 @@ sales-ai-automation-v2/
 **Objective**: Design data models, API contracts, agent prompts, and deployment architecture.
 
 **Output**:
+
 - `data-model.md`: Firestore collections, Gemini prompt templates
 - `contracts/`: API specs (OpenAPI), queue payloads (JSON), Slack blocks (JSON)
 - `quickstart.md`: Local dev setup, deployment guide
@@ -709,18 +840,22 @@ sales-ai-automation-v2/
   caseId: string,              // Same as document ID
   createdAt: Timestamp,
   updatedAt: Timestamp,
-  status: "pending" | "transcribing" | "analyzing" | "completed" | "failed",
+  status: "pending" | "transcribing" | "analyzing" | "awaiting_review" | "approved" | "sent" | "failed",
   sourceType: "google_drive" | "gcs" | "slack",
 
   // === Customer & Sales Rep ===
   customerName: string,
+  customerId: string,          // 客戶編號（新增）
+  customerPhone: string,       // 客戶手機（用於 SMS，新增）
   salesRepEmail: string,       // Index for queries
   salesRepName: string,
+  salesRepSlackId: string,     // 業務的 Slack ID（新增）
   unit: string,                // "IC" | "OTHER"
 
   // === Audio File ===
   audio: {
     fileName: string,
+    slackFileId: string,       // Slack file ID（Slack 上傳時有值，新增）
     originalUrl: string,       // Google Drive or GCS
     gcsPath: string,           // gs://bucket/path (processed copy)
     duration: number,          // Seconds
@@ -972,9 +1107,21 @@ sales-ai-automation-v2/
     },
     rawOutput: string,         // Full Gemini response (v7.0 format for comparison)
 
+    // Agent 7: Customer Summary（新增編輯功能）
     customerSummary: {
       summary: string,          // 2-3 sentence recap (Traditional Chinese)
-      markdown: string,         // Markdown with required sections
+      markdown: string,         // 當前版本的 Markdown
+      originalMarkdown: string, // AI 原始生成的版本（用於比對）
+      lastEditedAt: Timestamp,  // 最後編輯時間
+      editedBy: string,         // 編輯者 Slack ID
+      editHistory: [            // 編輯歷史（可選）
+        {
+          markdown: string,
+          editedAt: Timestamp,
+          editedBy: string,
+          comment: string,      // 編輯原因
+        }
+      ],
       keyDecisions: [
         {
           title: string,
@@ -1026,12 +1173,33 @@ sales-ai-automation-v2/
     completedAt: Timestamp,
   },
 
-  // === Slack Notification ===
+  // === Slack Notification（更新）===
   notification: {
-    slackMessageTs: string,    // Thread timestamp for conversational AI
-    sentAt: Timestamp,
+    slackChannelId: string,          // DM channel ID（就是 user_id）
+    slackThreadTs: string,           // Thread timestamp（音檔訊息的 ts）
+    slackFileId: string,             // Slack file ID
+    agent6MessageTs: string,         // Agent 6 分析卡片的 message_ts
+    agent7MessageTs: string,         // Agent 7 摘要預覽的 message_ts
+    agent6SentAt: Timestamp,
+    agent7SentAt: Timestamp,
     deliveryStatus: "sent" | "failed" | "skipped",
     errorMessage: string,
+  },
+
+  // === 客戶摘要發送（新增）===
+  delivery: {
+    smsStatus: "pending" | "sent" | "failed",
+    smsSid: string,                  // SMS 服務商的訊息 ID
+    customerPhone: string,           // 發送目標號碼
+    sentAt: Timestamp,
+    failedAt: Timestamp,
+    smsError: string,
+    summaryUrl: string,              // 完整網址
+    shortUrl: string,                // 短網址（可選）
+    viewCount: number,               // 客戶查看次數
+    firstViewedAt: Timestamp,        // 首次查看時間
+    lastViewedAt: Timestamp,         // 最後查看時間
+    completedAt: Timestamp,          // 整個流程完成時間
   },
 
   // === Feedback ===
@@ -1075,9 +1243,10 @@ sales-ai-automation-v2/
     occurredAt: Timestamp,
   },
 }
-```
+```text
 
 **Indexes**:
+
 - `salesRepEmail` (for queries: "get my cases")
 - `status` (for monitoring: "count pending cases")
 - `createdAt` (for reporting: "cases this month")
@@ -1092,15 +1261,61 @@ sales-ai-automation-v2/
 {
   email: string,
   slackId: string,             // "U12345ABC" for Slack API
+  lineId: string,              // LINE 官方帳號 ID（新增，用於摘要網頁）
+  phone: string,               // 業務電話（新增）
   name: string,
   unit: string,                // "IC" | "OTHER"
   active: boolean,
+  welcomed: boolean,           // 是否已發送歡迎訊息（新增）
+  firstOpenedAt: Timestamp,    // 首次開啟 Bot 對話時間（新增）
   createdAt: Timestamp,
   updatedAt: Timestamp,
 }
-```
+```text
 
 **Indexes**: None (query by document ID)
+
+---
+
+##### Collection: `processed_files`（新增）
+
+```typescript
+// Document ID: slack_file_id
+{
+  slackFileId: string,              // Slack file ID（主鍵）
+  status: "processing" | "completed" | "failed",
+  locked: boolean,                  // 防止並發處理
+  lockedAt: Timestamp,
+
+  // 關聯資訊
+  caseId: string,                   // 對應的 case ID
+  channelId: string,                // DM channel ID
+  messageTs: string,                // 音檔訊息的 timestamp
+  threadTs: string,                 // Bot 回覆訊息的 timestamp
+
+  // 檔案資訊
+  fileName: string,
+  fileSize: number,
+
+  // 客戶資訊
+  customerName: string,
+  customerId: string,
+  customerPhone: string,
+
+  // 處理者
+  processedBy: string,              // 業務的 Slack ID
+
+  // 時間戳
+  processedAt: Timestamp,           // 開始處理時間
+  completedAt: Timestamp,           // 完成時間
+  failedAt: Timestamp,              // 失敗時間
+}
+```text
+
+**Indexes**:
+- `caseId` (for reverse lookup)
+- `processedBy` (for user queries)
+- `status` (for monitoring)
 
 ---
 
@@ -1124,7 +1339,7 @@ sales-ai-automation-v2/
   createdAt: Timestamp,
   version: number,
 }
-```
+```text
 
 ---
 
@@ -1179,7 +1394,7 @@ For EACH identified speaker, analyze and return structured JSON:
 
 ## Output Format
 Return ONLY valid JSON. No markdown, no explanation.
-```
+```text
 
 **(Similar prompt templates for Agents 2-6 to be created in Phase 1)**
 
@@ -1242,7 +1457,7 @@ paths:
       responses:
         '200':
           description: Acknowledge interaction
-```
+```text
 
 ---
 
@@ -1281,7 +1496,7 @@ paths:
     }
   }
 }
-```
+```text
 
 ---
 
@@ -1339,7 +1554,7 @@ curl -X POST http://localhost:8001/transcribe \
 
 ## Deployment
 See `docs/deployment.md`
-```
+```text
 
 ---
 
@@ -1352,6 +1567,7 @@ See `docs/deployment.md`
 **High-Level Task Breakdown** (for reference):
 
 ### Sprint 1: Foundation (Week 1-2)
+
 - [ ] Setup GCP project, Terraform IaC
 - [ ] Deploy Firestore, Cloud Storage, Cloud Tasks
 - [ ] Implement orchestration-service skeleton
@@ -1359,6 +1575,7 @@ See `docs/deployment.md`
 - [ ] Setup CI/CD pipelines
 
 ### Sprint 2: Transcription Service (Week 3-4)
+
 - [ ] Implement transcription-service with Faster-Whisper
 - [ ] Implement speaker diarization
 - [ ] Implement quality scoring (FR-010)
@@ -1366,6 +1583,7 @@ See `docs/deployment.md`
 - [ ] Deploy to Cloud Run (dev environment)
 
 ### Sprint 3: Multi-Agent Analysis (Week 5-6)
+
 - [ ] Implement analysis-service orchestrator
 - [ ] Implement Agent 1: Participant Analyzer
 - [ ] Implement Agent 2: Sentiment Analyzer
@@ -1374,6 +1592,7 @@ See `docs/deployment.md`
 - [ ] Integration test: End-to-end transcription → analysis
 
 ### Sprint 4: Multi-Agent Analysis (Cont.) (Week 7-8)
+
 - [ ] Implement Agent 4: Competitor Analyzer
 - [ ] Implement Agent 5: Questionnaire Analyzer
 - [ ] Implement Agent 6: Sales Coach Synthesizer
@@ -1382,6 +1601,7 @@ See `docs/deployment.md`
 - [ ] Performance test: Parallel execution <40s
 
 ### Sprint 5: Slack Integration (Week 9-10)
+
 - [ ] Implement slack-service skeleton
 - [ ] Implement `/錄音分析` slash command + upload modal
 - [ ] Implement interactive Block Kit messages
@@ -1391,6 +1611,7 @@ See `docs/deployment.md`
 - [ ] Implement summary review workflow（thread @業務、修改提醒、送出按鈕）
 
 ### Sprint 6: Integration & Polish (Week 11-12)
+
 - [ ] E2E test: Upload via Slack → Notification
 - [ ] Google Sheets daily sync function
 - [ ] GAS webhook compatibility layer
@@ -1402,6 +1623,7 @@ See `docs/deployment.md`
 - [ ] Alert configuration (Slack + Email)
 
 ### Sprint 7: Migration & Launch (Week 13-14)
+
 - [ ] Data migration script from V1
 - [ ] Parallel run (V1 + V2 both active)
 - [ ] User training (Slack usage guide)
@@ -1421,11 +1643,13 @@ See `docs/deployment.md`
 All key decisions have been confirmed by the user on 2025-01-29:
 
 ### 1. iCHEF Product Catalog for Agent 3 ✅
-**Decision**: Use iCHEF official website (https://www.ichefpos.com/) as product catalog reference
+
+**Decision**: Use iCHEF official website (<https://www.ichefpos.com/>) as product catalog reference
 
 **Product Catalog Structure**:
 
 #### Core Products
+
 1. **餐飲 POS 系統**
    - 解決痛點：提升出餐速度、減少人力依賴、即時營運掌控
    - 目標客群：小吃店、質感餐酒館、連鎖品牌
@@ -1449,6 +1673,7 @@ All key decisions have been confirmed by the user on 2025-01-29:
    - 功能：多店管理、集中控管
 
 #### Upgrade Path for Agent 3 Recommendations
+
 - **新客入門**：POS 系統 + 線上訂位
 - **成長驅動**：掃碼點餐 + 智慧推薦 → 客單價提升
 - **擴張路徑**：雲端餐廳 → 總部系統（連鎖管理）
@@ -1456,52 +1681,61 @@ All key decisions have been confirmed by the user on 2025-01-29:
 ---
 
 ### 2. Discovery Questionnaire Templates (Agent 5) ✅
+
 **Decision**: Option B - Prompt-based approach (no Firestore templates in MVP)
 
 **Feature Categories (22 specific features across 6 categories)**:
 
 #### 1️⃣ 點餐與訂單管理
-1. 掃碼點餐（QR Code 掃碼點餐）
-2. 多人掃碼點餐
-3. 套餐加價購
-4. 智慧菜單推薦
-5. POS 點餐系統
-6. 線上點餐接單
+
+- 掃碼點餐（QR Code 掃碼點餐）
+- 多人掃碼點餐
+- 套餐加價購
+- 智慧菜單推薦
+- POS 點餐系統
+- 線上點餐接單
 
 #### 2️⃣ 線上整合服務
-7. 線上訂位管理
-8. 線上外帶自取
-9. 雲端餐廳（Online Store）
-10. Google 整合
-11. LINE 整合
-12. 外送平台整合
-13. 聯絡式外帶服務
+
+- 線上訂位管理
+- 線上外帶自取
+- 雲端餐廳（Online Store）
+- Google 整合
+- LINE 整合
+- 外送平台整合
+- 聯絡式外帶服務
 
 #### 3️⃣ 成本與庫存管理
-14. 成本控管
-15. 庫存管理
-16. 帳款管理
+
+- 成本控管
+- 庫存管理
+- 帳款管理
 
 #### 4️⃣ 業績與銷售分析
-17. 銷售分析
-18. 報表生成功能
+
+- 銷售分析
+- 報表生成功能
 
 #### 5️⃣ 客戶關係管理
-19. 零秒集點（忠誠點數系統 2.0）
-20. 會員管理
+
+- 零秒集點（忠誠點數系統 2.0）
+- 會員管理
 
 #### 6️⃣ 企業級功能
-21. 總部系統
-22. 連鎖品牌管理
+
+- 總部系統
+- 連鎖品牌管理
 
 **Implementation**: Agent 5 system prompt will include complete feature list. Agent should flexibly detect any mentioned features from conversation.
 
 ---
 
 ### 3. Disaster Recovery Strategy ✅
+
 **Decision**: Option A (Simple) - Wait for recovery, accept rare downtime
 
 **Rationale**:
+
 - Monthly volume is low (200-250 files)
 - $0 extra cost
 - Acceptable trade-off: Potential 1-2 hour downtime per year vs +$15-20/month
@@ -1509,9 +1743,11 @@ All key decisions have been confirmed by the user on 2025-01-29:
 ---
 
 ### 4. Questionnaire Prompt Design ✅
+
 **Decision**: Current structure approved, iterate if issues arise
 
 **Structure**:
+
 - current_status（使用狀態）
 - need_reasons（需求原因 + quotes + confidence）
 - perceived_value（價值評估）
@@ -1524,9 +1760,11 @@ All key decisions have been confirmed by the user on 2025-01-29:
 ---
 
 ### 5. Multi-Agent Architecture ✅
+
 **Decision**: Approved - Use 6-agent architecture
 
 **Confirmation**:
+
 - Agents 1-5 execute in parallel
 - Agent 6 synthesizes all results
 - Cost: +$15/month acceptable
@@ -1540,21 +1778,25 @@ All key decisions have been confirmed by the user on 2025-01-29:
 ## Next Steps
 
 **Immediate**:
+
 1. User reviews this plan and answers 5 open questions above
 2. User reviews spec.md (already complete) for final approval
 3. Decide: Proceed to Phase 0 (POCs) or skip to Phase 1 (design)?
 
 **Recommended Sequence**:
+
 1. **This Week**: Run POCs 1-6 (validate critical assumptions) → Output: `research.md`
 2. **Next Week**: Detailed design (data models, prompts, contracts) → Output: `data-model.md`, `contracts/`, `quickstart.md`
 3. **Week 3**: Create implementation tasks → Output: `tasks.md` (via `/speckit.tasks`)
 4. **Week 4+**: Begin Sprint 1
 
 **Alternative (Fast-Track)**:
+
 - Skip POCs, proceed directly to implementation (higher risk if assumptions are wrong)
 - Recommendation: **Do NOT skip POCs** - Speaker diarization performance and Gemini structured output quality are critical unknowns
 
 **Backlog / TODO**:
+
 - **POC 1b**: Cloud Storage leads ingestion → download → transcription pipeline → `sourceType=leads` tagging（待完成，暫時排在 POC 7 之後）
 - **POC 1 (Slack)**: 上傳來源需標記 `sourceType=slack` + `stage=opportunity`，並驗證轉錄管線與 Firestore 寫入一致（排程於 POC 7 後統一調整）
 - **Agent 6 & 7 Integration**: 已完成 prompt（agent6-coach.md, agent7-summary.md），尚需實作 Gemini 呼叫、結果驗證與 Firestore 寫入流程
@@ -1588,6 +1830,7 @@ All key decisions have been confirmed by the user on 2025-01-29:
 **Status**: ⚠️ Slightly over $45 budget
 
 **Optimization Options** (if needed):
+
 1. Reduce Gemini token usage (shorter prompts, fewer examples) → Save $2-3/month
 2. Use Gemini 1.5 Flash-8B (cheaper model, slight quality trade-off) → Save $5-7/month
 3. Reduce Cloud Run vCPU for transcription (1 vCPU instead of 2, slower but still <5min) → Save $14/month

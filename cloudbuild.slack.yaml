@@ -1,0 +1,33 @@
+steps:
+  # Build the container image
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-f'
+      - 'Dockerfile.slack'
+      - '-t'
+      - 'asia-east1-docker.pkg.dev/sales-ai-automation-v2/cloud-run-source-deploy/sales-ai-slack-app:$BUILD_ID'
+      - '-t'
+      - 'asia-east1-docker.pkg.dev/sales-ai-automation-v2/cloud-run-source-deploy/sales-ai-slack-app:latest'
+      - '.'
+
+  # Push the container image to Artifact Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - 'asia-east1-docker.pkg.dev/sales-ai-automation-v2/cloud-run-source-deploy/sales-ai-slack-app:$BUILD_ID'
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - 'asia-east1-docker.pkg.dev/sales-ai-automation-v2/cloud-run-source-deploy/sales-ai-slack-app:latest'
+
+images:
+  - 'asia-east1-docker.pkg.dev/sales-ai-automation-v2/cloud-run-source-deploy/sales-ai-slack-app:$BUILD_ID'
+  - 'asia-east1-docker.pkg.dev/sales-ai-automation-v2/cloud-run-source-deploy/sales-ai-slack-app:latest'
+
+serviceAccount: 'projects/sales-ai-automation-v2/serviceAccounts/497329205771-compute@developer.gserviceaccount.com'
+
+options:
+  machineType: 'E2_HIGHCPU_8'
+  logging: CLOUD_LOGGING_ONLY

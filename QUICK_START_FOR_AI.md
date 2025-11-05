@@ -9,6 +9,7 @@
 ## 🚀 Start Here (Essential Reading Order)
 
 ### 1️⃣ Read This First (30 seconds)
+
 - **Current Phase**: Phase 0 - POC Validation (Ready to Execute)
 - **Last Session**: 2025-01-29 (Planning & Specification completed)
 - **Next Steps**: Execute 6 POC tests (3-4 days with 3-person team)
@@ -16,14 +17,17 @@
 ### 2️⃣ Read Context Files (5 minutes)
 
 **Must Read** (in order):
+
 1. `DEVELOPMENT_GUIDELINES.md` ⚠️ **MANDATORY** - Recording rules (READ FIRST!)
-2. `DEVELOPMENT_LOG.md` - Full session history, decisions, and context
-3. `memory/constitution.md` - System principles (cost, performance, Chinese optimization)
-4. `specs/001-sales-ai-automation/spec.md` - 8 User Stories, 22 features, success criteria
+2. `docs/ai-collaboration-playbook.md` - 標準開發流程與交接規範
+3. `DEVELOPMENT_LOG.md` - Full session history, decisions, and context
+4. `memory/constitution.md` - System principles (cost, performance, Chinese optimization)
+5. `docs/credential-management.md` - Secret/Token 存取方式（避免重複索取）
+6. `specs/001-sales-ai-automation/spec.md` - 8 User Stories, 22 features, success criteria
 
 **Optional** (if implementing):
-4. `specs/001-sales-ai-automation/plan.md` - Technical architecture, cost breakdown
-5. `specs/001-sales-ai-automation/research.md` - 6 POC test plans
+7. `specs/001-sales-ai-automation/plan.md` - Technical architecture, cost breakdown
+8. `specs/001-sales-ai-automation/research.md` - 6 POC test plans
 
 ### 3️⃣ Understand Key Decisions (1 minute)
 
@@ -54,6 +58,7 @@ All critical decisions are FINAL ✅ (do not re-discuss):
 **Immediate**: Execute Phase 0 POC validations
 
 **6 POCs to validate** (3-4 days, 3-person team):
+
 1. Faster-Whisper + Speaker Diarization (<5 min, >80% accuracy)
 2. Multi-Agent Parallel Orchestration (<40s, <5% errors)
 3. Gemini Structured Output Quality (>95% compliance)
@@ -65,7 +70,7 @@ All critical decisions are FINAL ✅ (do not re-discuss):
 
 ## 🗂️ File Structure (What to Look At)
 
-```
+```text
 sales-ai-automation-V2/
 ├── DEVELOPMENT_LOG.md           ⭐ FULL SESSION HISTORY - READ FIRST
 ├── QUICK_START_FOR_AI.md        ⭐ THIS FILE
@@ -84,35 +89,42 @@ sales-ai-automation-V2/
 │       │   └── test_parallel.py 🐍 Multi-agent orchestration test
 │       └── poc6_questionnaire/
 │           └── agent5_prompts/v1.md  💬 Questionnaire analyzer prompt
-```
+```text
 
 ---
 
 ## 💡 Common User Requests & How to Handle
 
 ### "Continue where we left off"
+
 → Read `DEVELOPMENT_LOG.md` Session 1 to understand full context
 → Current task: Prepare for POC execution (or execute if ready)
 
 ### "Can you explain the architecture?"
+
 → Read `specs/001-sales-ai-automation/plan.md`
 → Key: 4 Cloud Run services, 6 agents (1-5 parallel, 6 synthesis), Firestore primary
 
 ### "What are the 22 features for Agent 5?"
+
 → See `DEVELOPMENT_LOG.md` "22 iCHEF Features" section
 → Also in `spec.md` lines 943-976
 
 ### "Why did we choose X over Y?"
+
 → Check `DEVELOPMENT_LOG.md` "Key Discussions & Decisions"
 → All decisions have documented rationale
 
 ### "What's the budget/cost?"
+
 → $46.74/month for 250 files (see `plan.md` cost breakdown)
 → Slightly over $45 target but acceptable
 
 ### "How do I run the POC tests?"
+
 → Read `specs/001-sales-ai-automation/research.md`
 → Test scripts in `specs/001-sales-ai-automation/poc-tests/`
+→ Agent 6/7 regression：`make test-agent67`（使用內建 mock fixtures，可離線執行；需要先 `pip install pytest`）
 
 ---
 
@@ -135,6 +147,7 @@ sales-ai-automation-V2/
 ### Respect the Constitution
 
 `memory/constitution.md` defines immutable principles:
+
 - Cost optimization first (<$45/month target)
 - Self-hosted Faster-Whisper (not OpenAI API)
 - Event-driven architecture (not polling)
@@ -147,6 +160,7 @@ sales-ai-automation-V2/
 ### Prerequisites Checklist
 
 Ask user to confirm:
+
 - [ ] GCP project created with billing enabled
 - [ ] Slack workspace with test app
 - [ ] Gemini API key obtained
@@ -200,7 +214,7 @@ Ask user to confirm:
 
 #### Next Session Preparation
 - Action items for next AI assistant
-```
+```text
 
 ---
 
@@ -254,6 +268,6 @@ Before responding to user, verify:
 
 ---
 
-**Welcome to the project! You're now ready to continue development. 🚀**
+#### Welcome to the project! You're now ready to continue development. 🚀
 
 *Last Updated: 2025-01-29 by Claude Sonnet 4.5*

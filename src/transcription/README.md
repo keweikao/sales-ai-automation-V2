@@ -9,10 +9,11 @@
 - **並行轉錄**: 使用 ThreadPoolExecutor 多線程並行處理，6 workers 提供 3-4x 加速
 - **結果合併**: 智能合併片段結果，處理重疊區域去重
 - **多格式輸出**: 支援 TXT、SRT、VTT、JSON 格式
+- **品質評分**: 完整計算語言信心、段落一致性、重複率、說話者覆蓋率等指標（FR-010）
 
 ## 架構
 
-```
+```text
 src/transcription/
 ├── pipeline.py              # 主要 Pipeline 整合
 ├── vad/
@@ -23,7 +24,7 @@ src/transcription/
 │   └── transcriber.py      # 並行轉錄處理
 └── merging/
     └── merger.py           # 結果合併
-```
+```text
 
 ## 快速開始
 
@@ -31,7 +32,7 @@ src/transcription/
 
 ```bash
 pip install -r requirements.txt
-```
+```text
 
 ### 2. 基本使用
 
@@ -54,7 +55,7 @@ result = pipeline.process_audio(
 )
 
 print(result["full_text"])
-```
+```text
 
 ### 3. 命令列使用
 
@@ -65,11 +66,12 @@ python src/transcription/pipeline.py \
     --workers 6 \
     --vad-preset meeting \
     --formats txt json srt
-```
+```text
 
 ## 配置選項
 
 ### 模型大小
+
 - `tiny`: 最快，品質較低
 - `base`: 快速，基本品質
 - `small`: 平衡
@@ -77,12 +79,14 @@ python src/transcription/pipeline.py \
 - `large-v3`: 最高品質，速度較慢
 
 ### VAD 預設
+
 - **`meeting`**: 多人對話會議（預設）
 - `presentation`: 單人簡報演講
 - `noisy`: 嘈雜環境
 - `default`: 一般用途
 
 ### 並行工作數
+
 - CPU: 建議 6 workers
 - GPU: 建議 2-3 workers（GPU 已經很快）
 
@@ -97,6 +101,7 @@ python src/transcription/pipeline.py \
 | **優化** | Medium + VAD + 並行 | **4-6 min** | **~0.2x** | **92-93%** |
 
 ### 預期效能提升
+
 - VAD 去除靜音: 1.5-2x
 - 並行處理 (6 workers): 3-4x
 - 智能分段: 減少記憶體使用
@@ -105,6 +110,7 @@ python src/transcription/pipeline.py \
 ## 模組說明
 
 ### VADProcessor
+
 語音活動檢測，去除靜音片段
 
 ```python
@@ -117,9 +123,10 @@ vad = VADProcessor(
 )
 
 params = vad.get_vad_parameters()
-```
+```text
 
 ### AudioChunker
+
 智能音檔分段
 
 ```python
@@ -131,9 +138,10 @@ chunker = AudioChunker(
 )
 
 chunks = chunker.create_chunks(total_duration=3600)
-```
+```text
 
 ### ParallelTranscriber
+
 並行轉錄處理
 
 ```python
@@ -146,9 +154,10 @@ transcriber = ParallelTranscriber(
 )
 
 results = transcriber.transcribe_chunks(audio_path, chunks)
-```
+```text
 
 ### TranscriptionMerger
+
 結果合併
 
 ```python
@@ -160,7 +169,7 @@ final_result = merger.merge_chunks(chunk_results)
 # 儲存為不同格式
 merger.save_to_file(final_result, "output.txt", format="txt")
 merger.save_to_file(final_result, "output.srt", format="srt")
-```
+```text
 
 ## 測試
 
@@ -175,14 +184,16 @@ python test_optimized_pipeline.py \
     --workers 6 \
     --vad-preset meeting \
     --output poc1_optimized_results.json
-```
+```text
 
 ## 輸出格式
 
 ### TXT
+
 純文字轉錄結果
 
 ### SRT
+
 標準字幕格式，包含時間戳
 
 ```srt
@@ -193,12 +204,14 @@ python test_optimized_pipeline.py \
 2
 00:00:03,500 --> 00:00:07,000
 這是第二個句子
-```
+```text
 
 ### VTT
+
 WebVTT 字幕格式
 
 ### JSON
+
 完整的結構化結果，包含所有 segments 和統計資訊
 
 ## 系統需求
@@ -211,29 +224,35 @@ WebVTT 字幕格式
 ## 故障排除
 
 ### 記憶體不足
+
 減少並行工作數或片段大小：
+
 ```python
 pipeline = OptimizedTranscriptionPipeline(
     max_workers=4,  # 減少 workers
     target_chunk_duration=300  # 5 分鐘片段
 )
-```
+```text
 
 ### 品質不佳
+
 使用更大的模型或調整 VAD 參數：
+
 ```python
 pipeline = OptimizedTranscriptionPipeline(
     model_size="large-v3",
     vad_preset="noisy"  # 嘈雜環境使用更嚴格的 VAD
 )
-```
+```text
 
 ### 速度太慢
+
 確認已啟用 VAD 和並行處理：
+
 ```python
 # 檢查配置
 print(result["pipeline_config"])
-```
+```text
 
 ## 授權
 

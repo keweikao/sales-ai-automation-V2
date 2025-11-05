@@ -1,0 +1,432 @@
+{
+  "questions": [
+    {
+      "id": "Q001",
+      "question": "今天團隊表現如何？",
+      "type": "team_overview",
+      "expectedParams": {
+        "timeRange": "today"
+      },
+      "expectedAnswerPoints": [
+        "完成案件數",
+        "平均健康度",
+        "表現優異的業務",
+        "需要關注的案件"
+      ]
+    },
+    {
+      "id": "Q002",
+      "question": "本週完成幾件案件？",
+      "type": "team_overview",
+      "expectedParams": {
+        "timeRange": "this_week"
+      },
+      "expectedAnswerPoints": [
+        "總案件數",
+        "完成率",
+        "各業務的案件數"
+      ]
+    },
+    {
+      "id": "Q003",
+      "question": "團隊平均健康度多少？",
+      "type": "team_overview",
+      "expectedParams": {
+        "timeRange": "today"
+      },
+      "expectedAnswerPoints": [
+        "平均健康度數值",
+        "健康度分布"
+      ]
+    },
+    {
+      "id": "Q004",
+      "question": "有哪些案件需要我關注？",
+      "type": "team_overview",
+      "expectedParams": {
+        "timeRange": "recent",
+        "filter": "low_health"
+      },
+      "expectedAnswerPoints": [
+        "低健康度案件列表",
+        "風險原因",
+        "建議行動"
+      ]
+    },
+    {
+      "id": "Q005",
+      "question": "今天最好的案件是哪個？",
+      "type": "team_overview",
+      "expectedParams": {
+        "timeRange": "today",
+        "sort": "health_desc"
+      },
+      "expectedAnswerPoints": [
+        "案件 ID",
+        "健康度",
+        "業務名字",
+        "客戶名字"
+      ]
+    },
+    {
+      "id": "Q006",
+      "question": "王小明本週表現如何？",
+      "type": "sales_rep_performance",
+      "expectedParams": {
+        "salesRepName": "王小明",
+        "timeRange": "this_week"
+      },
+      "expectedAnswerPoints": [
+        "案件數",
+        "平均健康度",
+        "主要優勢",
+        "改進建議"
+      ]
+    },
+    {
+      "id": "Q007",
+      "question": "誰的健康度最低？",
+      "type": "sales_rep_performance",
+      "expectedParams": {
+        "timeRange": "recent",
+        "metric": "health_score",
+        "sort": "asc"
+      },
+      "expectedAnswerPoints": [
+        "業務名字",
+        "健康度數值",
+        "案件數",
+        "問題原因"
+      ]
+    },
+    {
+      "id": "Q008",
+      "question": "陳美玲最近有什麼問題嗎？",
+      "type": "sales_rep_performance",
+      "expectedParams": {
+        "salesRepName": "陳美玲",
+        "timeRange": "recent"
+      },
+      "expectedAnswerPoints": [
+        "案件健康度",
+        "常見問題",
+        "建議輔導方向"
+      ]
+    },
+    {
+      "id": "Q009",
+      "question": "李大華今天完成幾件案件？",
+      "type": "sales_rep_performance",
+      "expectedParams": {
+        "salesRepName": "李大華",
+        "timeRange": "today"
+      },
+      "expectedAnswerPoints": [
+        "案件數",
+        "案件列表",
+        "平均健康度"
+      ]
+    },
+    {
+      "id": "Q010",
+      "question": "團隊裡誰最厲害？",
+      "type": "sales_rep_performance",
+      "expectedParams": {
+        "timeRange": "this_week",
+        "metric": "overall",
+        "sort": "desc"
+      },
+      "expectedAnswerPoints": [
+        "第一名業務",
+        "案件數",
+        "健康度",
+        "優勢"
+      ]
+    },
+    {
+      "id": "Q011",
+      "question": "#202501-IC003 的情況如何？",
+      "type": "case_details",
+      "expectedParams": {
+        "caseId": "202501-IC003"
+      },
+      "expectedAnswerPoints": [
+        "健康度",
+        "客戶名字",
+        "業務名字",
+        "風險",
+        "下一步行動"
+      ]
+    },
+    {
+      "id": "Q012",
+      "question": "健康度低於 50 的案件有哪些？",
+      "type": "case_details",
+      "expectedParams": {
+        "timeRange": "recent",
+        "healthScoreMax": 50
+      },
+      "expectedAnswerPoints": [
+        "案件列表",
+        "各案件健康度",
+        "主要風險",
+        "建議"
+      ]
+    },
+    {
+      "id": "Q013",
+      "question": "幸福小館這個客戶怎麼樣？",
+      "type": "case_details",
+      "expectedParams": {
+        "customerName": "幸福小館"
+      },
+      "expectedAnswerPoints": [
+        "案件 ID",
+        "健康度",
+        "業務名字",
+        "客戶狀況"
+      ]
+    },
+    {
+      "id": "Q014",
+      "question": "有哪些案件快要成交了？",
+      "type": "case_details",
+      "expectedParams": {
+        "timeRange": "recent",
+        "salesStage": "即將成交型"
+      },
+      "expectedAnswerPoints": [
+        "高健康度案件",
+        "預估成交時間",
+        "下一步行動"
+      ]
+    },
+    {
+      "id": "Q015",
+      "question": "最近有哪些新案件？",
+      "type": "case_details",
+      "expectedParams": {
+        "timeRange": "recent",
+        "sort": "created_desc"
+      },
+      "expectedAnswerPoints": [
+        "新案件列表",
+        "創建時間",
+        "初步評估"
+      ]
+    },
+    {
+      "id": "Q016",
+      "question": "Eats365 最近被提到幾次？",
+      "type": "competitor_intelligence",
+      "expectedParams": {
+        "competitorName": "Eats365",
+        "timeRange": "this_week"
+      },
+      "expectedAnswerPoints": [
+        "提及次數",
+        "佔比",
+        "客戶評價"
+      ]
+    },
+    {
+      "id": "Q017",
+      "question": "客戶對競品的評價如何？",
+      "type": "competitor_intelligence",
+      "expectedParams": {
+        "timeRange": "this_week"
+      },
+      "expectedAnswerPoints": [
+        "主要競品",
+        "優點",
+        "缺點",
+        "我們的應對策略"
+      ]
+    },
+    {
+      "id": "Q018",
+      "question": "Foodpanda POS 的滿意度怎麼樣？",
+      "type": "competitor_intelligence",
+      "expectedParams": {
+        "competitorName": "Foodpanda POS",
+        "timeRange": "recent"
+      },
+      "expectedAnswerPoints": [
+        "平均滿意度",
+        "客戶反饋",
+        "我們的優勢"
+      ]
+    },
+    {
+      "id": "Q019",
+      "question": "哪個競品最常被提到？",
+      "type": "competitor_intelligence",
+      "expectedParams": {
+        "timeRange": "this_week",
+        "sort": "mention_count_desc"
+      },
+      "expectedAnswerPoints": [
+        "第一名競品",
+        "提及次數",
+        "主要場景"
+      ]
+    },
+    {
+      "id": "Q020",
+      "question": "我們跟競品相比有什麼優勢？",
+      "type": "competitor_intelligence",
+      "expectedParams": {
+        "timeRange": "recent"
+      },
+      "expectedAnswerPoints": [
+        "客戶認可的優勢",
+        "差異化功能",
+        "建議話術"
+      ]
+    },
+    {
+      "id": "Q021",
+      "question": "掃碼點餐功能的需求如何？",
+      "type": "product_demand",
+      "expectedParams": {
+        "feature": "掃碼點餐",
+        "timeRange": "this_week"
+      },
+      "expectedAnswerPoints": [
+        "討論次數",
+        "高意願佔比",
+        "主要障礙",
+        "建議"
+      ]
+    },
+    {
+      "id": "Q022",
+      "question": "最熱門的功能是什麼？",
+      "type": "product_demand",
+      "expectedParams": {
+        "timeRange": "this_week",
+        "sort": "demand_desc"
+      },
+      "expectedAnswerPoints": [
+        "第一名功能",
+        "需求度",
+        "成功案例"
+      ]
+    },
+    {
+      "id": "Q023",
+      "question": "庫存管理功能有多少客戶想要？",
+      "type": "product_demand",
+      "expectedParams": {
+        "feature": "庫存管理",
+        "timeRange": "recent"
+      },
+      "expectedAnswerPoints": [
+        "需求次數",
+        "意願分布",
+        "客戶類型"
+      ]
+    },
+    {
+      "id": "Q024",
+      "question": "客戶對外送整合的障礙是什麼？",
+      "type": "product_demand",
+      "expectedParams": {
+        "feature": "外送整合",
+        "timeRange": "recent",
+        "focus": "barriers"
+      },
+      "expectedAnswerPoints": [
+        "主要障礙類型",
+        "嚴重程度",
+        "解決方案"
+      ]
+    },
+    {
+      "id": "Q025",
+      "question": "有哪些功能需求很少被提到？",
+      "type": "product_demand",
+      "expectedParams": {
+        "timeRange": "this_week",
+        "sort": "demand_asc"
+      },
+      "expectedAnswerPoints": [
+        "冷門功能列表",
+        "可能原因",
+        "建議"
+      ]
+    },
+    {
+      "id": "Q026",
+      "question": "本週 vs 上週，健康度有什麼變化？",
+      "type": "trend_comparison",
+      "expectedParams": {
+        "metric": "health_score",
+        "compareRange": ["this_week", "last_week"]
+      },
+      "expectedAnswerPoints": [
+        "本週平均",
+        "上週平均",
+        "變化百分比",
+        "主要原因"
+      ]
+    },
+    {
+      "id": "Q027",
+      "question": "王小明本月跟上月比較如何？",
+      "type": "trend_comparison",
+      "expectedParams": {
+        "salesRepName": "王小明",
+        "compareRange": ["this_month", "last_month"]
+      },
+      "expectedAnswerPoints": [
+        "案件數變化",
+        "健康度變化",
+        "趨勢方向"
+      ]
+    },
+    {
+      "id": "Q028",
+      "question": "團隊成長趨勢如何？",
+      "type": "trend_comparison",
+      "expectedParams": {
+        "timeRange": "last_4_weeks",
+        "metric": "overall"
+      },
+      "expectedAnswerPoints": [
+        "案件數趨勢",
+        "健康度趨勢",
+        "成長或衰退"
+      ]
+    },
+    {
+      "id": "Q029",
+      "question": "Eats365 提及率有增加嗎？",
+      "type": "trend_comparison",
+      "expectedParams": {
+        "competitorName": "Eats365",
+        "metric": "mention_rate",
+        "compareRange": ["this_week", "last_week"]
+      },
+      "expectedAnswerPoints": [
+        "本週提及率",
+        "上週提及率",
+        "變化趨勢"
+      ]
+    },
+    {
+      "id": "Q030",
+      "question": "陳美玲最近進步了嗎？",
+      "type": "trend_comparison",
+      "expectedParams": {
+        "salesRepName": "陳美玲",
+        "compareRange": ["this_week", "last_week"]
+      },
+      "expectedAnswerPoints": [
+        "健康度變化",
+        "案件數變化",
+        "改善領域"
+      ]
+    }
+  ]
+}

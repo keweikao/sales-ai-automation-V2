@@ -36,14 +36,17 @@ Validate 6 critical technical assumptions before committing to full implementati
 ## POC 1: Faster-Whisper Performance with Speaker Diarization
 
 ### Question
+
 Can Faster-Whisper with speaker diarization process 40-minute Chinese audio in <5 minutes on Cloud Run (CPU-only)?
 
 ### Why This Matters
+
 - **Cost Impact**: GPU adds $10-15/month
 - **Architecture Impact**: CPU-only keeps system simple
 - **Performance**: <5 min target enables <4 min end-to-end processing
 
 ### Success Criteria
+
 | Metric | Target | Fallback Threshold |
 |--------|--------|-------------------|
 | Processing Time (40-min audio) | <5 min (0.125x real-time) | <7 min acceptable |
@@ -55,6 +58,7 @@ Can Faster-Whisper with speaker diarization process 40-minute Chinese audio in <
 ### Test Setup
 
 #### Environment
+
 ```yaml
 Platform: Cloud Run
 CPU: 2 vCPU
@@ -64,6 +68,7 @@ Container: Python 3.11 + faster-whisper
 ```
 
 #### Test Dataset
+
 - **Quantity**: 10 diverse audio files
 - **Formats**: m4a (primary), mp3, wav
 - **Durations**: 10min, 20min, 30min, 40min, 60min
@@ -72,16 +77,19 @@ Container: Python 3.11 + faster-whisper
 - **Audio Quality**: Good (studio), Medium (phone recording), Poor (noisy environment)
 
 #### Models to Test
+
 1. **faster-whisper large-v3** (recommended - best Chinese accuracy)
 2. **faster-whisper medium** (fallback - faster but less accurate)
 
 #### Diarization Methods to Test
+
 1. **pyannote.audio** (deep learning-based, higher accuracy)
 2. **simple VAD + clustering** (faster, lower accuracy)
 
 ### Test Procedure
 
 #### Step 1: Baseline Test (No Diarization)
+
 ```bash
 # Deploy minimal Cloud Run service
 cd poc/whisper-test
@@ -97,6 +105,7 @@ curl -X POST https://whisper-test-xxx.run.app/transcribe \
 ```
 
 #### Step 2: Diarization Test (pyannote.audio)
+
 ```bash
 # Enable diarization
 curl -X POST https://whisper-test-xxx.run.app/transcribe \
@@ -108,11 +117,13 @@ curl -X POST https://whisper-test-xxx.run.app/transcribe \
 ```
 
 #### Step 3: Manual Validation
+
 - Randomly sample 5 files
 - Sales rep manually reviews speaker boundaries
 - Calculate accuracy: `correct_boundaries / total_boundaries`
 
 #### Step 4: Cost Analysis
+
 ```python
 # Calculate cost per file
 cpu_time_seconds = 240  # Example: 4 minutes
@@ -129,11 +140,13 @@ print(f"Cost per file: ${compute_cost:.4f}")
 ### Expected Results
 
 #### Hypothesis
+
 - **large-v3 + pyannote**: 4-5 minutes, >85% quality, >80% diarization accuracy
 - **medium + simple VAD**: 2-3 minutes, >80% quality, >70% diarization accuracy
 
 #### Decision Tree
-```
+
+```text
 IF processing_time <5 min AND quality >85% AND diarization >80%:
     → Use large-v3 + pyannote (recommended path)
 
@@ -159,14 +172,17 @@ ELSE:
 ## POC 2: Multi-Agent Orchestration Performance
 
 ### Question
+
 Can 5 Gemini agents execute in parallel within 40 seconds total?
 
 ### Why This Matters
+
 - **Performance**: 40s target keeps total processing <4 min
 - **Cost**: Parallel execution is critical to avoid 5x latency
 - **Rate Limits**: Need to verify Gemini API can handle 5 concurrent requests
 
 ### Success Criteria
+
 | Metric | Target | Fallback Threshold |
 |--------|--------|-------------------|
 | Parallel Execution Time (Agents 1-5) | <40s | <60s acceptable |
@@ -178,6 +194,7 @@ Can 5 Gemini agents execute in parallel within 40 seconds total?
 ### Test Setup
 
 #### Environment
+
 ```yaml
 Platform: Local development (then Cloud Run)
 Python: 3.11
@@ -187,12 +204,14 @@ API Key: Test quota (15 RPM free tier)
 ```
 
 #### Test Transcript
+
 - **Source**: Real 40-minute sales call (anonymized)
 - **Length**: ~10,000 Chinese characters
 - **Speakers**: 3 (sales rep, owner, manager)
 - **Content**: Discussion of POS system, pricing, competitors
 
 #### Agent Configurations
+
 ```python
 agents = {
     "agent1_participant": {
@@ -231,6 +250,7 @@ agents = {
 ### Test Procedure
 
 #### Step 1: Sequential Baseline
+
 ```python
 # Test agents sequentially to get individual times
 import time
@@ -262,6 +282,7 @@ print(f"Total sequential: {total_sequential:.2f}s")
 ```
 
 #### Step 2: Parallel Execution
+
 ```python
 import asyncio
 
@@ -298,6 +319,7 @@ print(f"Errors: {len(errors)}/{len(results)}")
 ```
 
 #### Step 3: Load Test (Concurrent Cases)
+
 ```python
 # Simulate 10 concurrent cases (50 parallel Gemini calls)
 async def process_case(case_id, transcript):
@@ -320,6 +342,7 @@ print(f"Average per case: {duration/10:.2f}s")
 ```
 
 #### Step 4: Agent 6 Synthesis Test
+
 ```python
 # Agent 6 receives outputs from Agents 1-5
 agent6_input = {
@@ -365,13 +388,15 @@ print(f"Total analysis time: {parallel_duration + agent6_duration + agent7_durat
 ### Expected Results
 
 #### Hypothesis
+
 - **Parallel Execution (Agents 1-5)**: 30-40s (dominated by slowest agent)
 - **Agent 6 Synthesis**: 15-20s
 - **Agent 7 Summary**: 10-15s
 - **Total Analysis**: 55-75s
 
 #### Decision Tree
-```
+
+```text
 IF parallel_time <40s AND agent6_time <20s AND errors == 0:
     → Proceed with parallel architecture (recommended)
 
@@ -401,14 +426,17 @@ ELSE IF parallel_time >60s:
 ## POC 3: Gemini Structured Output Quality
 
 ### Question
+
 Can Gemini 1.5 Flash produce consistent structured outputs (JSON) with >95% schema compliance?
 
 ### Why This Matters
+
 - **Automation**: Structured outputs enable direct database storage
 - **Reliability**: High compliance rate = less error handling code
 - **User Experience**: Poor JSON = failed analyses = user frustration
 
 ### Success Criteria
+
 | Metric | Target | Fallback Threshold |
 |--------|--------|-------------------|
 | JSON Schema Compliance | >95% | >90% acceptable |
@@ -419,6 +447,7 @@ Can Gemini 1.5 Flash produce consistent structured outputs (JSON) with >95% sche
 ### Test Setup
 
 #### Test Dataset (30 Transcripts)
+
 - **Variety**:
   - Short calls (10 min): 10 transcripts
   - Medium calls (30 min): 10 transcripts
@@ -427,6 +456,7 @@ Can Gemini 1.5 Flash produce consistent structured outputs (JSON) with >95% sche
 - **Scenarios**: Cold call, demo, negotiation, objection handling
 
 #### JSON Schemas (Pydantic Models)
+
 ```python
 from pydantic import BaseModel, Field
 from typing import List, Literal
@@ -450,6 +480,7 @@ class Agent1Output(BaseModel):
 ### Test Procedure
 
 #### Step 1: Schema Compliance Test
+
 ```python
 import json
 from pydantic import ValidationError
@@ -494,6 +525,7 @@ for agent_id, schema in agent_schemas.items():
 ```
 
 #### Step 2: Hallucination Detection Test
+
 ```python
 # Test if agents invent information not in transcript
 def test_hallucinations():
@@ -541,6 +573,7 @@ def test_hallucinations():
 ```
 
 #### Step 3: Field Completeness Test
+
 ```python
 def test_field_completeness(agent_id, required_fields):
     """Test if agent fills all required fields"""
@@ -573,6 +606,7 @@ test_field_completeness("agent3", agent3_required)
 ```
 
 #### Step 4: Prompt Engineering Iteration
+
 ```python
 # If compliance <95%, iterate on prompts:
 improvements = {
@@ -592,13 +626,15 @@ for improvement_name, description in improvements.items():
 ### Expected Results
 
 #### Hypothesis
+
 - **Initial Compliance**: 85-90% (without optimization)
 - **After Prompt Engineering**: >95%
 - **Hallucination Rate**: <5%
 - **Field Completeness**: >90%
 
 #### Decision Tree
-```
+
+```text
 IF compliance >95% AND hallucination <5%:
     → Proceed with JSON output parsing (recommended)
 
@@ -628,14 +664,17 @@ IF hallucination >10%:
 ## POC 4: Slack Block Kit Interactivity
 
 ### Question
+
 Can Slack Block Kit + FastAPI handle interactive buttons, modals, and threaded conversations within 3s timeout?
 
 ### Why This Matters
+
 - **User Experience**: Slack has 3s timeout for interactions
 - **Architecture**: If timeout exceeded, need Socket Mode (WebSocket)
 - **Complexity**: Socket Mode adds deployment complexity
 
 ### Success Criteria
+
 | Metric | Target | Fallback Threshold |
 |--------|--------|-------------------|
 | Button Click Response Time | <1s | <2s acceptable |
@@ -646,6 +685,7 @@ Can Slack Block Kit + FastAPI handle interactive buttons, modals, and threaded c
 ### Test Setup
 
 #### Environment
+
 ```yaml
 Platform: Local FastAPI → Cloud Run
 Framework: FastAPI + slack-bolt
@@ -654,6 +694,7 @@ Tools: ngrok (for local testing), pytest-asyncio
 ```
 
 #### Test Slack App Features
+
 1. Slash command: `/test-upload`
 2. Interactive message with 5 buttons
 3. Modal form with 3 fields
@@ -663,6 +704,7 @@ Tools: ngrok (for local testing), pytest-asyncio
 ### Test Procedure
 
 #### Step 1: Basic Slack App Setup
+
 ```python
 # slack_service.py
 from slack_bolt import App
@@ -708,6 +750,7 @@ async def endpoint(req: Request):
 ```
 
 #### Step 2: Interactive Message Test
+
 ```python
 @slack_app.action("view_transcript")
 def handle_view_transcript(ack, action, client):
@@ -754,6 +797,7 @@ def send_test_message():
 ```
 
 #### Step 3: Modal Submission Test
+
 ```python
 @slack_app.view("upload_modal_submission")
 def handle_modal_submission(ack, view, client):
@@ -779,6 +823,7 @@ def handle_modal_submission(ack, view, client):
 ```
 
 #### Step 4: Thread Context Retrieval Test
+
 ```python
 @slack_app.event("message")
 def handle_message(event, client):
@@ -807,6 +852,7 @@ def handle_message(event, client):
 ```
 
 #### Step 5: Load Test (10 Concurrent Users)
+
 ```python
 import asyncio
 from slack_sdk.web.async_client import AsyncWebClient
@@ -835,13 +881,15 @@ asyncio.run(load_test())
 ### Expected Results
 
 #### Hypothesis
+
 - **Button clicks**: <1s (Firestore fetch is fast)
 - **Modal submissions**: <2s (Firestore write is fast)
 - **Thread retrieval**: <500ms (indexed Firestore query)
 - **Concurrent load**: 0 dropped events
 
 #### Decision Tree
-```
+
+```text
 IF all_response_times <3s AND dropped_events == 0:
     → Proceed with HTTP mode (recommended - simpler)
 
@@ -867,14 +915,17 @@ ELSE IF response_times >3s OR dropped_events >5%:
 ## POC 5: Firestore Query Performance
 
 ### Question
+
 Can Firestore handle real-time queries for 200-250 cases/month within budget (<$5/month)?
 
 ### Why This Matters
+
 - **Cost**: Firestore charges per read/write operation
 - **Performance**: Need <300ms query latency for good UX
 - **Scalability**: 2+ years of data = 5000+ documents
 
 ### Success Criteria
+
 | Metric | Target | Fallback Threshold |
 |--------|--------|-------------------|
 | Query Latency (by ID) | <100ms | <200ms acceptable |
@@ -886,6 +937,7 @@ Can Firestore handle real-time queries for 200-250 cases/month within budget (<$
 ### Test Setup
 
 #### Environment
+
 ```yaml
 Platform: Firestore (Native mode)
 Region: asia-east1
@@ -893,6 +945,7 @@ Dataset: 1000 test cases (simulated 4 years)
 ```
 
 #### Pricing Model
+
 ```python
 FIRESTORE_PRICING = {
     "reads": 0.06 / 100_000,      # $0.06 per 100K reads
@@ -905,6 +958,7 @@ FIRESTORE_PRICING = {
 ### Test Procedure
 
 #### Step 1: Seed Test Data
+
 ```python
 from google.cloud import firestore
 import random
@@ -950,6 +1004,7 @@ seed_test_cases()
 ```
 
 #### Step 2: Query Performance Test
+
 ```python
 import time
 
@@ -999,6 +1054,7 @@ test_query_performance()
 ```
 
 #### Step 3: Cost Estimation
+
 ```python
 def estimate_monthly_cost():
     # Assumptions for 250 files/month
@@ -1056,6 +1112,7 @@ estimate_monthly_cost()
 ```
 
 #### Step 4: Index Optimization
+
 ```python
 # Identify needed indexes
 indexes_needed = [
@@ -1085,13 +1142,15 @@ indexes_needed = [
 ### Expected Results
 
 #### Hypothesis
+
 - **Fetch by ID**: <100ms (single document read)
 - **Fetch by rep**: <200ms (indexed query, 50 results)
 - **Aggregate count**: <300ms (count aggregation)
 - **Monthly cost**: $3-5
 
 #### Decision Tree
-```
+
+```text
 IF latency <300ms AND cost <$5:
     → Proceed with Firestore (recommended)
 
@@ -1122,14 +1181,17 @@ ELSE IF cost >$10:
 ## POC 6: Discovery Questionnaire Extraction Accuracy
 
 ### Question
+
 Can Agent 5 accurately extract questionnaire responses from conversation without explicit Q&A structure at >75% accuracy?
 
 ### Why This Matters
+
 - **User Experience**: High accuracy = no manual questionnaire filling
 - **Data Quality**: Poor extraction = incomplete questionnaires = poor insights
 - **Feature Viability**: If <75% accurate, manual questionnaire needed (UX regression)
 
 ### Success Criteria
+
 | Metric | Target | Fallback Threshold |
 |--------|--------|-------------------|
 | Topic Detection Recall | >85% | >75% acceptable |
@@ -1140,6 +1202,7 @@ Can Agent 5 accurately extract questionnaire responses from conversation without
 ### Test Setup
 
 #### Test Dataset (15 Transcripts)
+
 - **Explicit conversations** (5 transcripts): Clear Q&A structure
   - "你們有用掃碼點餐嗎？" → "有，已經用了半年"
 
@@ -1150,6 +1213,7 @@ Can Agent 5 accurately extract questionnaire responses from conversation without
   - "想要省人力但擔心成本太高" → perceived_value (positive) + barriers (budget)
 
 #### Ground Truth Labels
+
 ```yaml
 # Example ground truth for transcript #1
 transcript_id: 001
@@ -1179,6 +1243,7 @@ features_discussed:
 ```
 
 #### Agent 5 Prompt (Initial Version)
+
 ```markdown
 # Agent 5: Discovery Questionnaire Analyzer
 
@@ -1265,6 +1330,7 @@ Return ONLY valid JSON.
 ### Test Procedure
 
 #### Step 1: Topic Detection Test
+
 ```python
 def test_topic_detection(test_transcripts, ground_truth):
     """Test if Agent 5 finds all discussed features"""
@@ -1306,6 +1372,7 @@ def test_topic_detection(test_transcripts, ground_truth):
 ```
 
 #### Step 2: Response Extraction Accuracy Test
+
 ```python
 def test_extraction_accuracy(test_transcripts, ground_truth):
     """Test if extracted responses match ground truth"""
@@ -1358,6 +1425,7 @@ def test_extraction_accuracy(test_transcripts, ground_truth):
 ```
 
 #### Step 3: Confidence Calibration Test
+
 ```python
 def test_confidence_calibration():
     """Test if high confidence → high accuracy"""
@@ -1392,6 +1460,7 @@ def test_confidence_calibration():
 ```
 
 #### Step 4: Sales Rep Validation
+
 ```python
 def sales_rep_validation():
     """Have sales reps review 30 auto-completed questionnaires"""
@@ -1421,6 +1490,7 @@ def sales_rep_validation():
 ```
 
 #### Step 5: Prompt Iteration (if <75% accurate)
+
 ```python
 # Iterate on prompt to improve accuracy
 improvements = {
@@ -1450,13 +1520,15 @@ for version, description in improvements.items():
 ### Expected Results
 
 #### Hypothesis
+
 - **Topic Detection Recall**: 80-85% (may miss subtle mentions)
 - **Extraction Accuracy**: 70-75% (implicit inference is hard)
 - **Confidence Calibration**: High conf (>80) → 85-90% accurate
 - **Sales Rep Satisfaction**: 3.5-4.0/5.0
 
 #### Decision Tree
-```
+
+```text
 IF recall >85% AND accuracy >75% AND satisfaction >3.5:
     → Proceed with Agent 5 (recommended)
 
@@ -1489,6 +1561,7 @@ ELSE IF satisfaction <3.0:
 ### Parallel Execution Strategy
 
 **Week 1** (Parallel):
+
 - **POC 1** (Whisper): Team member A (2-3 days)
 - **POC 2** (Multi-Agent): Team member B (1 day)
 - **POC 3** (Gemini JSON): Team member B (2 days, after POC 2)
@@ -1496,6 +1569,7 @@ ELSE IF satisfaction <3.0:
 - **POC 5** (Firestore): Team member C (1 day, after POC 4)
 
 **Week 2** (Parallel):
+
 - **POC 6** (Questionnaire): Team member A (2-3 days, after POC 1)
 - **POC 1 optimization** (if needed): Team member A
 - **POC 3 prompt iteration** (if needed): Team member B
@@ -1510,6 +1584,7 @@ ELSE IF satisfaction <3.0:
 At the end of Phase 0, we should have:
 
 ### Deliverables
+
 1. ✅ POC test results for all 6 experiments
 2. ✅ Performance benchmarks (latency, cost, accuracy)
 3. ✅ Recommended configurations (models, prompts, infrastructure)
@@ -1543,7 +1618,8 @@ At the end of Phase 0, we should have:
 ## Appendix: Test Scripts Repository
 
 All POC test scripts will be stored in:
-```
+
+```text
 specs/001-sales-ai-automation/poc-tests/
 ├── poc1_whisper/
 │   ├── Dockerfile
@@ -1577,4 +1653,4 @@ specs/001-sales-ai-automation/poc-tests/
     └── README.md
 ```
 
-**End of Research Plan**
+### End of Research Plan

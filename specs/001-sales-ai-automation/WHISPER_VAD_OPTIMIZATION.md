@@ -9,6 +9,7 @@
 ## 📋 目標
 
 將 Whisper 音檔轉錄速度從 **0.92x**（Medium 模型）優化至 **0.08-0.15x**，實現 **6-12倍提速**，同時：
+
 - ✅ 零額外成本
 - ✅ 提升轉錄品質（92-93/100）
 - ✅ 改善說話者辨識準確度
@@ -20,11 +21,11 @@
 
 ### 三階段優化
 
-```
+```text
 階段 1: VAD 基礎優化        → 1.5-2x 提速
 階段 2: 分段並行處理        → 6-12x 提速（總計）
 階段 3: GPU 快速通道（可選）→ 30-90x 提速（總計）
-```
+```text
 
 ---
 
@@ -42,11 +43,11 @@ graph TD
     F --> G[說話者辨識]
     G --> H[時間戳校正]
     H --> I[輸出結果]
-```
+```text
 
 ### 詳細架構
 
-```
+```text
 ┌─────────────────────────────────────────────────────────┐
 │                    Audio Upload Service                  │
 │                   (Cloud Storage Trigger)                │
@@ -113,7 +114,7 @@ graph TD
 │                  Analysis Service                        │
 │              (Multi-Agent Processing)                    │
 └─────────────────────────────────────────────────────────┘
-```
+```text
 
 ---
 
@@ -124,6 +125,7 @@ graph TD
 **目的**: 檢測語音活動，移除靜音片段
 
 **實作**:
+
 ```python
 from faster_whisper import WhisperModel
 from silero_vad import load_silero_vad, get_speech_timestamps
@@ -215,9 +217,10 @@ class VADProcessor:
             sample_rate = 16000
 
         return waveform.squeeze(), sample_rate
-```
+```text
 
 **效能預估**:
+
 - 處理速度: ~8000x 即時（60分鐘音檔 <1秒）
 - 記憶體: ~100MB
 - 準確度: >95%
@@ -229,6 +232,7 @@ class VADProcessor:
 **目的**: 將長音檔按 VAD 結果的自然停頓點切分
 
 **實作**:
+
 ```python
 from typing import List, Dict
 
@@ -382,9 +386,10 @@ class AudioChunker:
                 filtered.append(adjusted_seg)
 
         return filtered
-```
+```text
 
 **效能**:
+
 - 處理速度: <1秒
 - 分段數量: 60分鐘音檔約 6-8 段
 
@@ -395,6 +400,7 @@ class AudioChunker:
 **目的**: 並行處理所有音檔片段
 
 **實作**:
+
 ```python
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from faster_whisper import WhisperModel
@@ -569,9 +575,10 @@ class ParallelTranscriber:
         segment.export(temp_file.name, format="wav")
 
         return temp_file.name
-```
+```text
 
 **效能**:
+
 - 6 個並行 workers
 - 60分鐘音檔（6段）: 總處理時間 ~4-6分鐘
 - 記憶體: ~2GB (6 workers × ~300MB)
@@ -583,6 +590,7 @@ class ParallelTranscriber:
 **目的**: 合併所有片段的轉錄結果
 
 **實作**:
+
 ```python
 class TranscriptMerger:
     """轉錄結果合併器"""
@@ -645,13 +653,14 @@ class TranscriptMerger:
             "chunks_processed": len([c for c in chunk_results if c.get("success", False)]),
             "chunks_failed": len([c for c in chunk_results if not c.get("success", False)])
         }
-```
+```text
 
 ---
 
 ### 5. 完整流程整合
 
 **主要處理函數**:
+
 ```python
 class OptimizedTranscriptionPipeline:
     """優化的轉錄流程"""
@@ -756,7 +765,7 @@ if __name__ == "__main__":
     import json
     with open("transcript_output.json", "w", encoding="utf-8") as f:
         json.dump(result, f, ensure_ascii=False, indent=2)
-```
+```text
 
 ---
 
@@ -821,7 +830,7 @@ spec:
           value: "6"
         - name: CHUNK_DURATION
           value: "600"
-```
+```text
 
 ### Dockerfile
 
@@ -846,11 +855,11 @@ COPY src/ /app/src/
 WORKDIR /app
 
 CMD ["python", "-m", "src.main"]
-```
+```text
 
 ### requirements.txt
 
-```
+```text
 faster-whisper==1.2.0
 silero-vad==4.0.0
 torch==2.1.0
@@ -858,7 +867,7 @@ torchaudio==2.1.0
 pydub==0.25.1
 google-cloud-storage==2.10.0
 google-cloud-firestore==2.14.0
-```
+```text
 
 ---
 
@@ -867,11 +876,13 @@ google-cloud-firestore==2.14.0
 ### Phase 1: 核心功能（1-2週）
 
 **Week 1**:
+
 - [ ] VAD 預處理模組
 - [ ] 智能分段模組
 - [ ] 單元測試
 
 **Week 2**:
+
 - [ ] 並行轉錄模組
 - [ ] 結果合併模組
 - [ ] 整合測試
@@ -921,7 +932,7 @@ def test_audio_chunker():
     assert len(chunks) >= 2
     assert chunks[0]["start"] == 0
     assert chunks[-1]["end"] <= 900
-```
+```text
 
 ### 整合測試
 
@@ -947,7 +958,7 @@ def test_full_pipeline():
 
     print(f"✅ Processing took {metadata['total_processing_time']:.1f}s")
     print(f"✅ Speed ratio: {speed_ratio:.3f}x ({1/speed_ratio:.1f}x faster)")
-```
+```text
 
 ### 效能基準測試
 
@@ -990,7 +1001,7 @@ def benchmark_different_lengths():
               f"{r['speedup']:>8.1f}x")
 
     print("="*60)
-```
+```text
 
 ---
 
@@ -1048,7 +1059,7 @@ vad_params_noisy = {
     "min_silence_duration_ms": 800,
     "speech_pad_ms": 500            # 更多 padding
 }
-```
+```text
 
 ### 錯誤處理
 
@@ -1066,7 +1077,7 @@ def transcribe_with_retry(chunk, max_retries=3):
             else:
                 # 等待後重試
                 time.sleep(2 ** attempt)  # 指數退避
-```
+```text
 
 ---
 
@@ -1080,4 +1091,5 @@ def transcribe_with_retry(chunk, max_retries=3):
 ---
 
 **版本歷史**:
+
 - v1.0 (2025-01-29): 初始版本

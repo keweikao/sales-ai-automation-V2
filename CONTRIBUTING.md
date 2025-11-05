@@ -44,6 +44,8 @@ On [GitHub Codespaces](https://github.com/features/codespaces) it's even simpler
 1. Push to your fork and submit a pull request
 1. Wait for your pull request to be reviewed and merged.
 
+Before opening the PR, review the [Pull Request Checklist](docs/checklists/pr.md) and make sure every適用項目都已完成（特別是 `DEVELOPMENT_LOG.md` 的更新與 Outstanding Work Tracker 勾選）。
+
 Here are a few things you can do that will increase the likelihood of your pull request being accepted:
 
 - Follow the project's coding conventions.
@@ -70,15 +72,16 @@ To test your templates, commands, and other changes locally, follow these steps:
 1. **Create release packages**
 
    Run the following command to generate the local packages:
-   ```
+
+```text
    ./.github/workflows/scripts/create-release-packages.sh v1.0.0
-   ```
+```text
 
 2. **Copy the relevant package to your test project**
 
-   ```
+```text
    cp -r .genreleases/sdd-copilot-package-sh/. <path-to-test-project>/
-   ```
+```text
 
 3. **Open and test the agent**
 
