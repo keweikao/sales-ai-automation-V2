@@ -1624,6 +1624,7 @@ All critical questions were answered by user during this session.
 **Decision**: 創建優化版 Prompt v2
 
 **Key Improvements**:
+
 - 強化繁體中文要求（避免簡體中文和大陸用語）
 - 優化回答結構（簡短總結 + 數據 + 洞察 + 建議）
 - 明確各問題類型的處理指南
@@ -1632,6 +1633,7 @@ All critical questions were answered by user during this session.
 #### Technical Highlights
 
 **POC 8 Test Results** (All metrics exceeded targets):
+
 - 問題分類準確率: 100% (目標 ≥90%)
 - 參數提取準確率: 100% (目標 ≥85%)
 - 數據查詢召回率: 100% (目標 ≥95%)
@@ -1643,7 +1645,8 @@ All critical questions were answered by user during this session.
 **GO Decision**: ✅ All success criteria met, proceed to Phase 1 MVP
 
 **Architecture**:
-```
+
+```text
 User (Slack) → /ask-agent8
   ↓
 Cloud Run (slack-service)
@@ -1657,6 +1660,7 @@ Ephemeral Message (Slack)
 ```
 
 **Performance**:
+
 - 支持 6 種問題類型（team_overview, sales_rep_performance, case_details, competitor_intelligence, product_demand, trend_comparison）
 - 多輪對話上下文理解
 - 代詞指代解析
@@ -1664,6 +1668,7 @@ Ephemeral Message (Slack)
 - 100% 繁體中文輸出
 
 **Cost Analysis** (Production):
+
 - 假設 5 位主管，每人每天 10 次查詢
 - 月查詢次數: 1,000 次
 - Gemini API: ~$0.50/月
@@ -1697,6 +1702,7 @@ Ephemeral Message (Slack)
 #### Next Session Preparation
 
 **For Deployment**:
+
 1. 獲取 Gemini API Key
 2. 設定 Cloud Run 環境變數 `GEMINI_API_KEY`
 3. 在 Firestore 建立至少 1 位主管權限測試
@@ -1705,11 +1711,13 @@ Ephemeral Message (Slack)
 6. 執行功能測試
 
 **Files to Reference**:
+
 - `docs/agent8-phase1-deployment.md` - 詳細部署步驟
 - `docs/agent8-permission-management.md` - 權限管理方法
 - `docs/agent8-user-guide.md` - 發送給業務主管
 
 **Success Metrics to Monitor**:
+
 - 每日查詢數
 - 平均響應時間
 - 錯誤率
