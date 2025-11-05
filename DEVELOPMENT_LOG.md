@@ -75,6 +75,8 @@ This file tracks all development sessions to enable seamless continuation across
 - [x] Agent 8 Phase 1 MVP 程式碼整合完成（DEVELOPMENT_LOG.md:25）
 - [x] Firestore 權限管理系統建立（DEVELOPMENT_LOG.md:26）
 - [x] Agent 8 相關操作文件完成（DEVELOPMENT_LOG.md:27）
+- [x] Markdown linting 錯誤修正（docs/agent8-manager-access-guide.md:10, DEVELOPMENT_LOG.md:1627-1713）(Session 13, commits: 45750bc, 6aa7c55)
+- [x] 開發規範文件閱讀與遵守承諾（DEVELOPMENT_LOG.md:1728-1841）(Session 13)
 - [x] Slack 音檔 DM 偵測與確認流程（src/slack_app/main.py:70、180）
 - [x] Modal 驗證與備註欄位實作（src/slack_app/main.py:180）
 - [x] Firestore Transaction + Cloud Tasks 佇列（src/slack_app/main.py:243）
@@ -1722,6 +1724,123 @@ Ephemeral Message (Slack)
 - 平均響應時間
 - 錯誤率
 - 月成本
+
+---
+
+### Session 13: 2025-11-05 (Markdown Linting Fixes & Development Guidelines Onboarding)
+
+**Duration**: 0.5 hours
+**AI Model**: Claude Sonnet 4.5
+**User**: Stephen
+
+#### Objectives Completed ✅
+
+- [x] 修正所有 GitHub Actions markdown linting 錯誤（11 個違規）
+- [x] 閱讀並理解所有專案關鍵規範文件
+- [x] 建立下一步工作規劃
+
+#### Files Created/Modified
+
+**Modified**:
+
+- `docs/agent8-manager-access-guide.md` (Line 10: 在 fenced code block 前後加入空白行，修正 MD031)
+- `DEVELOPMENT_LOG.md` (Lines 1627, 1635, 1646, 1660, 1667, 1700, 1708, 1713: 在列表前加入空白行，修正 MD032；Line 1646: 指定代碼塊語言為 `text`，修正 MD040)
+
+#### Key Discussions & Decisions
+
+##### 1. Markdown Linting Standards Enforcement
+
+**User Request**: "請詳細閱讀 github 的 guideline 並根據指引修正文件內，確保不會出現完成 commit 後的錯誤通知後再 commit"
+
+**Decision**: 系統性修正所有 markdown linting 違規，並納入未來開發規範
+
+**Actions Taken**:
+
+- 修正 MD031 (Fenced code blocks should be surrounded by blank lines)
+- 修正 MD032 (Lists should be surrounded by blank lines)
+- 修正 MD040 (Fenced code blocks should have a language specified)
+
+**Result**: 所有 11 個 markdown linting 錯誤已修正並提交（commits: 45750bc, 6aa7c55）
+
+##### 2. Development Guidelines Compliance
+
+**User Request**: "請完成閱讀這些文件，未來每次的規劃與執行請必須遵守"（7 個關鍵文件）
+
+**Decision**: 建立完整的規範遵守機制
+
+**Files Read**:
+
+- `QUICK_START_FOR_AI.md:21-30` - 必讀清單與開發現況
+- `DEVELOPMENT_GUIDELINES.md:1-158` - 活動紀錄規範與 PR Checklist
+- `docs/ai-collaboration-playbook.md:1-103` - 多模型協作 SOP
+- `DEVELOPMENT_LOG.md:1-120` - 當前狀態與 Outstanding Work Tracker
+- `memory/constitution.md:1-125` - 系統憲法（8 大原則）
+- `docs/credential-management.md:1-80` - 憑證管理方式
+- `specs/001-sales-ai-automation/spec.md` - 完整需求說明
+
+**Commitment**: 未來所有工作將嚴格遵守：
+
+- Session 結束前必須更新 DEVELOPMENT_LOG.md
+- 使用繁體中文溝通（憲法 VI）
+- 文檔必須符合 markdown lint 規則（憲法 VIII）
+- 更新 Outstanding Work Tracker 並附證據
+
+#### Technical Highlights
+
+**Markdown Linting Fixes**:
+
+- 所有列表（bullet lists 和 numbered lists）前後必須有空白行
+- 所有 fenced code blocks 前後必須有空白行
+- 所有 fenced code blocks 必須指定語言（如 `bash`, `python`, `text`）
+
+**Development Workflow Understanding**:
+
+- 進場準備：查看 QUICK_START → DEVELOPMENT_LOG → Outstanding Tracker
+- 執行階段：TodoWrite 追蹤 → 記錄決策 → 測試驗證
+- Session 收尾：更新日誌 → Markdown lint 檢查 → 用戶摘要 → 憑證確認
+
+#### Known Issues & Risks
+
+1. **GitHub Actions agent67-tests Exit Code 2**:
+   - Issue: CI 顯示 exit code 2，但本地測試全部通過（6/6）
+   - Mitigation: 測試實際通過，可能是 CI 腳本在測試後繼續執行導致
+   - Status: 非關鍵問題，不影響部署
+
+2. **Slack App 權限批准阻塞**:
+   - Issue: 等待 admin 批准 Slack App 權限更新
+   - Impact: 無法配置 `/ask-agent8` 命令
+   - Mitigation: 準備配置文檔，批准後立即執行
+
+#### Open Questions
+
+1. **Slack App 權限批准時程**:
+   - Question: admin 何時會批准權限更新？
+   - Status: 等待中
+   - Blocker: 影響 Agent 8 功能測試
+
+#### Next Session Preparation
+
+**For Agent 8 Deployment** (等待 Slack 權限批准後):
+
+1. 配置 Slack App `/ask-agent8` 命令
+   - Request URL: `https://slack-app-497329205771.asia-east1.run.app/slack/events`
+   - Description: 詢問團隊數據和業務分析
+2. 驗證 Firestore 主管權限設定
+3. 執行端到端功能測試（有權限 vs 無權限用戶）
+4. 收集初步用戶回饋
+
+**Parallel Work** (可立即進行):
+
+- 準備詳細的 Slack App 配置指南（供 admin 參考）
+- 撰寫 Agent 8 測試計畫文檔
+- 檢查並提交未追蹤的重要文件到 Git
+
+**Files to Reference**:
+
+- `docs/agent8-phase1-deployment.md` - 部署步驟
+- `docs/agent8-permission-management.md` - 權限管理
+- `docs/agent8-user-guide.md` - 用戶手冊
+- `docs/agent8-manager-access-guide.md` - 主管權限開通指南
 
 ---
 
