@@ -16,12 +16,12 @@ from slack_bolt import App
 from slack_bolt.adapter.flask import SlackRequestHandler
 from slack_sdk.errors import SlackApiError
 
-from .utils.case_management import (
+from utils.case_management import (
     allocate_case_id,
     build_initial_case_document,
     build_processed_file_document,
 )
-from .utils.file_pipeline import (
+from utils.file_pipeline import (
     download_slack_file,
     enqueue_transcription_task,
     upload_to_gcs,
