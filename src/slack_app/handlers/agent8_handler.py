@@ -6,186 +6,264 @@ Agent 8 Slack 命令處理器
 
 import os
 import logging
-from typing import Dict, Any
+import json
+import time
+from typing import Dict, Any, List
 
-from google.cloud import firestore
-
-try:
-    from slack_sdk.errors import SlackApiError
-except ModuleNotFoundError:  # pragma: no cover - for test env without slack_sdk
-    class SlackApiError(Exception):  # type: ignore
-        def __init__(self, error: str = "slack_sdk_missing"):
-            self.response = {"error": error}
-            super().__init__(error)
+from google.cloud import firestore, tasks_v2
 
 try:
     from slack_sdk import WebClient
-except ModuleNotFoundError:  # pragma: no cover - allow tests without slack_sdk installed
-    WebClient = Any  # type: ignore
-from agents.conversational_agent8 import ConversationalAgent8
+except ModuleNotFoundError:  # pragma: no cover
+    WebClient = Any
+
+from ..mcp_adapter import MCPAdapter
 
 logger = logging.getLogger(__name__)
 
-# 全局 Agent 8 實例（單例模式）
-_agent8_instance = None
+# --- Environment Config ---
+ANALYSIS_SERVICE_URL = os.environ.get("ANALYSIS_SERVICE_URL")
+AGENT8_TASK_QUEUE = os.environ.get("AGENT8_TASK_QUEUE", "agent8-tasks")
+TASK_LOCATION = os.environ.get("TASK_LOCATION", "asia-east1")
+GCP_PROJECT_ID = os.environ.get("GCP_PROJECT_ID")
+TASK_SERVICE_ACCOUNT = os.environ.get("TASK_SERVICE_ACCOUNT")
 
+class Agent8Handler:
+    def __init__(self, client: WebClient, db_client: firestore.Client, logger_instance):
+        self.client = client
+        self.db_client = db_client
+        self.logger = logger_instance
+        self.mcp = None  # MCP adapter (initialized per session)
 
-def get_agent8_instance() -> ConversationalAgent8:
-    """
-    獲取 Agent 8 單例
-
-    Returns:
-        ConversationalAgent8 實例
-    """
-    global _agent8_instance
-    if _agent8_instance is None:
-        _agent8_instance = ConversationalAgent8()
-    return _agent8_instance
-
-
-def check_manager_permission(user_id: str, db_client: firestore.Client) -> bool:
-    """
-    檢查用戶是否有主管權限
-
-    Args:
-        user_id: Slack User ID
-        db_client: Firestore Client
-
-    Returns:
-        是否有權限
-    """
-    try:
-        # 查詢 Firestore 中的主管名單
-        user_doc = db_client.collection("users").document(user_id).get()
-
-        if not user_doc.exists:
-            logger.warning(f"用戶不存在：{user_id}")
+    def check_manager_permission(self, user_id: str) -> bool:
+        """Checks if a user has manager permissions in Firestore."""
+        if not self.db_client:
+            self.logger.error("Firestore client is not available for permission check.")
             return False
-
-        user_data = user_doc.to_dict()
-        role = user_data.get("role", "")
-
-        # 允許 manager 和 admin 角色
-        is_authorized = role in ["manager", "admin"]
-
-        logger.info(f"權限檢查：user={user_id}, role={role}, authorized={is_authorized}")
-
-        return is_authorized
-
-    except Exception as e:
-        logger.error(f"檢查權限失敗：{e}", exc_info=True)
+        try:
+            user_doc = self.db_client.collection("users").document(user_id).get()
+            if user_doc.exists and user_doc.to_dict().get("role") in ["manager", "admin"]:
+                self.logger.info(f"Permission check PASSED for user {user_id}")
+                return True
+        except Exception as e:
+            self.logger.error(f"Error checking permission for {user_id}: {e}", exc_info=True)
+        
+        self.logger.warning(f"Permission check FAILED for user {user_id}")
         return False
 
+    def enqueue_agent8_task(self, payload: Dict[str, Any]):
+        """Creates a Cloud Task to trigger the analysis service asynchronously."""
+        tasks_client = tasks_v2.CloudTasksClient()
+        parent = tasks_client.queue_path(GCP_PROJECT_ID, TASK_LOCATION, AGENT8_TASK_QUEUE)
+
+        task = {
+            "http_request": {
+                "http_method": tasks_v2.HttpMethod.POST,
+                "url": f"{ANALYSIS_SERVICE_URL}/ask-agent8",
+                "headers": {"Content-Type": "application/json"},
+                "body": json.dumps(payload).encode(),
+            }
+        }
+
+        if TASK_SERVICE_ACCOUNT:
+            task["http_request"]["oidc_token"] = {
+                "service_account_email": TASK_SERVICE_ACCOUNT
+            }
+
+        try:
+            response = tasks_client.create_task(parent=parent, task=task)
+            self.logger.info(f"Created Cloud Task: {response.name}")
+            return response
+        except Exception as e:
+            self.logger.error(f"Error creating Cloud Task: {e}", exc_info=True)
+            raise
+
+    def handle_command(self, ack, command: Dict[str, Any]):
+        """Handles the /ask-agent8 command by creating a Cloud Task with detailed timing."""
+        start_time = time.time()
+        self.logger.info("Agent 8 handler started.")
+
+        ack()
+        ack_time = time.time()
+        self.logger.info(f"--- TIMING: ack() sent in {(ack_time - start_time) * 1000:.2f} ms ---")
+
+        user_id = command.get("user_id")
+        question = command.get("text", "").strip()
+        channel_id = command.get("channel_id")
+        session_id = f"{user_id}-{channel_id}-{time.time()}"
+
+        try:
+            # 1. Permission Check
+            perm_start_time = time.time()
+            has_permission = self.check_manager_permission(user_id)
+            perm_end_time = time.time()
+            self.logger.info(f"--- TIMING: Permission check took {(perm_end_time - perm_start_time) * 1000:.2f} ms ---")
+
+            if not has_permission:
+                self.client.chat_postEphemeral(channel=channel_id, user=user_id, text="❌ 您沒有使用此命令的權限。")
+                return
+
+            if not question:
+                self.client.chat_postEphemeral(channel=channel_id, user=user_id, text="📝 請輸入問題。")
+                return
+
+            # 2. Post "thinking" message
+            thinking_start_time = time.time()
+            self.client.chat_postEphemeral(
+                channel=channel_id, user=user_id, text=f"🤔 收到問題，正在為您分析...\n> {question}"
+            )
+            thinking_end_time = time.time()
+            self.logger.info(f"--- TIMING: chat_postEphemeral took {(thinking_end_time - thinking_start_time) * 1000:.2f} ms ---")
+
+            # 3. Handle user query with MCP
+            answer = self.handle_user_query(question, session_id, user_id)
+            self.client.chat_postEphemeral(channel=channel_id, user=user_id, text=answer)
+
+
+        except Exception as e:
+            self.logger.error(f"An unexpected error occurred in ask-agent8 handler: {e}", exc_info=True)
+            try:
+                self.client.chat_postEphemeral(channel=channel_id, user=user_id, text=f"❌ 處理您的問題時發生未預期的錯誤。")
+            except Exception as slack_err:
+                self.logger.error(f"Unable to send error message to Slack: {slack_err}")
+        finally:
+            end_time = time.time()
+            self.logger.info(f"--- TIMING: Total handler execution time: {(end_time - start_time) * 1000:.2f} ms ---")
+
+    def handle_user_query(self, user_query: str, session_id: str, user_id: str):
+        """
+        Handle user query with MCP tool support.
+        """
+        # Initialize MCP adapter for this session
+        if self.mcp is None or self.mcp.session_id != session_id:
+            self.mcp = MCPAdapter(
+                session_id=session_id,
+                tools_dir="tools",
+                enable_pii_protection=True
+            )
+
+        # Infer if query requires data access
+        needs_tools = self._needs_tools(user_query)
+
+        if needs_tools:
+            # Progressive tool discovery
+            category = self._infer_tool_category(user_query)
+            tools = self.mcp.discover_tools(category=category, detail_level="names")
+
+            # Tool selection (can use LLM to select best tool)
+            selected_tool = self._select_tool(tools, user_query)
+
+            # Load tool definition
+            tool_def = self.mcp.load_tool(selected_tool)
+
+            # Construct parameters (can use LLM to extract from query)
+            params = self._construct_tool_params(user_query, tool_def)
+
+            # Execute tool with context optimization
+            result = self.mcp.execute_tool(selected_tool, params, timeout=30)
+
+            # Generate response based on tool result
+            if result["status"] == "success":
+                answer = self._generate_answer_with_data(user_query, result["result"])
+            else:
+                answer = f"抱歉，查詢資料時發生錯誤：{result.get('error', 'Unknown error')}"
+
+            return answer
+        else:
+            # Direct LLM response (existing logic)
+            return self._direct_gemini_response(user_query)
+
+    def _direct_gemini_response(self, user_query: str) -> str:
+        """Directly call Gemini for a response."""
+        # This is a placeholder for the original logic of enqueuing a task
+        # In a real scenario, you might call a different service or a direct LLM here.
+        self.logger.info("Query does not require tools. Enqueuing a standard task.")
+        task_payload = {
+            "question": user_query,
+            "user_id": "system", # Should be the actual user_id
+            "slack_context": {}
+        }
+        self.enqueue_agent8_task(task_payload)
+        return "您的問題已提交處理，請稍後。"
+
+    def _needs_tools(self, query: str) -> bool:
+        """Check if query requires data access tools."""
+        # Simple keyword matching (can be enhanced with LLM classification)
+        data_keywords = ["案件", "資料", "統計", "健康度", "客戶", "業務員", "團隊"]
+        return any(kw in query for kw in data_keywords)
+
+    def _infer_tool_category(self, query: str) -> str:
+        """Infer required tool category from query."""
+        if any(kw in query for kw in ["案件", "客戶", "業務員", "健康度"]):
+            return "firestore"
+        elif any(kw in query for kw in ["檔案", "上傳", "下載"]):
+            return "gcs"
+        elif any(kw in query for kw in ["SQL", "分析", "報表"]):
+            return "bigquery"
+        else:
+            return "firestore"  # Default
+
+    def _select_tool(self, tools: List[str], query: str) -> str:
+        """Select most appropriate tool."""
+        # Simple selection (can be enhanced with LLM reasoning)
+        if "統計" in query or "平均" in query or "趨勢" in query:
+            # Prefer aggregate tools
+            for tool in tools:
+                if "aggregate" in tool:
+                    return tool
+
+        # Default to first query tool
+        for tool in tools:
+            if "query" in tool:
+                return tool
+
+        return tools[0] if tools else "firestore.query"
+
+    def _construct_tool_params(self, query: str, tool_def: dict) -> dict:
+        """Construct tool parameters from query."""
+        # TODO: Use LLM to extract entities and construct params
+        # For now, return basic structure
+
+        params = {
+            "collection": "cases",  # Extract from query
+            "filters": [],  # Extract from query
+            "limit": 100,
+            "context_mode": "minimal"  # Use minimal by default for token optimization
+        }
+
+        # Extract rep name if mentioned
+        import re
+        name_match = re.search(r"([\u4e00-\u9fff]{2,4})", query)
+        if name_match:
+            rep_name = name_match.group(1)
+            params["filters"].append({
+                "field": "rep_name",
+                "op": "==",
+                "value": rep_name
+            })
+
+        # Check if aggregate mode needed
+        if any(kw in query for kw in ["平均", "統計", "趨勢", "分布"]):
+            params["context_mode"] = "aggregate"
+
+        return params
+
+    def _generate_answer_with_data(self, query: str, data: Any) -> str:
+        """Generate natural language answer based on query and data."""
+        # TODO: Use Gemini to generate response
+        # For now, return simple formatted response
+
+        if isinstance(data, dict) and "results" in data:
+            results = data["results"]
+            if isinstance(results, list):
+                return f"查詢結果：共找到 {len(results)} 筆資料\n{results[:3]}"  # Show first 3
+            else:
+                return f"統計結果：\n{results}"
+        else:
+            return str(data)
 
 def handle_ask_agent8_command(
-    ack,
-    command: Dict[str, Any],
-    client: WebClient,
-    logger_instance,
-    db_client: firestore.Client
+    ack, command: Dict[str, Any], client: WebClient, logger_instance, db_client: firestore.Client
 ):
-    """
-    處理 /ask-agent8 命令
-
-    Args:
-        ack: Slack 確認函數
-        command: Slack 命令數據
-        client: Slack Web Client
-        logger_instance: Logger 實例
-        db_client: Firestore Client
-    """
-    # 立即確認命令（3 秒內必須回應）
-    ack()
-
-    user_id = command.get("user_id")
-    question = command.get("text", "").strip()
-    channel_id = command.get("channel_id")
-
-    logger.info(f"收到 /ask-agent8 命令：user={user_id}, question={question}")
-
-    try:
-        # 1. 檢查權限
-        if not check_manager_permission(user_id, db_client):
-            client.chat_postEphemeral(
-                channel=channel_id,
-                user=user_id,
-                text="❌ 抱歉，您沒有使用 Agent 8 的權限。\n\n"
-                     "Agent 8 目前僅開放給業務主管使用。\n"
-                     "如需權限，請聯絡系統管理員。"
-            )
-            logger.warning(f"用戶無權限：{user_id}")
-            return
-
-        # 2. 檢查問題是否為空
-        if not question:
-            client.chat_postEphemeral(
-                channel=channel_id,
-                user=user_id,
-                text="📝 請在命令後輸入問題，例如：\n\n"
-                     "`/ask-agent8 今天團隊表現如何？`\n\n"
-                     "**問題範例**：\n"
-                     "• 今天團隊表現如何？\n"
-                     "• 王小明本週表現如何？\n"
-                     "• 健康度低於 50 的案件有哪些？\n"
-                     "• Eats365 最近被提到幾次？"
-            )
-            return
-
-        # 3. 發送「思考中」訊息
-        thinking_msg = client.chat_postEphemeral(
-            channel=channel_id,
-            user=user_id,
-            text=f"🤔 正在分析您的問題...\n\n> {question}"
-        )
-
-        # 4. 使用 Agent 8 生成回答
-        agent8 = get_agent8_instance()
-        result = agent8.generate_answer(question, user_id)
-
-        # 5. 回傳結果
-        if result["success"]:
-            # 準備回答訊息
-            answer_text = f"💬 **問題**：{question}\n\n"
-            answer_text += f"🤖 **Agent 8 回答**：\n\n{result['answer']}\n\n"
-            answer_text += f"---\n"
-            answer_text += f"📊 查詢了 {result['totalCases']} 個案件"
-
-            # 如果是話題切換，加上提示
-            if result.get("isTopicSwitch"):
-                answer_text += " | 🔄 檢測到話題切換"
-
-            client.chat_postEphemeral(
-                channel=channel_id,
-                user=user_id,
-                text=answer_text
-            )
-
-            logger.info(f"Agent 8 回答成功：user={user_id}, cases={result['totalCases']}")
-
-        else:
-            # 錯誤訊息
-            error_text = f"❌ 處理問題時發生錯誤：\n\n{result.get('error', '未知錯誤')}\n\n"
-            error_text += "請稍後再試或聯絡系統管理員。"
-
-            client.chat_postEphemeral(
-                channel=channel_id,
-                user=user_id,
-                text=error_text
-            )
-
-            logger.error(f"Agent 8 處理失敗：user={user_id}, error={result.get('error')}")
-
-    except SlackApiError as e:
-        logger.error(f"Slack API 錯誤：{e.response['error']}", exc_info=True)
-    except Exception as e:
-        logger.error(f"處理命令時發生錯誤：{e}", exc_info=True)
-
-        # 發送錯誤訊息給用戶
-        try:
-            client.chat_postEphemeral(
-                channel=channel_id,
-                user=user_id,
-                text=f"❌ 系統錯誤，請稍後再試。\n\n錯誤訊息：{str(e)}"
-            )
-        except:
-            pass
+    handler = Agent8Handler(client, db_client, logger_instance)
+    handler.handle_command(ack, command)

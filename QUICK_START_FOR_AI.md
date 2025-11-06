@@ -8,13 +8,36 @@
 
 ## 🚀 Start Here (Essential Reading Order)
 
-### 1️⃣ Read This First (30 seconds)
+### 1️⃣ 如何啟動 AI 開發 (How to Start an AI Task)
+
+當您準備好開始一項新任務時，請使用一個簡單、高層次的指令來啟動 AI。您不需要記住所有流程細節。
+
+**建議指令：**
+
+> **「請遵循標準作業流程，開始執行下一個開發任務。」**
+
+或更簡單的：
+
+> **「請開始下一個開發任務。」**
+
+收到此指令後，AI 將會自動執行「工作前啟動檢查清單」：
+1.  與遠端同步，確保程式碼與文件為最新。
+2.  閱讀 `DEVELOPMENT_LOG.md`，分析 `Outstanding Work Tracker`。
+3.  從待辦事項中選擇一個任務。
+4.  向您**提案**要執行的任務並請求**確認**。
+5.  在您同意後，開始執行。
+
+這個標準化指令確保了開發流程的一致性與可預測性。
+
+---
+
+### 2️⃣ 檢查當前狀態 (Check Current Status)
 
 - **Current Phase**: Phase 0 - POC Validation (Ready to Execute)
 - **Last Session**: 2025-01-29 (Planning & Specification completed)
 - **Next Steps**: Execute 6 POC tests (3-4 days with 3-person team)
 
-### 2️⃣ Read Context Files (5 minutes)
+### 3️⃣ 閱讀上下文檔案 (Read Context Files)
 
 **Must Read** (in order):
 
@@ -29,7 +52,7 @@
 7. `specs/001-sales-ai-automation/plan.md` - Technical architecture, cost breakdown
 8. `specs/001-sales-ai-automation/research.md` - 6 POC test plans
 
-### 3️⃣ Understand Key Decisions (1 minute)
+### 4️⃣ 理解關鍵決策 (Understand Key Decisions)
 
 All critical decisions are FINAL ✅ (do not re-discuss):
 
