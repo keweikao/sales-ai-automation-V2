@@ -52,7 +52,8 @@ Agent 8 是業務主管專屬的智能助理，僅開放給有權限的主管使
 4. 輸入以下資訊：
    - **文件 ID**: Slack User ID（例如：`U12345678`）
    - **欄位**：
-     ```
+
+     ```yaml
      userId: U12345678
      role: manager
      name: 王大明
@@ -61,6 +62,7 @@ Agent 8 是業務主管專屬的智能助理，僅開放給有權限的主管使
      createdAt: [自動時間戳記]
      updatedAt: [自動時間戳記]
      ```
+
 5. 點擊「儲存」
 
 ### 方法 2：使用 Python Script
@@ -284,6 +286,7 @@ print(f"User {user_id} 權限：{'✅ 有' if has_permission else '❌ 無'}")
 ### Q1: 為什麼用戶收到「沒有權限」訊息？
 
 **檢查步驟**：
+
 1. 確認 Slack User ID 正確
 2. 確認 Firestore 中有該用戶的 Document
 3. 確認 `role` 欄位為 `manager` 或 `admin`
@@ -323,6 +326,7 @@ for doc in docs:
 ### 查看 Agent 8 使用日誌
 
 Cloud Run 日誌中會記錄：
+
 - 權限檢查結果
 - 用戶提問
 - 回答成功/失敗

@@ -12,11 +12,13 @@
   gcloud config set project sales-ai-automation-v2
   gcloud auth login
   ```
+
 - 具備可讀寫 Firestore 的服務帳號或個人權限。若使用服務帳號，請將憑證 JSON 路徑輸出為環境變數：
 
   ```bash
   export GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account.json
   ```
+
 - 確認 Slack 使用者 ID（格式如 `U12345678`），可透過 Slack 使用者個人資訊檢視。
 
 ---
