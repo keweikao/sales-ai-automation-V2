@@ -43,6 +43,7 @@ python scripts/quick_test.py
 ```
 
 這會測試 3 個基本問題：
+
 - 今天團隊表現如何？
 - 王小明本週表現如何？
 - 健康度低於 50 的案件有哪些？
@@ -83,12 +84,14 @@ python conversational_agent8.py
 ## 預期結果
 
 ✅ **成功標誌**：
+
 - 問題被正確解析（識別類型和參數）
 - 查詢到相關案件
 - 生成繁體中文回答
 - 回答包含數據、洞察和建議
 
 ❌ **如果失敗**：
+
 1. 檢查 `GEMINI_API_KEY` 是否正確設置
 2. 檢查是否安裝了所有依賴 (`pip install -r requirements.txt`)
 3. 檢查測試數據是否存在 (`test_data/firestore_mock_cases.json`)
@@ -112,6 +115,7 @@ python conversational_agent8.py
 ### Q1: ImportError: No module named 'google.generativeai'
 
 **解決**：
+
 ```bash
 pip install google-generativeai
 ```
@@ -119,6 +123,7 @@ pip install google-generativeai
 ### Q2: ValueError: GEMINI_API_KEY 未設定
 
 **解決**：
+
 ```bash
 export GEMINI_API_KEY='your-key'
 ```
@@ -130,6 +135,7 @@ export GEMINI_API_KEY='your-key'
 ### Q4: 查詢結果為空
 
 **解決**：
+
 - 檢查時間範圍是否正確
 - 檢查測試數據是否載入 (`TEST_MODE=true`)
 - 使用 `data_fetcher.py` 單獨測試

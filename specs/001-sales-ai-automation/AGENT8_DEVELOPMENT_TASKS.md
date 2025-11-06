@@ -229,6 +229,7 @@
   - 调整导入路径和配置
 
 - [ ] **1.1.2** 创建正式的目录结构
+
   ```
   src/slack_app/
   ├── agents/
@@ -244,6 +245,7 @@
   ```
 
 - [ ] **1.1.3** 更新 `main.py` 注册 Agent 8 命令
+
   ```python
   from commands.ask_agent8_handler import register_ask_agent8_handler
   register_ask_agent8_handler(app)
@@ -379,6 +381,7 @@
 ### 2.1 Cloud Function 开发（1 天）
 
 - [ ] **2.1.1** 创建 Cloud Function 目录结构
+
   ```
   src/agent8_scheduled_report/
   ├── main.py

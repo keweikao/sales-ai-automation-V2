@@ -17,22 +17,26 @@
 ## 🔄 標準作業流程（SOP）
 
 ### 0. 進場準備
+
 - 查看 `QUICK_START_FOR_AI.md` → 確認當前階段/進度。  
 - 閱讀 `DEVELOPMENT_GUIDELINES.md` Rule 1-7（錄入規則、PR Checklist）。  
 - 詳讀 `DEVELOPMENT_LOG.md` 最近一次 Session、Outstanding Work Tracker。  
 - 確認必要憑證取得方式：`docs/credential-management.md`。
 
 ### 1. 分析與規劃
+
 - 若任務複雜，使用工作計畫工具（/plan）列出步驟。  
 - 明確列出要修改的檔案與預期輸出（文件、程式、測試、部署設定）。
 
 ### 2. 執行階段
+
 1. **資料蒐集**：閱讀 specs/plan/task 文件或現有程式碼。  
 2. **實作**：依優先順序完成程式或文檔更新；必要時建立工具函式。  
 3. **測試/驗證**：執行單元測試或 CLI 指令；若無法測試須註明原因與風險。  
 4. **同步說明**：在開發過程中記錄關鍵決策、前置條件或阻塞因素（便於後續補寫 Log）。
 
 ### 3. Session 收尾
+
 1. **更新開發日誌**：  
    - 新增/更新 Session 條目：模型、日期、主要產出、測試結果、待辦。  
    - 將完成的事項在 Outstanding Work Tracker 勾選（附檔案路徑／行號）。  
@@ -45,6 +49,7 @@
 ## 🗂️ 紀錄與交接模板
 
 ### Development Log Session 範例
+
 ```markdown
 ### Session X: 2025-11-05 (任務標題)
 - **模型**: Codex CLI（GPT-5）
@@ -62,6 +67,7 @@
 ```
 
 ### 使用者 Session 摘要
+
 ```markdown
 - 完成事項：列出核心變更與對應檔案
 - 測試紀錄：命令 / 結果 / 失敗原因
@@ -72,6 +78,7 @@
 ---
 
 ## 🔐 憑證與環境設定
+
 - 所有金鑰/Token 皆由 Secret Manager 管理，取得方式參考 `docs/credential-management.md`。  
 - 新增或使用 Secrets 時，記得在日誌標註來源、用途與更新步驟。  
 - `.env` 僅供本地測試，請勿提交；Session 結束後清除或移除關聯記錄。
@@ -79,6 +86,7 @@
 ---
 
 ## 🧪 測試與驗證準則
+
 - 優先執行與修改內容相關的單元/整合測試。  
 - 若需新增測試，命名與結構需遵循既有模式。  
 - 測試指令與結果（含失敗原因）需寫入 `DEVELOPMENT_LOG.md`。  
@@ -87,6 +95,7 @@
 ---
 
 ## 🗣️ 溝通約定
+
 - **語言**：使用繁體中文（除代碼或 API 名稱）。  
 - **引用**：附上檔案路徑與行號（`path/to/file.py:123`）或測試輸出。  
 - **決策回報**：重大決策/偏離憲法需記錄於日誌並在使用者摘要標註。  
@@ -95,6 +104,7 @@
 ---
 
 ## 📎 相關文件
+
 - `DEVELOPMENT_GUIDELINES.md`：詳細錄入規則、PR Checklist、決策紀錄範例。  
 - `DEVELOPMENT_LOG.md`：唯一權威的開發歷史與 Outstanding Tracker。  
 - `QUICK_START_FOR_AI.md`：新進模型必讀的專案導覽。  

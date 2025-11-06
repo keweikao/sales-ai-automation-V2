@@ -4,7 +4,7 @@
 
 **Target Audience**: AI LLMs or human developers executing the integration.
 
-**Source**: Derived from Anthropic official doc (2025) - https://www.anthropic.com/engineering/code-execution-with-mcp
+**Source**: Derived from Anthropic official doc (2025) - <https://www.anthropic.com/engineering/code-execution-with-mcp>
 
 **Last Updated**: 2025-11-06
 
@@ -13,6 +13,7 @@
 ## 📋 Overview
 
 This guide provides complete instructions for implementing Agent 9 (MCP Integration Layer) to enable:
+
 - 95%+ token reduction through progressive tool discovery
 - 98%+ context optimization through in-environment data filtering
 - Automatic PII detection and anonymization
@@ -750,24 +751,28 @@ class MCPAdapter:
 
 ## 🎯 Success Criteria
 
-### Phase 2 Complete When:
+### Phase 2 Complete When
+
 - [ ] `tools/` directory structure created
 - [ ] `tools/firestore/query.py` implemented and tested
 - [ ] Tool can be imported without errors
 - [ ] Tool supports all 3 context modes (minimal/full/aggregate)
 
-### Phase 3 Complete When:
+### Phase 3 Complete When
+
 - [ ] `agent8_handler.py` updated with MCP integration
 - [ ] Agent 8 can discover tools via MCP
 - [ ] Agent 8 can execute tools and get results
 - [ ] PII is automatically anonymized in results
 
-### Phase 4 Complete When:
+### Phase 4 Complete When
+
 - [ ] Unit tests pass (85%+ coverage for mcp_adapter.py)
 - [ ] Integration tests pass (requires Firestore connection)
 - [ ] Manual e2e test: User query → Tool execution → Response
 
-### Phase 5 Complete When:
+### Phase 5 Complete When
+
 - [ ] Token tracking enabled for all tool calls
 - [ ] 90%+ optimization rate achieved for minimal mode
 - [ ] 98%+ optimization rate achieved for aggregate mode
@@ -818,15 +823,19 @@ Read these before implementing:
 ## 🔧 Troubleshooting
 
 ### Issue: `ModuleNotFoundError: No module named 'tools'`
+
 **Solution**: Ensure `tools/` directory exists and has `__init__.py`
 
 ### Issue: Firestore connection errors
+
 **Solution**: Set `GOOGLE_APPLICATION_CREDENTIALS` environment variable
 
 ### Issue: Tool execution timeout
+
 **Solution**: Increase timeout parameter in `execute_tool()` call
 
 ### Issue: PII not anonymized
+
 **Solution**: Verify `enable_pii_protection=True` in MCPAdapter initialization
 
 ---

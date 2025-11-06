@@ -25,6 +25,7 @@ Agent 8 從 POC 驗證成功後，已完成 Phase 1 MVP 開發，整合到現有
 **代碼行數**：~800 行（生產版本，優化後）
 
 **主要改進**（相比 POC）：
+
 - 使用 Firestore 替代記憶體儲存對話歷史
 - 權限管理整合到 Firestore
 - 移除測試模式相關代碼
@@ -40,6 +41,7 @@ Agent 8 從 POC 驗證成功後，已完成 Phase 1 MVP 開發，整合到現有
 | 主程式更新 | `src/slack_app/main.py` | 註冊 Agent 8 命令 | ✅ |
 
 **整合特點**：
+
 - 復用現有 Slack App（不需要新建 App）
 - 共用 Firestore client
 - 權限檢查機制
@@ -54,6 +56,7 @@ Agent 8 從 POC 驗證成功後，已完成 Phase 1 MVP 開發，整合到現有
 | 整合測試 | `src/slack_app/tests/test_agent8_integration.py` | 模塊導入、權限檢查、初始化 | ✅ |
 
 **測試涵蓋**：
+
 - 模塊導入正確性
 - 問題類型枚舉
 - 權限檢查邏輯
@@ -79,12 +82,14 @@ Agent 8 從 POC 驗證成功後，已完成 Phase 1 MVP 開發，整合到現有
 **更新文件**：`src/slack_app/requirements.txt`
 
 **新增依賴**：
+
 ```
 google-generativeai>=0.3.0
 pydantic>=2.5.0
 ```
 
 **所有依賴**：
+
 - slack-bolt>=1.18.0
 - gunicorn>=21.2.0
 - google-cloud-firestore>=2.13.0
@@ -166,11 +171,13 @@ Cloud Run (slack-service)
 ### 月成本（生產環境）
 
 **假設**：
+
 - 5 位主管使用
 - 每人每天 10 次查詢
 - 每月工作日 20 天
 
 **計算**：
+
 - 總查詢次數：5 × 10 × 20 = 1,000 次/月
 - Gemini API 成本：~$0.50/月（Gemini 2.0 Flash Exp）
 - Cloud Run 成本：包含在現有服務中
@@ -355,10 +362,12 @@ Cloud Run (slack-service)
 ## 📞 聯絡資訊
 
 **技術問題**：
+
 - 查看部署指南：`docs/agent8-phase1-deployment.md`
 - 查看故障排除章節
 
 **功能建議**：
+
 - 收集用戶反饋
 - 提交 Issue 或建議
 

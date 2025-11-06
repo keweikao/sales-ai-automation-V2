@@ -2,7 +2,7 @@
 
 **Purpose**: Guide tool implementations to filter data in execution environment before passing to model context.
 
-**Source**: Derived from Anthropic official doc (2025) - https://www.anthropic.com/engineering/code-execution-with-mcp
+**Source**: Derived from Anthropic official doc (2025) - <https://www.anthropic.com/engineering/code-execution-with-mcp>
 
 **Token Optimization**: Achieve 98%+ token reduction for large datasets (Anthropic case study: 150k → 2k tokens).
 
@@ -208,6 +208,7 @@ def select_context_mode(query: str, tool_def: dict) -> str:
 **Query**: "過去一個月所有案件的健康度低於 60 的案件？"
 
 **Without Optimization**:
+
 ```python
 # ❌ Naive approach
 raw_results = firestore.collection("cases").where("created_date", ">=", "2024-12-01").get()
@@ -216,6 +217,7 @@ raw_results = firestore.collection("cases").where("created_date", ">=", "2024-12
 ```
 
 **With Optimization**:
+
 ```python
 # ✅ Optimized approach
 result = firestore_query(
@@ -238,6 +240,7 @@ result = firestore_query(
 **Query**: "本週團隊平均健康度與上週對比？"
 
 **Without Optimization**:
+
 ```python
 # ❌ Pass all records to model for aggregation
 this_week = get_cases(week="2025-W02")  # 200 records → 50k tokens
@@ -246,6 +249,7 @@ last_week = get_cases(week="2025-W01")  # 200 records → 50k tokens
 ```
 
 **With Optimization**:
+
 ```python
 # ✅ Aggregate in environment
 result = firestore_query(
@@ -270,6 +274,7 @@ result = firestore_query(
 **Query**: "案件 #202501-IC001 的完整資料？"
 
 **Optimization**:
+
 ```python
 # Use context_mode="full" since only 1 record expected
 result = firestore_query(
@@ -456,6 +461,7 @@ def test_context_optimization():
 ---
 
 **Next Steps**:
+
 1. Update existing Firestore query code to support `context_mode` parameter
 2. Implement `ContextOptimizationMetrics` for monitoring
 3. Add token usage logging to all tool executions

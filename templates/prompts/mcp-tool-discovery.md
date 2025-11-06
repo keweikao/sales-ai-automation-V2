@@ -2,7 +2,7 @@
 
 **Purpose**: Guide AI agents to efficiently discover and select tools using progressive disclosure strategy.
 
-**Source**: Derived from Anthropic official doc (2025) - https://www.anthropic.com/engineering/code-execution-with-mcp
+**Source**: Derived from Anthropic official doc (2025) - <https://www.anthropic.com/engineering/code-execution-with-mcp>
 
 **Token Optimization**: This prompt reduces context usage by 95%+ through progressive tool loading.
 
@@ -124,6 +124,7 @@ Output format:
 ## Complete Workflow Example
 
 ### User Query
+
 "王小明這週的案件健康度如何？哪些案件需要關注？"
 
 ### Agent Reasoning Process
@@ -296,6 +297,7 @@ result = agent8.handle_user_query(query, session_id="test-001")
 ---
 
 **Next Steps**:
+
 1. Integrate this prompt template into Agent 8 system prompt
 2. Implement `_infer_category()`, `_select_tool()`, `_construct_params()` helper methods
 3. Add token usage monitoring to track optimization effectiveness

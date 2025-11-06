@@ -37,6 +37,7 @@ ls -la tools/firestore/
 ```
 
 **Expected Output**:
+
 ```
 tools/
   __init__.py
@@ -56,6 +57,7 @@ tools/
 **Template Source**: Copy complete template from `IMPLEMENTATION_GUIDE.md` Step 2.2
 
 **Key Requirements**:
+
 1. ✅ Include docstring with `# derived from Anthropic official doc (2025)`
 2. ✅ Support 3 context modes: minimal, full, aggregate
 3. ✅ Implement 5-stage filtering logic:
@@ -79,12 +81,14 @@ python -c "from tools.firestore.query import query; print('Import successful')"
 ### Task 2.3: Mark Phase 2 Complete
 
 **Checklist**:
+
 - [ ] All directories created with `__init__.py`
 - [ ] `tools/firestore/query.py` created
 - [ ] Import test passes
 - [ ] Code includes proper docstrings and comments
 
 **Report Back to User**:
+
 ```
 ✅ Phase 2 完成
 
@@ -114,6 +118,7 @@ Read: src/slack_app/handlers/agent8_handler.py
 ```
 
 **Look for**:
+
 - Existing `handle_user_query()` method
 - How user queries are currently processed
 - Where to insert MCP integration code
@@ -125,11 +130,13 @@ Read: src/slack_app/handlers/agent8_handler.py
 **Action**: Edit `src/slack_app/handlers/agent8_handler.py`
 
 **Add to imports** (top of file):
+
 ```python
 from mcp_adapter import MCPAdapter
 ```
 
 **Add to `__init__()` method**:
+
 ```python
 def __init__(self):
     # ... existing initialization ...
@@ -145,6 +152,7 @@ def __init__(self):
 **Reference**: Complete code in `IMPLEMENTATION_GUIDE.md` Step 3.1
 
 **Key additions**:
+
 1. Initialize MCP adapter per session
 2. Check if query needs tools (`_needs_tools()`)
 3. If yes:
@@ -163,6 +171,7 @@ def __init__(self):
 **Action**: Add these methods to Agent8Handler class
 
 Methods to add:
+
 - `_needs_tools(query: str) -> bool`
 - `_infer_tool_category(query: str) -> str`
 - `_select_tool(tools: List[str], query: str) -> str`
@@ -194,6 +203,7 @@ print(f'MCP adapter available: {handler.mcp is not None or hasattr(handler, \"mc
 ### Task 3.6: Mark Phase 3 Complete
 
 **Checklist**:
+
 - [ ] MCP import added
 - [ ] MCP initialization in `__init__()`
 - [ ] `handle_user_query()` updated with MCP logic
@@ -201,6 +211,7 @@ print(f'MCP adapter available: {handler.mcp is not None or hasattr(handler, \"mc
 - [ ] Import test passes
 
 **Report Back to User**:
+
 ```
 ✅ Phase 3 完成
 
@@ -231,6 +242,7 @@ print(f'MCP adapter available: {handler.mcp is not None or hasattr(handler, \"mc
 **Template**: Copy from `IMPLEMENTATION_GUIDE.md` Step 4.1
 
 **Tests to include**:
+
 1. `TestPIIAnonymizer` - email, phone, nested data anonymization
 2. `TestToolRegistry` - tool discovery, definition loading
 3. `TestMCPAdapter` - initialization, session stats
@@ -267,6 +279,7 @@ pytest tests/unit/test_mcp_adapter.py -v
 **Test Query**: "王小明這週的案件健康度如何？"
 
 **Expected Flow**:
+
 1. Agent 8 receives query
 2. Detects tools needed → category = "firestore"
 3. Discovers tools → finds "firestore.query"
@@ -283,11 +296,13 @@ pytest tests/unit/test_mcp_adapter.py -v
 ### Task 4.5: Mark Phase 4 Complete
 
 **Checklist**:
+
 - [ ] Unit tests created and pass
 - [ ] Integration tests created (or documented as skipped)
 - [ ] Manual E2E test successful (or documented issue)
 
 **Report Back to User**:
+
 ```
 ✅ Phase 4 完成
 
@@ -322,6 +337,7 @@ pytest tests/unit/test_mcp_adapter.py -v
 **Action**: Update `mcp_adapter.py` to use TokenUsageTracker
 
 **Changes**:
+
 1. Import TokenUsageTracker
 2. Initialize in `__init__()`
 3. Call `measure_optimization()` in `execute_tool()`
@@ -351,12 +367,14 @@ print(result.get("token_optimization"))
 ### Task 5.4: Mark Phase 5 Complete
 
 **Checklist**:
+
 - [ ] TokenUsageTracker implemented
 - [ ] Integrated with MCP adapter
 - [ ] Test shows >90% token reduction for minimal mode
 - [ ] Test shows >95% token reduction for aggregate mode
 
 **Report Back to User**:
+
 ```
 ✅ Phase 5 完成
 

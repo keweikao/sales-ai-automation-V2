@@ -3,6 +3,7 @@
 > 🧭 目的：集中管理本專案使用的所有金鑰、Token 與憑證，確保每位語言模型或開發者都能在不重複索取的情況下存取既有憑證。
 
 ## 🎯 原則
+
 - 所有敏感資訊一律儲存在 **GCP Secret Manager**（Production / Staging 環境）或受控的共享保管庫（例如 1Password business vault）；**不得**硬編在程式碼或 commit。
 - 本地開發需透過 `gcloud secrets versions access` 匯出到 `.env` 或臨時檔案，並於 Session 結束後清除。
 - 每次部署前，請確認所需 Secret 已存在並授權給對應的 Cloud Run / Cloud Functions 服務帳號。

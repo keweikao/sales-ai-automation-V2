@@ -173,11 +173,13 @@ python scripts/demo.py
 #### 2. 權限管理（1 天）
 
 - [ ] 在 Firestore 建立主管名單
+
   ```
   Collection: users
   Document ID: {slack_user_id}
   Fields: {role: "manager", name: "XXX", email: "XXX"}
   ```
+
 - [ ] 實現權限檢查邏輯
 - [ ] 未授權用戶返回友善提示
 
@@ -246,6 +248,7 @@ python scripts/demo.py
 ### **決策：GO** ✅
 
 **決策依據**：
+
 1. ✅ 所有核心功能驗證通過
 2. ✅ 所有成功標準達成
 3. ✅ 成本極低（$0.11/月）
@@ -253,6 +256,7 @@ python scripts/demo.py
 5. ✅ 用戶體驗良好
 
 **建議**：
+
 - ✅ 進入 Phase 1 MVP 開發
 - ✅ 2 週內完成 dev 環境部署
 - ✅ 邀請主管試用並收集反饋
@@ -304,6 +308,7 @@ python scripts/demo.py
 ## 🌟 特別感謝
 
 感謝以下資源和工具：
+
 - **Gemini 2.0 Flash**：強大的 AI 模型
 - **Google Cloud Platform**：穩定的基礎設施
 - **Slack API**：完善的 Bot 開發工具

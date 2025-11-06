@@ -37,6 +37,7 @@
 ### 前置準備
 
 **所需資源**：
+
 - ✅ GCP 項目：`sales-ai-automation-v2`
 - ✅ Firestore 資料庫（已存在）
 - ✅ Cloud Run 服務：`slack-service`（已存在）
@@ -67,6 +68,7 @@ gcloud run services describe slack-service \
 ```
 
 **必須的環境變數**：
+
 - ✅ `GCP_PROJECT_ID`
 - ✅ `SLACK_BOT_TOKEN`
 - ✅ `SLACK_SIGNING_SECRET`
@@ -85,7 +87,8 @@ gcloud run services describe slack-service \
    **Document ID**: `U12345678`（您的 Slack User ID）
 
    **欄位**：
-   ```
+
+   ```text
    userId: U12345678
    role: manager
    name: 測試主管
@@ -96,6 +99,7 @@ gcloud run services describe slack-service \
    ```
 
 **如何獲取 Slack User ID**：
+
 1. 在 Slack 中點擊自己的頭像
 2. 選擇「檢視個人檔案」→「更多」→「複製成員 ID」
 
@@ -168,20 +172,24 @@ gcloud run deploy slack-service \
 #### 5.1 權限測試
 
 **測試有權限的用戶**：
+
 ```
 /ask-agent8 今天團隊表現如何？
 ```
 
 **預期結果**：
+
 - ✅ 收到 Agent 8 的回答
 - ✅ 回答使用繁體中文
 - ✅ 包含數據、洞察、建議
 
 **測試無權限的用戶**：
+
 - 切換到沒有主管權限的用戶
 - 執行 `/ask-agent8 測試`
 
 **預期結果**：
+
 - ✅ 收到「沒有權限」訊息
 
 #### 5.2 功能測試
@@ -212,6 +220,7 @@ gcloud logging read "resource.type=cloud_run_revision AND resource.labels.servic
 ```
 
 **關鍵日誌**：
+
 - ✅ `收到 /ask-agent8 命令`
 - ✅ `權限檢查：user=xxx, authorized=true/false`
 - ✅ `Agent 8 回答成功`
@@ -223,6 +232,7 @@ gcloud logging read "resource.type=cloud_run_revision AND resource.labels.servic
 ### 問題 1：收到「GEMINI_API_KEY 未設定」錯誤
 
 **解決方法**：
+
 ```bash
 gcloud run services update slack-service \
   --region=asia-east1 \
@@ -232,11 +242,13 @@ gcloud run services update slack-service \
 ### 問題 2：收到「沒有權限」訊息
 
 **檢查步驟**：
+
 1. 確認 Firestore `users` Collection 中有您的 Document
 2. 確認 `role` 欄位為 `manager` 或 `admin`
 3. 確認 Document ID 是您的 Slack User ID
 
 **驗證腳本**：
+
 ```python
 from google.cloud import firestore
 
@@ -253,6 +265,7 @@ else:
 ### 問題 3：Agent 8 沒有回應
 
 **檢查步驟**：
+
 1. 檢查 Cloud Run 日誌
 2. 確認 Slack Command 的 Request URL 正確
 3. 確認 Cloud Run 服務健康
@@ -264,10 +277,12 @@ curl https://slack-service-xxx.run.app/health
 ### 問題 4：回答錯誤或不完整
 
 **可能原因**：
+
 - Firestore 中沒有案件數據
 - 查詢條件過於嚴格
 
 **檢查數據**：
+
 ```python
 from google.cloud import firestore
 
@@ -306,6 +321,7 @@ gcloud logging read "textPayload:\"收到 /ask-agent8 命令\"" \
 ### 成本監控
 
 **預估成本**（每月）：
+
 - Gemini 2.0 Flash Exp: ~$0.11（每天 10 次查詢）
 - Cloud Run: 包含在現有服務中
 - Firestore: 讀取操作費用極低
@@ -339,16 +355,19 @@ gcloud logging read "textPayload:\"收到 /ask-agent8 命令\"" \
 ## ✅ 檢查清單
 
 **部署前**：
+
 - [ ] Gemini API Key 已設定
 - [ ] 至少添加 1 位主管到 Firestore
 - [ ] Cloud Run 環境變數正確
 
 **部署中**：
+
 - [ ] 代碼成功部署到 Cloud Run
 - [ ] Slack Command 已配置
 - [ ] 健康檢查通過
 
 **部署後**：
+
 - [ ] 有權限用戶測試成功
 - [ ] 無權限用戶收到正確提示
 - [ ] 多輪對話功能正常
@@ -359,6 +378,7 @@ gcloud logging read "textPayload:\"收到 /ask-agent8 命令\"" \
 ## 📞 支援
 
 如有問題，請參考：
+
 - [用戶使用指南](./agent8-user-guide.md)
 - [權限管理文檔](./agent8-permission-management.md)
 - [POC 測試報告](../specs/001-sales-ai-automation/poc-tests/poc8_agent8_conversational/POC8_REPORT.md)

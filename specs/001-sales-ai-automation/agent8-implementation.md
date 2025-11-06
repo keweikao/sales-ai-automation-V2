@@ -39,6 +39,7 @@
 ```
 
 **優點**：
+
 - ✅ 輕量級，冷啟動快
 - ✅ 成本更低（Cloud Function < Cloud Run）
 - ✅ 獨立部署，不影響 slack-service

@@ -3,7 +3,7 @@
 **Feature Branch**: `001-sales-ai-automation/integration-mcp`
 **Created**: 2025-11-06
 **Status**: Draft
-**Source**: Derived from Anthropic official doc (2025) - https://www.anthropic.com/engineering/code-execution-with-mcp
+**Source**: Derived from Anthropic official doc (2025) - <https://www.anthropic.com/engineering/code-execution-with-mcp>
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -98,6 +98,7 @@
 **Acceptance Scenarios**:
 
 - **Given** tools are organized in directory structure:
+
   ```
   tools/
   ├── firestore/
@@ -109,6 +110,7 @@
   ├── bigquery/
       ├── query.py
   ```
+
   **When** agent requests tool list for "firestore" category
   **Then** system should:
   - Scan `tools/firestore/` directory
@@ -249,6 +251,7 @@
 ---
 
 **Next Steps**:
+
 1. Clarify open questions (Q-001 to Q-004)
 2. Design tool definition schema and directory structure
 3. Implement `mcp_adapter.py` module for tool discovery and execution

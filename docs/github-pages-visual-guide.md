@@ -36,10 +36,12 @@ Source: [下拉選單]
 ```
 
 **下拉選單選項**：
+
 - Deploy from a branch（預設）
 - GitHub Actions ← **選擇這個**
 
 選擇 "GitHub Actions" 後：
+
 - 不需要點擊 Save（會自動保存）
 - 頁面會顯示：✅ GitHub Actions
 
@@ -75,10 +77,12 @@ GitHub Pages is currently disabled. Select a source below to enable GitHub Pages
 GitHub Pages 對於不同可見性的 repository 有不同要求：
 
 **Private Repository**（私有倉庫）：
+
 - 免費帳號：無法使用 GitHub Pages
 - GitHub Pro/Team/Enterprise：可以使用 Pages
 
 **Public Repository**（公開倉庫）：
+
 - 所有帳號都可使用 Pages
 
 **檢查方法**：
@@ -166,7 +170,7 @@ gh api \
 
 ## 📸 畫面截圖參考位置
 
-### 正確的 Pages 設定頁面應該長這樣：
+### 正確的 Pages 設定頁面應該長這樣
 
 ```text
 ┌─────────────────────────────────────────────────────┐
@@ -186,7 +190,7 @@ gh api \
 └─────────────────────────────────────────────────────┘
 ```
 
-### Settings 側邊欄位置：
+### Settings 側邊欄位置
 
 ```text
 Settings (左側選單)
@@ -216,6 +220,7 @@ Settings (左側選單)
 **原因**: Repository 是 Private 且您使用免費帳號
 
 **解決方式**（選一）：
+
 - 升級到 GitHub Pro（$4/月）
 - 將 repository 改為 Public
 - 暫時不使用 Pages（文檔仍可在 GitHub 上瀏覽）
@@ -225,10 +230,12 @@ Settings (左側選單)
 ### Q2: 我進入 Settings/Pages 但頁面完全空白
 
 **可能原因**：
+
 1. 瀏覽器快取問題
 2. 權限載入延遲
 
 **解決方式**：
+
 ```bash
 # 清除快取後重試
 1. 按 Ctrl+Shift+R (Windows) 或 Cmd+Shift+R (Mac) 強制重新載入
@@ -240,10 +247,12 @@ Settings (左側選單)
 ### Q3: 我是 Owner 但仍看不到 Pages 選項
 
 **檢查項目**：
+
 1. 確認 repository 不是 fork（fork 的 repo 可能無法啟用 Pages）
 2. 確認組織設定沒有禁用 Pages
 
 **檢查組織設定**（如果 repo 屬於組織）：
+
 1. 進入組織設定：`https://github.com/organizations/YOUR_ORG/settings/pages`
 2. 確認沒有禁用 GitHub Pages
 
@@ -257,6 +266,7 @@ Settings (左側選單)
    - 進入 Settings/Pages 後看到什麼？（完全空白 / 有文字但無選單 / 其他）
 
 2. **Repository 狀態**：
+
    ```bash
    # 執行以下命令並提供輸出
    gh repo view keweikao/sales-ai-automation-V2 --json visibility,owner,permissions
@@ -298,4 +308,3 @@ git push
 ```
 
 部署完成後（約 2-3 分鐘），文檔網站就會在上述 URL 可用。
-
