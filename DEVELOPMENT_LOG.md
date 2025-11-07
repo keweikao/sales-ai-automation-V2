@@ -277,7 +277,7 @@ This file tracks all development sessions to enable seamless continuation across
 - The next logical step is to perform user testing and gather feedback as outlined in the "Next Steps" section.
 - You can now proceed with the "使用者回饋測試並記錄" task.
 
-### Session 20: 2025-11-07 (Slack 錄音流程 UX + 轉錄服務自動化)
+### Session 21: 2025-11-07 (Slack 錄音流程 UX + 轉錄服務自動化)
 
 **Duration**: ~2.5 hours
 **AI Model**: GPT-5 Codex (CLI)
