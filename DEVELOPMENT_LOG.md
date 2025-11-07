@@ -93,65 +93,60 @@ This file tracks all development sessions to enable seamless continuation across
 
 ---
 
-## 🎯 Quick Reference for New AI Assistants
-
-### Essential Files to Read First
-
-1. **`memory/constitution.md`** - System principles and constraints
-2. **`specs/001-sales-ai-automation/spec.md`** - Complete feature specification
-3. **`specs/001-sales-ai-automation/plan.md`** - Technical implementation plan
-4. **`specs/001-sales-ai-automation/research.md`** - POC validation plan
-5. **This file** - Development history and decisions
-
-### Key Decisions Already Made ✅
-
-| Decision | Choice | Rationale |
-|----------|--------|-----------|
-| **Product Catalog** | Use iCHEF website (<https://www.ichefpos.com/>) | 6 core products, upgrade paths defined |
-| **Questionnaire Approach** | Prompt-based (22 features, 6 categories) | Simpler than Firestore templates for MVP |
-| **Disaster Recovery** | Option A (Wait for recovery) | Low volume, acceptable downtime risk |
-| **Questionnaire Structure** | Approved (current_status, need_reasons, barriers, etc.) | Iterate if issues arise |
-| **Multi-Agent Architecture** | 6 agents (Agents 1-5 parallel, Agent 6 synthesis) | +$15/month acceptable for 15-20% accuracy gain |
-
-### 22 iCHEF Features (for Agent 5)
-
-**點餐與訂單管理** (6): 掃碼點餐, 多人掃碼點餐, 套餐加價購, 智慧菜單推薦, POS點餐系統, 線上點餐接單
-
-**線上整合服務** (7): 線上訂位管理, 線上外帶自取, 雲端餐廳, Google整合, LINE整合, 外送平台整合, 聯絡式外帶服務
-
-**成本與庫存管理** (3): 成本控管, 庫存管理, 帳款管理
-
-**業績與銷售分析** (2): 銷售分析, 報表生成功能
-
-**客戶關係管理** (2): 零秒集點, 會員管理
-
-**企業級功能** (2): 總部系統, 連鎖品牌管理
-
-### Project Structure
-
-```text
-sales-ai-automation-V2/
-├── memory/
-│   └── constitution.md              # Core principles
-├── specs/001-sales-ai-automation/
-│   ├── spec.md                      # Feature specification (8 User Stories)
-│   ├── plan.md                      # Technical plan (architecture, costs)
-│   ├── research.md                  # POC validation plan (6 POCs)
-│   └── poc-tests/                   # POC test scripts
-│       ├── README.md
-│       ├── poc1_whisper/
-│       │   └── test_whisper.py
-│       ├── poc2_multi_agent/
-│       │   └── test_parallel.py
-│       └── poc6_questionnaire/
-│           └── agent5_prompts/v1.md
-├── DEVELOPMENT_LOG.md               # This file
-└── README.md                        # Project overview
-```
-
----
-
 ## 📅 Session History
+
+### Session 22: 2025-11-06 (Troubleshooting Agent 8 Invocation and Model Not Found Error)
+
+**Duration**: ~30 minutes
+**AI Model**: Gemini
+**User**: Stephen
+
+#### Objectives Completed ✅
+
+- [x] Monitored Cloud Run logs for the `slack-app` service to diagnose a permission error reported by the user.
+- [x] Checked the IAM policy for the `slack-app` service and confirmed it is publicly accessible (`roles/run.invoker` assigned to `allUsers`).
+- [x] Identified a new error message from the user: `分析失敗：問題解析失敗: 404 models/gemini-1.5-flash is not found for API version v1beta, or is not supported for generateContent.`
+
+#### Files Created/Modified
+
+**Modified**:
+
+- `DEVELOPMENT_LOG.md`: Added this session log.
+
+#### Key Discussions & Decisions
+
+##### 1. Root Cause Analysis of Permission Error and New 404 Error
+
+**Initial State**: The user reported a permission error when invoking the `/ask-agent8` command, but no corresponding error was found in the Cloud Run logs.
+
+**Investigation**:
+
+1. Continuously monitored the logs for revision `slack-app-00037-hkn`, but no invocation requests were logged.
+2. Verified the service's IAM policy, confirming it was publicly invokable. This ruled out a service-level IAM issue.
+3. The user then provided a new error message: `404 models/gemini-1.5-flash is not found`. This points to an application-level issue where the code is attempting to use a non-existent or unsupported Gemini model.
+
+**Decision**: The focus of the investigation has shifted from infrastructure-level permission issues to an application-level model configuration problem. The next step is to analyze the application code to find where `gemini-1.5-flash` is being called and replace it with a valid model.
+
+#### Technical Highlights
+
+- Used `gcloud logging read` to monitor Cloud Run logs.
+- Used `gcloud run services get-iam-policy` to verify public access.
+
+#### Known Issues & Risks
+
+- The application is currently in a broken state due to the invalid model name.
+
+#### Open Questions
+
+- Where in the codebase is `gemini-1.5-flash` being used?
+
+#### Next Session Preparation
+
+**For Next AI Assistant**:
+
+- The immediate next step is to search the codebase for the string `gemini-1.5-flash` to identify the source of the error.
+- Once found, replace the invalid model name with a supported model, such as `gemini-1.5-pro-latest` or another suitable model.
+- After fixing the code, redeploy the `slack-app` service and have the user test the `/ask-agent8` command again.
 
 ### Session 21: 2025-11-06 (Fix All Markdownlint Errors for GitHub Pages Deployment)
 
@@ -184,21 +179,25 @@ sales-ai-automation-V2/
 **User Request**: "我部署到 github 的這個錯誤還是沒有修復，請詳細規劃 debug 方式並幫我重新部署"
 
 **Decision**: Two-phase approach:
+
 1. Manually fix the 3 originally reported files
 2. Auto-fix all remaining files and update config to disable problematic rules
 
 **Rationale**: The original errors were in specific files, but GitHub Actions checks ALL markdown files. Rather than manually fixing 482 errors, we:
+
 - Used `markdownlint-cli2 --fix` to auto-fix most issues (reduced to 96 errors)
 - Disabled rules that were too strict for documentation style (MD029, MD036, MD040)
 
 ##### 2. Disabled Markdown Rules
 
 **Decision**: Disabled three markdownlint rules:
+
 - MD029: Ordered list prefixes (allows flexible numbering)
 - MD036: Emphasis as headings (allows **bold text** in certain contexts)
 - MD040: Fenced code language (allows code blocks without language specification for output examples)
 
 **Rationale**: These rules were too strict for documentation that includes:
+
 - Example outputs (don't need language specification)
 - Emphasized labels that aren't headings
 - Flexible list numbering for maintenance
