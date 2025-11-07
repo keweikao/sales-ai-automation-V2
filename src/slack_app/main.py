@@ -7,6 +7,7 @@ import json
 import logging
 import os
 import re
+import threading
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
@@ -26,6 +27,7 @@ from utils.file_pipeline import (
     enqueue_transcription_task,
     upload_to_gcs,
 )
+from handlers.agent8_handler import handle_ask_agent8_command
 
 # 設定 logging
 logging.basicConfig(
@@ -66,9 +68,8 @@ SLACK_BOT_TOKEN = os.getenv("SLACK_BOT_TOKEN")
 # ============================================
 
 @app.command("/ask-agent8")
-def ask_agent8_command(ack, command, client):
+def ask_agent8_command(ack, command, client, logger):
     """處理 /ask-agent8 命令"""
-    from handlers.agent8_handler import handle_ask_agent8_command
     handle_ask_agent8_command(ack, command, client, logger, db)
 
 
@@ -76,10 +77,31 @@ def ask_agent8_command(ack, command, client):
 # Event Handlers
 # ============================================
 
+@firestore.transactional
+def check_and_create_notified_record(transaction, file_ref, file_id, file_name, user_id):
+    """
+    Atomically checks if a file record exists and creates it if it doesn't.
+    Returns the existing document if found, otherwise None.
+    """
+    snapshot = file_ref.get(transaction=transaction)
+    if snapshot.exists:
+        return snapshot.to_dict()
+    
+    new_doc = {
+        "fileId": file_id,
+        "fileName": file_name,
+        "userId": user_id,
+        "status": "notified",
+        "notifiedAt": firestore.SERVER_TIMESTAMP,
+    }
+    transaction.set(file_ref, new_doc)
+    return None
+
+
 @app.event("file_shared")
 def handle_file_shared(client, event, logger):
     """
-    處理音檔上傳事件（僅處理 DM）
+    處理音檔上傳事件（僅處理 DM），使用 Transaction 防止重複處理。
     """
     try:
         file_id = event.get("file_id")
@@ -89,19 +111,43 @@ def handle_file_shared(client, event, logger):
             logger.warning(f"Missing file_id or user_id in event: {event}")
             return
 
-        # 取得檔案資訊
+        # 取得檔案基本資訊
         file_info_response = client.files_info(file=file_id)
         file_info = file_info_response.get("file", {})
         file_name = file_info.get("name", "Unknown")
+        
+        # 使用 Transaction 檢查並建立初始紀錄
+        file_ref = db.collection("processed_files").document(file_id)
+        transaction = db.transaction()
+        existing_doc = check_and_create_notified_record(transaction, file_ref, file_id, file_name, user_id)
+
+        if existing_doc:
+            status = existing_doc.get('status', 'unknown')
+            case_id = existing_doc.get('caseId', '未知')
+            logger.info(f"File {file_id} already being processed (status: {status}, case: {case_id}), notifying user.")
+
+            status_emoji = {'notified': '📋', 'processing': '⏳', 'queued': '⏱️', 'transcribing': '🎙️', 'transcribed': '✅', 'analyzing': '🔍', 'completed': '🎉', 'failed': '❌'}.get(status, '📝')
+            status_text = {'notified': '等待分析', 'processing': '處理中', 'queued': '排隊中', 'transcribing': '轉錄中', 'transcribed': '已轉錄', 'analyzing': '分析中', 'completed': '已完成', 'failed': '失敗'}.get(status, status)
+
+            client.chat_postMessage(
+                channel=user_id,
+                text=f"ℹ️ 此音檔已經上傳過\n\n"
+                     f"📁 案件編號：`{case_id}`\n"
+                     f"{status_emoji} 狀態：{status_text}\n\n"
+                     f"如需重新分析，請先刪除此檔案後再上傳。"
+            )
+            return
+
+        # 如果 existing_doc 是 None，表示新紀錄已成功建立，可以繼續後續流程
+        logger.info(f"New file {file_id} record created atomically.")
+
         file_type = file_info.get("filetype", "")
         shares = file_info.get("shares", {})
 
-        # 只處理 DM（private shares）
         if not shares.get("private"):
             logger.info(f"Ignoring file {file_id} - not shared in DM")
             return
 
-        # 檢查是否為音檔
         supported_audio_types = ["m4a", "mp3", "wav", "flac", "ogg", "aac"]
         if file_type.lower() not in supported_audio_types:
             client.chat_postMessage(
@@ -111,34 +157,15 @@ def handle_file_shared(client, event, logger):
             logger.info(f"Ignored non-audio file: {file_id} (type: {file_type})")
             return
 
-        # 發送帶有按鈕的訊息
         client.chat_postMessage(
             channel=user_id,
             text=f"📎 收到音檔：*{file_name}*\n請點擊下方按鈕補充客戶資訊以開始分析。",
             blocks=[
-                {
-                    "type": "section",
-                    "text": {
-                        "type": "mrkdwn",
-                        "text": f"📎 收到音檔：*{file_name}*\n\n請點擊下方按鈕補充客戶資訊以開始分析。"
-                    }
-                },
-                {
-                    "type": "actions",
-                    "block_id": "audio_actions",
-                    "elements": [
-                        {
-                            "type": "button",
-                            "text": {"type": "plain_text", "text": "🎯 分析此錄音"},
-                            "style": "primary",
-                            "action_id": "analyze_audio_button",
-                            "value": file_id
-                        }
-                    ]
-                }
+                {"type": "section", "text": {"type": "mrkdwn", "text": f"📎 收到音檔：*{file_name}*\n\n請點擊下方按鈕補充客戶資訊以開始分析。"}},
+                {"type": "actions", "block_id": "audio_actions", "elements": [{"type": "button", "text": {"type": "plain_text", "text": "🎯 分析此錄音"}, "style": "primary", "action_id": "analyze_audio_button", "value": file_id}]}
             ]
         )
-        logger.info(f"Audio file detected: {file_id} ({file_name}) from user {user_id}")
+        logger.info(f"Audio file detected: {file_id} ({file_name}) from user {user_id}, prompt sent.")
 
     except SlackApiError as e:
         logger.error(f"Slack API error in handle_file_shared: {e.response['error']}")
@@ -280,7 +307,15 @@ def handle_modal_submission(ack, body, client, view, logger):
         channel_id,
     )
 
-    # 檢查基本設定
+    # 驗證手機（若有提供） - 在 ack() 之前驗證
+    clean_phone = re.sub(r"[^\d]", "", customer_phone_raw)
+    if customer_phone_raw and not re.fullmatch(r"09\d{8}", clean_phone):
+        ack(response_action="errors", errors={
+            "customer_phone_block": "請輸入正確的台灣手機格式（例如：0912345678）。"
+        })
+        return
+
+    # 檢查基本設定 - 在 ack() 之前檢查
     missing_config = []
     if not SLACK_BOT_TOKEN:
         missing_config.append("SLACK_BOT_TOKEN")
@@ -297,32 +332,83 @@ def handle_modal_submission(ack, body, client, view, logger):
         })
         return
 
-    # 驗證手機（若有提供）
-    clean_phone = re.sub(r"[^\d]", "", customer_phone_raw)
-    if customer_phone_raw and not re.fullmatch(r"09\d{8}", clean_phone):
-        ack(response_action="errors", errors={
-            "customer_phone_block": "請輸入正確的台灣手機格式（例如：0912345678）。"
-        })
-        return
+    # 立即確認以避免 Slack 3 秒超時 - 在背景處理所有操作
+    ack()
+
+    # 將後續處理放到後台線程，避免被 Slack Bolt 中斷
+    def process_in_background():
+        try:
+            _process_modal_submission(
+                file_id=file_id,
+                customer_id=customer_id,
+                customer_name=customer_name,
+                customer_phone_raw=customer_phone_raw,
+                clean_phone=clean_phone,
+                notes=notes,
+                user_id=user_id,
+                channel_id=channel_id,
+                message_ts=message_ts,
+                thread_ts=thread_ts,
+                client=client,
+                logger=logger,
+            )
+        except Exception as e:
+            logger.error(f"Background processing failed: {e}", exc_info=True)
+
+    # 啟動後台線程
+    thread = threading.Thread(target=process_in_background, daemon=False)
+    thread.start()
+
+
+def _process_modal_submission(
+    file_id: str,
+    customer_id: str,
+    customer_name: str,
+    customer_phone_raw: str,
+    clean_phone: str,
+    notes: str,
+    user_id: str,
+    channel_id: str,
+    message_ts: str,
+    thread_ts: str,
+    client,
+    logger,
+):
+    """後台處理 Modal 提交的實際邏輯"""
+    import sys
+    logger.info("=== Background thread started for file %s ===", file_id)
+    sys.stdout.flush()  # Force flush to ensure logs are written
 
     # 取得 Slack 檔案與使用者資訊
     try:
+        logger.info("Fetching file info from Slack for file %s", file_id)
+        sys.stdout.flush()
         file_info_response = client.files_info(file=file_id)
         file_info = file_info_response.get("file", {})
     except SlackApiError as e:
         logger.error("Failed to fetch Slack file info: %s", e.response["error"])
-        ack(response_action="errors", errors={
-            "customer_name_block": "無法取得音檔資訊，請稍後再試。"
-        })
+        try:
+            client.chat_postMessage(
+                channel=channel_id,
+                thread_ts=thread_ts,
+                text=f"❌ 無法取得音檔資訊，請稍後再試。\n錯誤：{e.response['error']}"
+            )
+        except Exception as notify_error:
+            logger.error(f"Failed to send error notification: {notify_error}")
         return
 
     try:
         user_info = client.users_info(user=user_id).get("user", {})
     except SlackApiError as e:
         logger.error("Failed to fetch Slack user info: %s", e.response["error"])
-        ack(response_action="errors", errors={
-            "customer_name_block": "無法取得使用者資訊，請稍後再試。"
-        })
+        try:
+            client.chat_postMessage(
+                channel=channel_id,
+                thread_ts=thread_ts,
+                text=f"❌ 無法取得使用者資訊，請稍後再試。\n錯誤：{e.response['error']}"
+            )
+        except Exception as notify_error:
+            logger.error(f"Failed to send error notification: {notify_error}")
         return
 
     sales_rep_email = user_info.get("profile", {}).get("email", "")
@@ -360,6 +446,7 @@ def handle_modal_submission(ack, body, client, view, logger):
 
     processed_ref = db.collection("processed_files").document(file_id)
 
+    @firestore.transactional
     def run_transaction(transaction: firestore.Transaction):
         snapshot = processed_ref.get(transaction=transaction)
         if snapshot.exists:
@@ -401,42 +488,51 @@ def handle_modal_submission(ack, body, client, view, logger):
         }
 
     try:
-        transaction = db.transaction()
-        txn_result = run_transaction(transaction)
+        txn_result = run_transaction(db.transaction())
     except Exception as e:  # pylint: disable=broad-except
         logger.error("Firestore transaction failed: %s", e, exc_info=True)
-        ack(response_action="errors", errors={
-            "customer_name_block": "系統忙碌中，請稍後再試。"
-        })
+        client.chat_postMessage(
+            channel=channel_id,
+            thread_ts=thread_ts,
+            text=f"❌ 系統忙碌中，請稍後再試。\n錯誤：{str(e)[:200]}"
+        )
         return
 
     if not txn_result.get("can_process"):
         existing = txn_result.get("existing", {})
         existing_case_id = existing.get("caseId", "未知")
         status = existing.get("status", "processing")
-        ack(response_action="errors", errors={
-            "customer_id_block": f"此音檔已在案件 {existing_case_id} ({status}) 中處理。"
-        })
+        client.chat_postMessage(
+            channel=channel_id,
+            thread_ts=thread_ts,
+            text=f"⚠️ 此音檔已在案件 `{existing_case_id}` ({status}) 中處理。"
+        )
         return
 
     case_id = txn_result["case_id"]
     case_ref = db.collection("cases").document(case_id)
 
-    # 交易成功後立即回覆 Slack，避免逾時
-    ack()
-
     logger.info("Case %s created for file %s by user %s", case_id, file_id, user_id)
+    sys.stdout.flush()
 
     gcs_path = None
     local_path: Optional[str] = None
 
     try:
+        logger.info("Downloading file from Slack: %s", file_metadata["name"])
+        sys.stdout.flush()
         temp_path = download_slack_file(file_metadata, SLACK_BOT_TOKEN)
         local_path = str(temp_path)
+        logger.info("File downloaded to: %s", local_path)
+        sys.stdout.flush()
 
         safe_name = file_metadata["name"].replace(" ", "_")
         destination_blob = f"slack/{case_id}/{safe_name}"
+        logger.info("Uploading to GCS: %s", destination_blob)
+        sys.stdout.flush()
         gcs_path = upload_to_gcs(temp_path, AUDIO_BUCKET, destination_blob)
+        logger.info("File uploaded to GCS: %s", gcs_path)
+        sys.stdout.flush()
 
         delete_at = datetime.now(timezone.utc) + timedelta(days=7)
         case_ref.update({
@@ -455,33 +551,56 @@ def handle_modal_submission(ack, body, client, view, logger):
             "updatedAt": firestore.SERVER_TIMESTAMP,
         })
 
-        enqueue_transcription_task(
-            case_id=case_id,
-            gcs_path=gcs_path,
-            queue=TASK_QUEUE,
-            location=TASK_LOCATION,
-            project=project_id,
-            handler_url=TASK_HANDLER_URL,
-            service_account_email=TASK_SERVICE_ACCOUNT,
-        )
+        logger.info("Enqueuing transcription task for case %s", case_id)
+        logger.info("Task details: queue=%s, location=%s, handler_url=%s", TASK_QUEUE, TASK_LOCATION, TASK_HANDLER_URL)
+        sys.stdout.flush()
 
-        processed_ref.update({
-            "taskEnqueuedAt": firestore.SERVER_TIMESTAMP,
-        })
+        try:
+            task_response = enqueue_transcription_task(
+                case_id=case_id,
+                gcs_path=gcs_path,
+                queue=TASK_QUEUE,
+                location=TASK_LOCATION,
+                project=project_id,
+                handler_url=TASK_HANDLER_URL,
+                service_account_email=TASK_SERVICE_ACCOUNT,
+            )
+            logger.info("Transcription task enqueued successfully: %s", task_response.name)
+            sys.stdout.flush()
+
+            processed_ref.update({
+                "taskEnqueuedAt": firestore.SERVER_TIMESTAMP,
+                "taskName": task_response.name,
+            })
+        except Exception as task_error:
+            logger.error("Failed to enqueue transcription task: %s", task_error, exc_info=True)
+            sys.stdout.flush()
+            # Update case with error but don't fail the entire process
+            case_ref.update({
+                "taskEnqueueError": str(task_error),
+                "updatedAt": firestore.SERVER_TIMESTAMP,
+            })
+            # Re-raise to be caught by outer exception handler
+            raise
 
         confirmation_text = (
             f"✅ *案件已建立並開始分析*\n\n"
             f"📁 案件編號：`{case_id}`\n"
+            f"👤 客戶編號：`{customer_id}`\n"
             f"🏪 客戶名稱：{customer_name}\n"
             f"📞 客戶電話：{clean_phone or '未提供'}\n"
             f"📝 備註：{notes or '無'}\n\n"
             f"🎯 我們會在分析完成後自動通知您。"
         )
 
+        logger.info("Sending confirmation message to channel %s", channel_id)
+        sys.stdout.flush()
         client.chat_postMessage(
             channel=channel_id,
             text=confirmation_text,
         )
+        logger.info("Confirmation message sent successfully")
+        sys.stdout.flush()
 
         if channel_id and message_ts:
             try:
@@ -514,26 +633,26 @@ def handle_modal_submission(ack, body, client, view, logger):
     except Exception as e:  # pylint: disable=broad-except
         logger.error("Failed to process Slack submission: %s", e, exc_info=True)
 
-        processed_ref.update({
-            "status": "failed",
-            "error": str(e),
-            "locked": False,
-            "failedAt": firestore.SERVER_TIMESTAMP,
-        })
-
-        case_ref.update({
-            "status": "failed",
-            "error": str(e),
-            "updatedAt": firestore.SERVER_TIMESTAMP,
-        })
-
         try:
+            processed_ref.update({
+                "status": "failed",
+                "error": str(e),
+                "locked": False,
+                "failedAt": firestore.SERVER_TIMESTAMP,
+            })
+
+            case_ref.update({
+                "status": "failed",
+                "error": str(e),
+                "updatedAt": firestore.SERVER_TIMESTAMP,
+            })
+
             client.chat_postMessage(
                 channel=channel_id,
-                text="❌ 系統處理音檔時發生錯誤，請稍後再試或聯絡技術支援。",
+                text=f"❌ 系統處理音檔時發生錯誤，請稍後再試或聯絡技術支援。\n錯誤詳情：{str(e)[:200]}",
             )
-        except SlackApiError as notify_error:
-            logger.error("Unable to notify user about failure: %s", notify_error.response["error"])
+        except Exception as notify_error:
+            logger.error("Unable to notify user about failure: %s", notify_error, exc_info=True)
 
     finally:
         if local_path and os.path.exists(local_path):
