@@ -1,4 +1,8 @@
 {
+  "globs": [
+    "**/*.md",
+    "!**/.pytest_cache/**/*.md"
+  ],
   // https://github.com/DavidAnson/markdownlint/blob/main/doc/Rules.md
   "config": {
     "default": true,
