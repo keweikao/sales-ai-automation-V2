@@ -173,6 +173,23 @@ def handle_file_shared(client, event, logger):
         logger.error(f"Unexpected error in handle_file_shared: {e}", exc_info=True)
 
 
+@app.event("message")
+def handle_message_events(body, logger):
+    """
+    Handles message events. Specifically ignores message events with a
+    'file_share' subtype to prevent duplicate processing, as these are
+    also handled by the 'file_shared' event.
+    """
+    subtype = body.get("event", {}).get("subtype")
+    if subtype == "file_share":
+        file_id = body.get("event", {}).get("files", [{}])[0].get("id")
+        logger.info(f"Ignoring message event with subtype 'file_share' for file_id: {file_id} to prevent duplicate handling.")
+        return
+    
+    # Log other unhandled message subtypes for debugging, if any
+    logger.warning(f"Unhandled message event with subtype: {subtype}")
+
+
 @app.action("analyze_audio_button")
 def handle_analyze_button(ack, body, client, logger):
     """
