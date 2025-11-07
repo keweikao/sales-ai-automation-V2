@@ -6,7 +6,7 @@ Optimized Transcription Pipeline
 
 import logging
 import subprocess
-from typing import Dict, Optional
+from typing import Callable, Dict, Optional
 from pathlib import Path
 import time
 
@@ -105,7 +105,8 @@ class OptimizedTranscriptionPipeline:
         self,
         audio_path: str,
         save_transcription: bool = True,
-        output_formats: list = None
+        output_formats: list = None,
+        progress_callback: Optional[Callable[[Dict], None]] = None,
     ) -> Dict:
         """
         處理音檔的完整流程
@@ -144,6 +145,13 @@ class OptimizedTranscriptionPipeline:
         # Step 2: 創建音檔分段
         logger.info("\n[Step 2/4] Creating audio chunks...")
         chunks = self.chunker.create_chunks(total_duration)
+        self._notify_progress(
+            progress_callback,
+            step="chunking",
+            total_chunks=len(chunks),
+            completed_chunks=0,
+            detail=f"已規劃 {len(chunks)} 個片段",
+        )
 
         # Step 3: 並行轉錄所有片段
         logger.info("\n[Step 3/4] Parallel transcription...")
@@ -154,11 +162,13 @@ class OptimizedTranscriptionPipeline:
         chunk_results = self.transcriber.transcribe_chunks(
             audio_path=audio_path,
             chunks=chunks,
-            output_dir=chunks_output_dir
+            output_dir=chunks_output_dir,
+            progress_callback=progress_callback,
         )
 
         # Step 4: 合併結果
         logger.info("\n[Step 4/4] Merging results...")
+        self._notify_progress(progress_callback, step="merging", detail="合併片段中")
         merged_result = self.merger.merge_chunks(chunk_results)
 
         # 加入音檔資訊
@@ -231,6 +241,15 @@ class OptimizedTranscriptionPipeline:
         self._print_final_summary(merged_result, pipeline_total_time)
 
         return merged_result
+
+    @staticmethod
+    def _notify_progress(callback: Optional[Callable[[Dict], None]], **payload) -> None:
+        if not callback:
+            return
+        try:
+            callback(payload)
+        except Exception as exc:  # pylint: disable=broad-except
+            logger.debug("Progress callback failed: %s", exc)
 
     @staticmethod
     def _assign_speakers_to_segments(segments, diarization_segments):

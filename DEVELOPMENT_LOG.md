@@ -277,6 +277,68 @@ This file tracks all development sessions to enable seamless continuation across
 - The next logical step is to perform user testing and gather feedback as outlined in the "Next Steps" section.
 - You can now proceed with the "使用者回饋測試並記錄" task.
 
+### Session 20: 2025-11-07 (Slack 錄音流程 UX + 轉錄服務自動化)
+
+**Duration**: ~2.5 hours
+**AI Model**: GPT-5 Codex (CLI)
+**User**: Stephen
+
+#### Objectives Completed ✅
+
+- [x] 修正 Slack 錄音流程，避免尚未填表的檔案被判定為「已處理」，並讓使用者在送出 Modal 後即顯示「錄音檔上傳中」。
+- [x] 為轉錄服務新增 Firestore 進度追蹤（chunk 狀態、step、百分比），並部署新的 `TranscriptionStatusTracker`。
+- [x] 調整 Cloud Tasks queue（`maxDispatchesPerSecond=2`、`maxConcurrentDispatches=5`），以及 Cloud Run `transcription-service`（concurrency=1、max instances=5、memory=6Gi、`MAX_WORKERS=1`）。
+- [x] 重新佇列並啟動滯留案件 `202511-IC001`、`202511-IC002` 的 Cloud Tasks，確保轉錄恢復。
+
+#### Files Created/Modified
+
+**Created**:
+- `src/transcription/status_tracker.py`: 集中管理 Firestore 轉錄進度寫入。
+
+**Modified**:
+- `src/slack_app/main.py`: 按鈕 UX 調整、交易判斷修正、回傳的確認訊息更新以及 Cloud Tasks payload 帶入 `fileId`。
+- `src/slack_app/utils/file_pipeline.py`: Cloud Task payload 新增 `fileId` 並更新說明。
+- `src/transcription/main.py`: 串接 `TranscriptionStatusTracker`、紀錄下載/切割/轉錄/完成/失敗狀態，並帶入同一份 `file_info`。
+- `src/transcription/pipeline.py`: `process_audio` 支援 `progress_callback`，在 chunking/merging 階段回報進度。
+- `src/transcription/parallel/transcriber.py`: 在切 chunk 與每個 chunk 完成時觸發 callback，提供 chunk 細節與完成度。
+
+#### Key Discussions & Decisions
+
+##### 1. 轉錄併發策略
+**User Request**: 「不想為轉錄花太多錢，但要在 2-4 小時完成；一次可上傳多支。」
+**Decision**: 採「多實例、單 worker」；Cloud Run concurrency=1、max instances=5，並由 Cloud Tasks 以 `maxConcurrentDispatches=5` 控流。
+**Rationale**: 單實例只跑一支可避免 OOM，而多實例讓多支音檔可並行，無須人工判斷尖峰。
+
+##### 2. 記憶體 vs 成本
+**User Request**: 「若 6Gi 不夠是否能自動升級到 8Gi？」
+**Decision**: Cloud Run 無法自動升級記憶體，改以監控告警 + 重新部署。暫以 6Gi，若仍 OOM，再換 8Gi；成本差異僅 ~$0.016/45分鐘音檔。
+**Rationale**: 最小化持續成本，同時給出快速切換方案。
+
+#### Technical Highlights
+
+- Firestore 進度欄位：`analysis.transcription.step/detail/progress/chunks.*` 與 `processed_files.transcription*`，追蹤 chunk 狀態與時間。
+- Slack UX：送出 Modal 後即以 `chat_update` 顯示「錄音檔上傳中」，並隱藏再次點擊風險；`processed_files` 沒有 `caseId` 時改為重新發送按鈕，而非誤判。
+- 作業佇列：Cloud Tasks concurrency + Cloud Run autoscale 搭配，使 5 支以上音檔仍能在 1 小時左右全部排入。
+- 手動重派：針對 `202511-IC001/IC002` 直接建立 Cloud Task，並在 Firestore 查驗狀態。
+
+#### Known Issues & Risks
+
+1. **轉錄長音檔仍有 OOM 風險**：目前 6Gi，大於 60 分鐘或多語者音檔可能仍出現 OOM，需要監控 Cloud Run `varlog/system`。
+   - Mitigation: 若發現 OOM，重新部署 `--memory=8Gi`，成本差異小。
+2. **進度資料尚未整合至前端**：Firestore 已寫入 chunk 資訊，但尚未在 Slack 通知或 UI 顯示。
+
+#### Open Questions
+
+1. **是否需要自動化記憶體升級/告警？**
+   - Status: Pending；可用 Cloud Monitoring 觸發自動部署腳本。
+
+#### Next Session Preparation
+
+**For Next AI Assistant**:
+- 監看 Cloud Run `transcription-service` 日誌，若 OOM 次數持續，升級至 8Gi。
+- 根據 Firestore 的 `analysis.transcription` 欄位，考慮在 Slack 通知顯示 chunk 進度。
+- 若有新的卡件，重派 Cloud Task 並記錄在 DEVELOPMENT_LOG。
+
 ### Session 19: 2025-11-06 (Enhanced Agent 8 Intelligence with LLM-based Parameter Extraction)
 
 **Duration**: ~1 hour

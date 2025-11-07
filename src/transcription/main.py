@@ -1,11 +1,13 @@
 
 import os
 import logging
+import json
 from flask import Flask, request, jsonify
-from google.cloud import storage
+from google.cloud import storage, tasks_v2, firestore
 import tempfile
 
 from .pipeline import OptimizedTranscriptionPipeline
+from .status_tracker import TranscriptionStatusTracker
 
 # --- Initialization ---
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -66,6 +68,37 @@ except Exception as e:
 # --- GCS Client ---
 storage_client = storage.Client()
 
+# --- Firestore Client ---
+try:
+    db = firestore.Client()
+    logger.info("Firestore client initialized successfully")
+except Exception as e:
+    logger.error(f"Failed to initialize Firestore: {e}", exc_info=True)
+    db = None
+
+status_tracker = TranscriptionStatusTracker(db)
+
+# --- Cloud Tasks Client ---
+try:
+    tasks_client = tasks_v2.CloudTasksClient()
+    logger.info("Cloud Tasks client initialized successfully")
+except Exception as e:
+    logger.error(f"Failed to initialize Cloud Tasks: {e}", exc_info=True)
+    tasks_client = None
+
+# --- Configuration for Analysis Trigger ---
+GCP_PROJECT_ID = os.environ.get("GCP_PROJECT_ID", "sales-ai-automation-v2")
+ANALYSIS_QUEUE = "analysis-queue"
+ANALYSIS_LOCATION = "asia-east1"
+ANALYSIS_SERVICE_URL = os.environ.get(
+    "ANALYSIS_SERVICE_URL",
+    "https://analysis-service-497329205771.asia-east1.run.app/analyze"
+)
+SERVICE_ACCOUNT_EMAIL = os.environ.get(
+    "SERVICE_ACCOUNT_EMAIL",
+    "497329205771-compute@developer.gserviceaccount.com"
+)
+
 # --- Flask Routes ---
 
 @flask_app.route("/transcribe", methods=["POST"])
@@ -79,11 +112,28 @@ def transcribe_audio():
 
     # --- 1. Get GCS URI from request ---
     data = request.get_json()
-    if not data or "gcs_uri" not in data:
-        return jsonify({"error": "Missing 'gcs_uri' in request body"}), 400
+    if not data:
+        return jsonify({"error": "Missing request body"}), 400
 
-    gcs_uri = data["gcs_uri"]
+    # Accept both 'gcs_uri' and 'gcsPath' for compatibility
+    gcs_uri = data.get("gcs_uri") or data.get("gcsPath")
+    if not gcs_uri:
+        return jsonify({"error": "Missing 'gcs_uri' or 'gcsPath' in request body"}), 400
+
     logger.info(f"Received transcription request for GCS URI: {gcs_uri}")
+
+    case_id = data.get("caseId")
+    file_id = data.get("fileId")
+
+    def emit_progress(**kwargs):
+        if not status_tracker.is_enabled() or not case_id:
+            return
+        status_tracker.update(case_id=case_id, file_id=file_id, **kwargs)
+
+    def progress_callback(event):
+        emit_progress(**event)
+
+    emit_progress(step="downloading", detail="下載音檔中")
 
     try:
         # --- 2. Download file from GCS ---
@@ -98,25 +148,100 @@ def transcribe_audio():
             local_audio_path = temp_audio_file.name
 
         # --- 3. Process audio file ---
+        emit_progress(step="chunking", detail="切割音檔並準備轉錄")
         logger.info(f"Starting transcription process for {local_audio_path}")
         result = pipeline.process_audio(
             audio_path=local_audio_path,
-            save_transcription=False  # We will handle the result here
+            save_transcription=False,
+            progress_callback=progress_callback,
         )
         logger.info("Transcription process finished.")
 
-        # --- 4. Clean up and respond ---
+        # --- 4. Save to Firestore and trigger analysis ---
         os.remove(local_audio_path)
 
         if result and result.get("success"):
+            # Extract case_id from request
+            if case_id and db:
+                try:
+                    # Save transcription to Firestore
+                    logger.info(f"Saving transcription to Firestore for case {case_id}")
+                    case_ref = db.collection('cases').document(case_id)
+
+                    transcription_data = {
+                        "text": result.get("transcription", ""),
+                        "segments": result.get("segments", []),
+                        "speakers": result.get("speakers", []),
+                        "duration": result.get("audio_duration", 0),
+                        "language": result.get("language", "zh"),
+                    }
+
+                    case_ref.update({
+                        "transcription": transcription_data,
+                        "status": "transcribed",
+                        "updatedAt": firestore.SERVER_TIMESTAMP,
+                    })
+                    logger.info(f"Transcription saved successfully for case {case_id}")
+
+                    emit_progress(step="transcribed", detail="轉錄完成，等待分析", progress=1.0)
+                    if file_id:
+                        db.collection("processed_files").document(file_id).set(
+                            {
+                                "status": "transcribed",
+                                "updatedAt": firestore.SERVER_TIMESTAMP,
+                                "transcriptionDetail": "轉錄完成",
+                            },
+                            merge=True,
+                        )
+                    status_tracker.mark_completed(case_id=case_id, file_id=file_id)
+
+                    # Trigger analysis via Cloud Tasks
+                    if tasks_client:
+                        try:
+                            queue_path = tasks_client.queue_path(
+                                GCP_PROJECT_ID,
+                                ANALYSIS_LOCATION,
+                                ANALYSIS_QUEUE
+                            )
+
+                            task_payload = {
+                                "caseId": case_id,
+                            }
+
+                            task = {
+                                "http_request": {
+                                    "http_method": tasks_v2.HttpMethod.POST,
+                                    "url": ANALYSIS_SERVICE_URL,
+                                    "headers": {"Content-Type": "application/json"},
+                                    "body": json.dumps(task_payload).encode(),
+                                    "oidc_token": {
+                                        "service_account_email": SERVICE_ACCOUNT_EMAIL
+                                    }
+                                }
+                            }
+
+                            response = tasks_client.create_task(
+                                request={"parent": queue_path, "task": task}
+                            )
+                            logger.info(f"Analysis task created for case {case_id}: {response.name}")
+                        except Exception as task_error:
+                            logger.error(f"Failed to create analysis task: {task_error}", exc_info=True)
+                            # Don't fail the transcription if analysis trigger fails
+
+                except Exception as firestore_error:
+                    logger.error(f"Failed to save to Firestore: {firestore_error}", exc_info=True)
+                    # Don't fail the transcription if Firestore write fails
+
             return jsonify(result)
         else:
             error_message = result.get("error", "Unknown error during transcription.")
             logger.error(f"Transcription failed: {error_message}")
+            status_tracker.mark_failed(case_id=case_id, file_id=file_id, error=error_message)
             return jsonify({"error": error_message}), 500
 
     except Exception as e:
         logger.error(f"An unexpected error occurred: {e}", exc_info=True)
+        status_tracker.mark_failed(case_id=case_id, file_id=file_id, error=str(e))
         return jsonify({"error": "An internal server error occurred."}), 500
 
 

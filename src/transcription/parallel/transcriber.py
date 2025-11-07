@@ -7,7 +7,7 @@ Parallel Transcription Module
 import logging
 import subprocess
 import threading
-from typing import List, Dict, Optional
+from typing import Callable, Dict, List, Optional
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from faster_whisper import WhisperModel, utils as fw_utils
@@ -234,7 +234,8 @@ class ParallelTranscriber:
         self,
         audio_path: str,
         chunks: List[Dict],
-        output_dir: Optional[str] = None
+        output_dir: Optional[str] = None,
+        progress_callback: Optional[Callable[[Dict], None]] = None,
     ) -> List[Dict]:
         """
         並行轉錄所有音檔片段
@@ -263,6 +264,18 @@ class ParallelTranscriber:
         logger.info("Step 1: Extracting audio chunks...")
         chunk_paths = []
 
+        extracted = 0
+
+        def _notify(**payload):
+            if not progress_callback:
+                return
+            try:
+                progress_callback(payload)
+            except Exception as exc:  # pylint: disable=broad-except
+                logger.debug("Progress callback failed: %s", exc)
+
+        total_chunks = len(chunks)
+
         for chunk in chunks:
             chunk_path = self._extract_audio_chunk(audio_path, chunk, output_dir)
             if chunk_path:
@@ -271,10 +284,25 @@ class ParallelTranscriber:
                     "chunk": chunk,
                     "original_audio_path": audio_path
                 })
+                extracted += 1
+                _notify(
+                    step="chunking",
+                    total_chunks=total_chunks,
+                    completed_chunks=extracted,
+                    chunk_id=chunk["chunk_id"],
+                    chunk_status="extracted",
+                    chunk_duration=chunk.get("duration"),
+                )
             else:
                 logger.error(f"Failed to extract chunk {chunk['chunk_id']}")
 
         logger.info(f"Successfully extracted {len(chunk_paths)}/{len(chunks)} chunks")
+        _notify(
+            step="transcribing",
+            total_chunks=len(chunk_paths),
+            completed_chunks=0,
+            detail="開始並行轉錄",
+        )
 
         # Step 2: 並行轉錄
         logger.info("Step 2: Parallel transcription...")
@@ -289,11 +317,22 @@ class ParallelTranscriber:
             }
 
             # 收集結果
+            processed = 0
             for future in as_completed(future_to_chunk):
                 chunk_info = future_to_chunk[future]
                 try:
                     result = future.result()
                     results.append(result)
+                    chunk_status = "completed" if result["success"] else "failed"
+                    processed += 1
+                    _notify(
+                        step="transcribing",
+                        total_chunks=len(chunk_paths),
+                        completed_chunks=processed,
+                        chunk_id=result["chunk_id"],
+                        chunk_status=chunk_status,
+                        chunk_duration=result.get("duration"),
+                    )
                 except Exception as e:
                     logger.error(f"Chunk transcription exception: {str(e)}")
                     results.append({
@@ -303,6 +342,14 @@ class ParallelTranscriber:
                         "error": str(e),
                         "segments": []
                     })
+                    processed += 1
+                    _notify(
+                        step="transcribing",
+                        total_chunks=len(chunk_paths),
+                        completed_chunks=processed,
+                        chunk_id=chunk_info["chunk"]["chunk_id"],
+                        chunk_status="failed",
+                    )
 
         total_time = time.time() - start_time
 

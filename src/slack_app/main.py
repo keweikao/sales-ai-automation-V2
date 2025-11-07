@@ -123,23 +123,58 @@ def handle_file_shared(client, event, logger):
 
         if existing_doc:
             status = existing_doc.get('status', 'unknown')
-            case_id = existing_doc.get('caseId', '未知')
-            logger.info(f"File {file_id} already being processed (status: {status}, case: {case_id}), notifying user.")
+            case_id = existing_doc.get('caseId')
 
-            status_emoji = {'notified': '📋', 'processing': '⏳', 'queued': '⏱️', 'transcribing': '🎙️', 'transcribed': '✅', 'analyzing': '🔍', 'completed': '🎉', 'failed': '❌'}.get(status, '📝')
-            status_text = {'notified': '等待分析', 'processing': '處理中', 'queued': '排隊中', 'transcribing': '轉錄中', 'transcribed': '已轉錄', 'analyzing': '分析中', 'completed': '已完成', 'failed': '失敗'}.get(status, status)
+            if case_id:
+                logger.info(f"File {file_id} already being processed (status: {status}, case: {case_id}), notifying user.")
 
-            client.chat_postMessage(
-                channel=user_id,
-                text=f"ℹ️ 此音檔已經上傳過\n\n"
-                     f"📁 案件編號：`{case_id}`\n"
-                     f"{status_emoji} 狀態：{status_text}\n\n"
-                     f"如需重新分析，請先刪除此檔案後再上傳。"
+                status_emoji = {
+                    'notified': '📋',
+                    'processing': '⏳',
+                    'queued': '⏱️',
+                    'transcribing': '🎙️',
+                    'transcribed': '✅',
+                    'analyzing': '🔍',
+                    'completed': '🎉',
+                    'failed': '❌'
+                }.get(status, '📝')
+                status_text = {
+                    'notified': '等待分析',
+                    'processing': '處理中',
+                    'queued': '排隊中',
+                    'transcribing': '轉錄中',
+                    'transcribed': '已轉錄',
+                    'analyzing': '分析中',
+                    'completed': '已完成',
+                    'failed': '失敗'
+                }.get(status, status)
+
+                client.chat_postMessage(
+                    channel=user_id,
+                    text=f"ℹ️ 此音檔已經上傳過\n\n"
+                         f"📁 案件編號：`{case_id}`\n"
+                         f"{status_emoji} 狀態：{status_text}\n\n"
+                         f"如需重新分析，請先刪除此檔案後再上傳。"
+                )
+                return
+
+            # 重新送出提示讓使用者補資料，避免被卡在 notified 狀態
+            logger.info(
+                "File %s already has a notified record without caseId; resending modal instructions.",
+                file_id,
             )
-            return
 
-        # 如果 existing_doc 是 None，表示新紀錄已成功建立，可以繼續後續流程
-        logger.info(f"New file {file_id} record created atomically.")
+            # 更新現有 processed_files 紀錄的檔案資訊，確保使用最新檔名/使用者資料
+            merge_payload = {
+                "fileName": file_name,
+                "userId": user_id,
+                "status": status or "notified",
+                "updatedAt": firestore.SERVER_TIMESTAMP,
+            }
+            file_ref.set(merge_payload, merge=True)
+        else:
+            # 如果 existing_doc 是 None，表示新紀錄已成功建立，可以繼續後續流程
+            logger.info(f"New file {file_id} record created atomically.")
 
         file_type = file_info.get("filetype", "")
         shares = file_info.get("shares", {})
@@ -349,11 +384,48 @@ def handle_modal_submission(ack, body, client, view, logger):
         })
         return
 
-    # 立即確認以避免 Slack 3 秒超時 - 在背景處理所有操作
+    # 立即確認以避免 Slack 3 秒超時
     ack()
 
+    # 嘗試立即更新原訊息，讓使用者看到「錄音檔上傳中」狀態並避免重複點擊
+    initial_file_info: Optional[dict] = None
+    if channel_id and message_ts:
+        try:
+            file_info_response = client.files_info(file=file_id)
+            initial_file_info = file_info_response.get("file", {})
+        except SlackApiError as fetch_error:
+            logger.warning("Failed to fetch file info for status update: %s", fetch_error.response.get("error", fetch_error))
+
+        status_filename = (initial_file_info or {}).get("name") or f"檔案 {file_id}"
+        try:
+            client.chat_update(
+                channel=channel_id,
+                ts=message_ts,
+                text=f"⏳ {status_filename} 錄音檔上傳中…",
+                blocks=[
+                    {
+                        "type": "section",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": f"📎 *{status_filename}*\n⏳ 錄音檔上傳中，請稍候…",
+                        },
+                    },
+                    {
+                        "type": "context",
+                        "elements": [
+                            {
+                                "type": "mrkdwn",
+                                "text": "⚠️ 上傳期間請勿重複送出，以避免建立重複案件。",
+                            }
+                        ],
+                    },
+                ],
+            )
+        except SlackApiError as update_error:
+            logger.warning("Failed to update Slack message to uploading state: %s", update_error.response.get("error", update_error))
+
     # 將後續處理放到後台線程，避免被 Slack Bolt 中斷
-    def process_in_background():
+    def process_in_background(file_info_payload: Optional[dict] = initial_file_info):
         try:
             _process_modal_submission(
                 file_id=file_id,
@@ -366,6 +438,7 @@ def handle_modal_submission(ack, body, client, view, logger):
                 channel_id=channel_id,
                 message_ts=message_ts,
                 thread_ts=thread_ts,
+                file_info=file_info_payload,
                 client=client,
                 logger=logger,
             )
@@ -388,6 +461,7 @@ def _process_modal_submission(
     channel_id: str,
     message_ts: str,
     thread_ts: str,
+    file_info: Optional[dict],
     client,
     logger,
 ):
@@ -398,10 +472,11 @@ def _process_modal_submission(
 
     # 取得 Slack 檔案與使用者資訊
     try:
-        logger.info("Fetching file info from Slack for file %s", file_id)
-        sys.stdout.flush()
-        file_info_response = client.files_info(file=file_id)
-        file_info = file_info_response.get("file", {})
+        if not file_info:
+            logger.info("Fetching file info from Slack for file %s", file_id)
+            sys.stdout.flush()
+            file_info_response = client.files_info(file=file_id)
+            file_info = file_info_response.get("file", {})
     except SlackApiError as e:
         logger.error("Failed to fetch Slack file info: %s", e.response["error"])
         try:
@@ -466,12 +541,31 @@ def _process_modal_submission(
     @firestore.transactional
     def run_transaction(transaction: firestore.Transaction):
         snapshot = processed_ref.get(transaction=transaction)
-        if snapshot.exists:
+        
+        existing_processed_data = snapshot.to_dict() if snapshot.exists else {}
+        existing_case_id = (existing_processed_data or {}).get("caseId")
+
+        # Treat placeholder values (e.g. "未知") as missing so we don't block processing
+        # for records created before the case ID was assigned.
+        if isinstance(existing_case_id, str):
+            if existing_case_id.strip().lower() in {"", "未知", "unknown", "not_set"}:
+                existing_case_id = None
+
+        if existing_case_id:
+            # Document exists and already has a real caseId, so it's fully processed.
             return {
                 "can_process": False,
-                "existing": snapshot.to_dict(),
+                "existing": existing_processed_data,
             }
+        
+        if not snapshot.exists:
+            # This should not happen. The initial 'notified' record should exist.
+            # If it doesn't, it's an inconsistency.
+            logger.error(f"Processed file record {file_id} not found during modal submission transaction. This indicates an inconsistency.")
+            raise ValueError(f"Processed file record {file_id} not found.")
 
+        # If we reach here, the processed_files document exists but does not have a caseId.
+        # Allocate a new case ID and create the case document.
         case_id, counter_doc = allocate_case_id(db, transaction, sales_rep.get("unit", "IC"))
         case_ref = db.collection("cases").document(case_id)
 
@@ -485,19 +579,29 @@ def _process_modal_submission(
             thread_ts=thread_ts,
             notes=notes,
         )
+        transaction.set(case_ref, case_doc) # Create the case document
 
-        processed_doc = build_processed_file_document(
-            case_id=case_id,
-            file_info=file_metadata,
-            customer=customer,
-            sales_rep=sales_rep,
-            channel_id=channel_id,
-            message_ts=message_ts,
-            thread_ts=thread_ts,
-        )
-
-        transaction.set(case_ref, case_doc)
-        transaction.set(processed_ref, processed_doc)
+        # Update the existing processed_files document with the new caseId and status.
+        # Merge with existing data to preserve fields from handle_file_shared.
+        updated_processed_data = {
+            **existing_processed_data, # Preserve existing fields
+            "caseId": case_id,
+            "status": "processing", # Set status to processing
+            "updatedAt": firestore.SERVER_TIMESTAMP,
+            "locked": True,
+            "lockedAt": firestore.SERVER_TIMESTAMP,
+            "processedBy": sales_rep.get("slack_id", ""),
+            "channelId": channel_id,
+            "messageTs": message_ts,
+            "threadTs": thread_ts or message_ts,
+            "fileName": file_info.get("name", ""), # Redundant but safe
+            "fileSize": file_info.get("size"), # Redundant but safe
+            "customerName": customer.get("name", ""),
+            "customerId": customer.get("id", ""),
+            "customerPhone": customer.get("phone", "") or "",
+            "submittedAt": firestore.SERVER_TIMESTAMP,
+        }
+        transaction.set(processed_ref, updated_processed_data) # Update the existing document
 
         return {
             "can_process": True,
@@ -581,6 +685,7 @@ def _process_modal_submission(
                 project=project_id,
                 handler_url=TASK_HANDLER_URL,
                 service_account_email=TASK_SERVICE_ACCOUNT,
+                file_id=file_id,
             )
             logger.info("Transcription task enqueued successfully: %s", task_response.name)
             sys.stdout.flush()
@@ -601,7 +706,7 @@ def _process_modal_submission(
             raise
 
         confirmation_text = (
-            f"✅ *案件已建立並開始分析*\n\n"
+            f"✅ *案件已建立並開始轉錄與分析*\n\n"
             f"📁 案件編號：`{case_id}`\n"
             f"👤 客戶編號：`{customer_id}`\n"
             f"🏪 客戶名稱：{customer_name}\n"

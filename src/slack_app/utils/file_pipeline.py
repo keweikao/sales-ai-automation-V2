@@ -74,18 +74,41 @@ def enqueue_transcription_task(
     handler_url: str,
     service_account_email: Optional[str] = None,
     tasks_client: Optional[tasks_v2.CloudTasksClient] = None,
+    file_id: Optional[str] = None,
 ) -> tasks_v2.types.Task:
     """
     Enqueue a Cloud Task to trigger transcription/analysis pipeline.
+
+    Args:
+        case_id: Firestore case identifier.
+        gcs_path: gs:// URI pointing to uploaded audio.
+        file_id: Optional Slack file ID for progress tracking.
+        ... (other params unchanged)
     """
+    import logging
+    import sys
+    logger = logging.getLogger(__name__)
+
+    logger.info("Creating Cloud Tasks client...")
+    sys.stdout.flush()
     client = tasks_client or tasks_v2.CloudTasksClient()
+
+    logger.info("Building queue path: project=%s, location=%s, queue=%s", project, location, queue)
+    sys.stdout.flush()
     parent = client.queue_path(project, location, queue)
+    logger.info("Queue path: %s", parent)
+    sys.stdout.flush()
 
     payload = {
         "caseId": case_id,
-        "gcsPath": gcs_path,
+        "gcs_uri": gcs_path,  # Use gcs_uri as expected by transcription service
+        "gcsPath": gcs_path,  # Also include gcsPath for backwards compatibility
         "source": "slack",
     }
+    if file_id:
+        payload["fileId"] = file_id
+    logger.info("Task payload: %s", payload)
+    sys.stdout.flush()
 
     http_request: dict = {
         "http_method": tasks_v2.HttpMethod.POST,
@@ -95,10 +118,23 @@ def enqueue_transcription_task(
     }
 
     if service_account_email:
+        logger.info("Adding OIDC token with service account: %s", service_account_email)
+        sys.stdout.flush()
         http_request["oidc_token"] = {
             "service_account_email": service_account_email,
             "audience": handler_url,
         }
 
     task = {"http_request": http_request}
-    return client.create_task(parent=parent, task=task)
+    logger.info("Creating task in queue: %s", parent)
+    sys.stdout.flush()
+
+    try:
+        response = client.create_task(parent=parent, task=task)
+        logger.info("Task created successfully: %s", response.name)
+        sys.stdout.flush()
+        return response
+    except Exception as e:
+        logger.error("Failed to create task: %s", e, exc_info=True)
+        sys.stdout.flush()
+        raise
