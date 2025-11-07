@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """清除 Firestore 測試資料"""
+import argparse
 import os
 os.environ["GOOGLE_CLOUD_PROJECT"] = "sales-ai-automation-v2"
 
@@ -29,9 +30,19 @@ for f in files:
 
 # 詢問是否刪除
 print("\n" + "="*60)
-response = input("是否要刪除所有資料? (yes/no): ").strip()
 
-if response.lower() == "yes":
+parser = argparse.ArgumentParser(description="清除 Firestore 測試資料")
+parser.add_argument("--confirm-delete", action="store_true", help="直接確認刪除，不詢問")
+args = parser.parse_args()
+
+if args.confirm_delete:
+    print("自動確認刪除所有資料...")
+    should_delete = True
+else:
+    response = input("是否要刪除所有資料? (yes/no): ").strip()
+    should_delete = (response.lower() == "yes")
+
+if should_delete:
     print("\n🗑️  刪除案件...")
     for case in cases:
         case.reference.delete()
