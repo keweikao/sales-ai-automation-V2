@@ -32,6 +32,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install pytest
+          pip install -r analysis-service/requirements.txt
 
       - name: Run Agent 6/7 mock harness tests
         run: make test-agent67
