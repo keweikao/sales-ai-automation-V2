@@ -114,6 +114,26 @@
 
 **Compliance**: Pull requests or commits that introduce lint violations MUST be corrected before work is considered complete. Outstanding Work Tracker entries should reflect any lint fixes performed.
 
+### IX. Automated Workflows & Input Handling
+
+#### Log Detection & Auto-Archiving
+
+1.  **Detection**: When user input is received, analyze it for log/error characteristics (e.g., length > 20 lines, presence of keywords like `Traceback`, `Exception`, `[ERROR]`).
+2.  **Auto-Archiving**: If the input is identified as a log, immediately save the full content to a temporary file at `tmp/auto_log_<timestamp>.log`.
+3.  **Confirmation & Analysis**:
+    *   Respond to the user with a brief confirmation, acknowledging the detection and providing the path to the saved file.
+    *   Immediately invoke the `speckit-debugger` subagent to analyze the newly created file in the background.
+    *   Present the concise analysis from the subagent as the final response.
+    *   This ensures the large log content is removed from the conversational context for subsequent turns, optimizing token usage.
+
+#### Proactive Subagent Recommendation (SOP)
+
+1.  **Analyze Intent**: Upon receiving a user request, first analyze the user's intent (e.g., implementation, research, testing, planning).
+2.  **Propose Action**: Instead of executing immediately, formulate a plan and propose the use of the most appropriate subagent(s) or workflow(s).
+3.  **Await Confirmation**: The proposal must be presented to the user for confirmation. The response should be phrased as a clear question, awaiting an affirmative response (e.g., "同意", "ok").
+4.  **Execute on Approval**: Only after receiving explicit user confirmation, proceed with the execution of the proposed subagent or workflow.
+5.  **Exception**: This SOP does not apply to fully automated workflows that have their own explicit triggers, such as the "Log Detection & Auto-Archiving" rule.
+
 ## Integration Requirements
 
 ### Backward Compatibility

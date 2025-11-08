@@ -125,7 +125,8 @@ const result = await constitution.searchConstitution({
 
 console.log('找到以下相關章節:');
 result.sections.forEach(section => {
-  console.log(`\n## ${section.title}`);
+  console.log(`
+## ${section.title}`);
   console.log(section.content);
 });
 // 使用約 600 tokens
@@ -163,3 +164,27 @@ console.log(`下一個任務: ${nextTask.id} - ${nextTask.title}`);
 3. 列出 3 個絕對禁止的操作。
 
 完成驗證後，告訴我你已準備好開始工作。
+
+## 使用 Subagents 加速開發
+
+### 情境 5：平行實作多個任務
+```typescript
+// 使用 3 個 subagents 平行執行
+使用 3 個 speckit-implementer subagents 平行實作任務 1.1, 1.2, 1.3
+
+每個 subagent：
+- 使用 MCP API 取得任務資訊
+- Token < 3,500
+- 報告完成狀態
+```
+
+### 情境 6：完整功能開發
+```
+使用 feature-development workflow 開發「使用者認證」功能
+
+包含任務：2.1, 2.2, 2.3
+
+所有 subagents 使用 MCP API。
+```
+
+詳細資訊請參考：`.specify/SUBAGENT-GUIDE.md`

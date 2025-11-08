@@ -72,3 +72,43 @@ console.log(summary.summary);
 - [ ] 我不會直接讀取 spec/plan/tasks/constitution 文件
 - [ ] 我會在回應末尾註明 [估計 token: XXX]
 - [ ] 我的 token 使用量在目標範圍內
+
+## Subagent 使用規則
+
+### 何時使用 Subagents
+
+使用 subagents 當：
+- 有 3+ 個獨立任務要平行執行
+- 需要專門化處理（測試、文件、研究）
+- 處理大型程式碼庫探索
+- 需要加速開發流程
+
+### 可用的 Subagents
+
+1. **speckit-implementer**: 實作任務（token < 3,500）
+2. **speckit-planner**: 規劃策略（token < 2,000）
+3. **speckit-researcher**: 研究需求（token < 1,500）
+4. **speckit-tester**: 撰寫測試（token < 2,500）
+5. **speckit-documenter**: 更新文件（token < 1,000）
+6. **speckit-debugger**: 分析日誌和錯誤 (token < 2,000)
+
+詳見：`.specify/SUBAGENT-GUIDE.md`
+
+### Subagent 規則
+
+所有 subagents 必須：
+- [ ] 使用 MCP API（不讀取原始檔案）或檔案工具
+- [ ] 遵守 token 預算
+- [ ] 報告 token 使用量
+- [ ] 明確的任務邊界
+
+### 預定義工作流程
+
+- `parallel-tasks`: 平行實作多個任務
+- `feature-development`: 完整功能開發
+- `implement-phase`: 實作階段完整執行
+
+使用方式：
+```
+使用 [workflow-name] workflow 執行任務
+```
