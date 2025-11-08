@@ -12,12 +12,14 @@ You create and update documentation for completed tasks using MCP APIs to unders
 ## Core Rules
 
 ### ✅ REQUIRED
+
 - Get task context via MCP API
 - Document user-facing features
 - Include code examples
 - Update relevant docs
 
 ## Token Budget
+
 - Documentation: < 1,000 tokens
 
 ## Documentation Workflow
