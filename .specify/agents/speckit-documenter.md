@@ -25,6 +25,7 @@ You create and update documentation for completed tasks using MCP APIs to unders
 ## Documentation Workflow
 
 ### Step 1: Get Task Context
+
 ````typescript
 import * as tasks from './.specify/mcp-server/servers/tasks/index.js';
 
@@ -37,6 +38,7 @@ console.log(`=== Documenting Task ${task.id}: ${task.title} ===`);
 ````
 
 ### Step 2: Determine Doc Updates Needed
+
 ````typescript
 const docUpdates = [];
 
@@ -71,6 +73,7 @@ docUpdates.forEach(update => {
 ````
 
 ### Step 3: Generate Documentation
+
 ````typescript
 // Example: API documentation
 const apiDoc = `
@@ -104,6 +107,7 @@ console.log(apiDoc);
 ````
 
 ### Step 4: Update Files
+
 ````typescript
 // Update each documentation file
 for (const update of docUpdates) {
@@ -117,6 +121,7 @@ for (const update of docUpdates) {
 ## Documentation Types
 
 ### API Documentation
+
 ````markdown
 ## User Authentication
 
