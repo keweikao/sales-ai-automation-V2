@@ -101,6 +101,19 @@
 
 **Compliance**: 缺漏活動紀錄視為違反憲法流程，後續 AI 助理應優先補齊紀錄再繼續開發。
 
+### VIII. Documentation Hygiene
+
+**Principle**: All committed documentation MUST comply with the repository’s Markdown lint rules to prevent recurring CI failures and ensure readability.
+
+**Implementation**:
+
+- MUST surround bullet lists and fenced code blocks with single blank lines, matching `markdownlint` MD031/MD032 requirements.
+- MUST specify a language for every fenced code block (MD040).
+- MUST run `markdownlint` (or an equivalent formatting check) before submitting documentation changes and resolve reported issues.
+- SHOULD reference existing style guides (`DEVELOPMENT_GUIDELINES.md`, `docs/markdown-style.md` if present) when writing or updating docs.
+
+**Compliance**: Pull requests or commits that introduce lint violations MUST be corrected before work is considered complete. Outstanding Work Tracker entries should reflect any lint fixes performed.
+
 ## Integration Requirements
 
 ### Backward Compatibility

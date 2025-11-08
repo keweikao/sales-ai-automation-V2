@@ -199,7 +199,7 @@ Can 5 Gemini agents execute in parallel within 40 seconds total?
 Platform: Local development (then Cloud Run)
 Python: 3.11
 Libraries: google-generativeai, asyncio
-Model: gemini-1.5-flash
+Model: gemini-1.5-pro-latest
 API Key: Test quota (15 RPM free tier)
 ```
 
@@ -257,7 +257,7 @@ import time
 from google import generativeai as genai
 
 genai.configure(api_key="YOUR_API_KEY")
-model = genai.GenerativeModel('gemini-1.5-flash')
+model = genai.GenerativeModel('gemini-1.5-pro-latest')
 
 transcript = open("test_transcript.txt").read()
 
@@ -409,7 +409,7 @@ ELSE IF rate_limit_errors >5%:
 
 ELSE IF parallel_time >60s:
     → Reduce prompt lengths
-    → OR use faster model (gemini-1.5-flash-8b)
+    → OR use faster model (gemini-1.5-pro-latest)
 ```
 
 ### Risks & Mitigations

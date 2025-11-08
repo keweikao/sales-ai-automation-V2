@@ -29,79 +29,97 @@
 ## 🤖 可用的 Subagents
 
 ### 1. speckit-implementer
+
 **用途**：實作任務
 **Token 預算**：< 3,500 per task
 **使用時機**：
+
 - 實作功能
 - 修改程式碼
 - 寫單元測試
 
 **範例**：
+
 ```
 使用 speckit-implementer 實作任務 2.1
 ```
 
 ### 2. speckit-planner
+
 **用途**：規劃執行策略
 **Token 預算**：< 2,000
 **使用時機**：
+
 - 分析任務相依性
 - 建立執行計畫
 - 估計工作量
 
 **範例**：
+
 ```
 使用 speckit-planner 分析任務 1.1 到 1.5，建議執行策略
 ```
 
 ### 3. speckit-researcher
+
 **用途**：研究需求和技術
 **Token 預算**：< 1,500
 **使用時機**：
+
 - 調查需求細節
 - 查詢技術決策
 - 驗證對齊性
 
 **範例**：
+
 ```
 使用 speckit-researcher 研究「認證系統的安全性需求」
 ```
 
 ### 4. speckit-tester
+
 **用途**：撰寫和執行測試
 **Token 預算**：< 2,500
 **使用時機**：
+
 - 寫測試（TDD）
 - 執行測試
 - 驗證覆蓋率
 
 **範例**：
+
 ```
 使用 speckit-tester 為任務 2.1 撰寫測試
 ```
 
 ### 5. speckit-documenter
+
 **用途**：更新文件
 **Token 預算**：< 1,000
 **使用時機**：
+
 - 更新 API 文件
 - 撰寫使用指南
 - 更新技術文件
 
 **範例**：
+
 ```
 使用 speckit-documenter 為任務 2.1 更新文件
 ```
 
 ### 6. speckit-debugger
+
 **用途**：分析日誌與錯誤
 **Token 預算**：< 2,000
 **使用時機**：
+
 - 分析大型 log 檔案
 - 找出錯誤的根本原因
 - 建議解決方案
 
 **範例**：
+
 ```
 使用 speckit-debugger 分析 tmp/error.log 的錯誤
 ```
@@ -109,6 +127,7 @@
 ## 📋 預定義工作流程
 
 ### Workflow 1: parallel-tasks
+
 **用途**：平行實作多個獨立任務
 
 ```
@@ -116,6 +135,7 @@
 ```
 
 ### Workflow 2: feature-development
+
 **用途**：完整功能開發（從規劃到文件）
 
 ```
@@ -124,6 +144,7 @@
 ```
 
 ### Workflow 3: implement-phase
+
 **用途**：完整實作階段執行
 
 ```
@@ -133,6 +154,7 @@
 ## 💡 最佳實踐
 
 ### 1. 總是使用 MCP API 或檔案路徑
+
 ```
 ❌ 錯誤：
 const content = fs.readFileSync('spec.md')
@@ -147,6 +169,7 @@ const logContent = await read_file({ absolute_path: '/path/to/your/log.txt' });
 ```
 
 ### 2. 控制 Token 預算
+
 ```
 每個 subagent 完成時應報告：
 
@@ -157,6 +180,7 @@ const logContent = await read_file({ absolute_path: '/path/to/your/log.txt' });
 ```
 
 ### 3. 明確任務邊界
+
 ```
 ✅ 好的任務分配：
 Subagent 1: 修改 /src/auth/*.ts
@@ -170,6 +194,7 @@ Subagent 2: 實作使用者功能（檔案範圍不明確）
 ```
 
 ### 4. 依序執行有相依性的任務
+
 ```
 ✅ 正確順序：
 批次 1 (平行): Task 1.1, 1.2, 1.3 (無相依)
@@ -182,6 +207,7 @@ Subagent 2: 實作使用者功能（檔案範圍不明確）
 ```
 
 ### 5. 監控進度
+
 ```
 每完成一個批次，檢查狀態：
 
@@ -195,6 +221,7 @@ Subagent 2: 實作使用者功能（檔案範圍不明確）
 ## 🎯 常見場景
 
 ### 場景 1：實作單一任務
+
 ```
 實作任務 3.2
 
@@ -207,6 +234,7 @@ Subagent 2: 實作使用者功能（檔案範圍不明確）
 ```
 
 ### 場景 2：平行實作 3 個任務
+
 ```
 平行實作任務 1.1, 1.2, 1.3
 
@@ -218,6 +246,7 @@ Subagent 2: 實作使用者功能（檔案範圍不明確）
 ```
 
 ### 場景 3：完整功能開發
+
 ```
 開發「使用者註冊」功能
 
@@ -232,6 +261,7 @@ Subagent 2: 實作使用者功能（檔案範圍不明確）
 ```
 
 ### 場景 4：分析 Log 檔案
+
 ```
 分析 tmp/error.log 的錯誤
 
@@ -244,6 +274,7 @@ Subagent 2: 實作使用者功能（檔案範圍不明確）
 ```
 
 ### 場景 5：繼續未完成的工作
+
 ```
 繼續實作
 
@@ -260,6 +291,7 @@ Subagent 2: 實作使用者功能（檔案範圍不明確）
 ## 📊 效能監控
 
 ### 檢查 Token 使用
+
 ```
 請報告所有 subagent 的 token 使用：
 
@@ -272,6 +304,7 @@ Average: 3,167 tokens per task
 ```
 
 ### 比較效能
+
 ```
 請比較使用 subagents 前後的效能：
 
@@ -289,6 +322,7 @@ Average: 3,167 tokens per task
 ## 🔧 故障排除
 
 ### 問題 1：Subagent 超過 token 預算
+
 ```
 解決方案：
 1. 確認 subagent 使用了 MCP API（不是讀取檔案）
@@ -297,6 +331,7 @@ Average: 3,167 tokens per task
 ```
 
 ### 問題 2：Subagents 互相衝突
+
 ```
 解決方案：
 1. 確認任務修改不同的檔案
@@ -305,6 +340,7 @@ Average: 3,167 tokens per task
 ```
 
 ### 問題 3：Subagent 沒有使用 MCP API
+
 ```
 解決方案：
 1. 在指令中明確要求「使用 MCP API」
@@ -319,6 +355,7 @@ Average: 3,167 tokens per task
 ## 🎓 進階技巧
 
 ### 技巧 1：Resume Subagent
+
 ```
 長時間任務可以跨 session 繼續：
 
@@ -331,6 +368,7 @@ Resume subagent abc123 並分析授權邏輯
 ```
 
 ### 技巧 2：自訂 Subagent
+
 ```
 建立專門的 subagent：
 
@@ -347,6 +385,7 @@ model: sonnet
 ```
 
 ### 技巧 3：嵌套工作流程
+
 ```
 大型專案可以嵌套工作流程：
 
@@ -359,16 +398,19 @@ model: sonnet
 ## 🎉 總結
 
 使用 Subagents 的好處：
+
 - ⚡ 速度：平行執行節省 60-70% 時間
 - 💰 成本：結合 MCP API 節省 80-90% tokens
 - 🎯 品質：專門化 subagents 提供更好的結果
 - 📊 可擴展：處理大型專案更容易
 
 開始使用：
+
 1. 選擇一個工作流程
 2. 明確指定使用 MCP API
 3. 設定 token 預算
 4. 監控進度和效能
 
 祝你開發順利！🚀
+
 ```

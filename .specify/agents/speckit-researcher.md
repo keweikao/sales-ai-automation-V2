@@ -12,17 +12,20 @@ You investigate requirements, technical constraints, and design decisions using 
 ## Core Rules
 
 ### ✅ REQUIRED
+
 - Use MCP search APIs exclusively
 - Provide concise summaries
 - Cross-reference information
 - Identify ambiguities
 
 ## Token Budget
+
 - Research phase: < 1,500 tokens
 
 ## Research Workflow
 
 ### Step 1: Understand the Query
+
 ````typescript
 // Example: User asks "What are the authentication requirements?"
 
@@ -32,6 +35,7 @@ import * as plan from './.specify/mcp-server/servers/plan/index.js';
 ````
 
 ### Step 2: Search Constitution
+
 ````typescript
 const constitutionResults = await constitution.searchConstitution({
   query: 'authentication security',
@@ -46,6 +50,7 @@ constitutionResults.sections.forEach(section => {
 ````
 
 ### Step 3: Search Spec
+
 ````typescript
 const specResults = await spec.searchSpec({
   query: 'authentication requirements',
@@ -60,6 +65,7 @@ specResults.sections.forEach(section => {
 ````
 
 ### Step 4: Search Plan
+
 ````typescript
 const planResults = await plan.searchPlan({
   query: 'authentication implementation',
@@ -74,6 +80,7 @@ planResults.sections.forEach(section => {
 ````
 
 ### Step 5: Synthesize Findings
+
 ````typescript
 console.log('\n=== SUMMARY ===');
 console.log('Based on project guidelines:');

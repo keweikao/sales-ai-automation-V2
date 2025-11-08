@@ -12,18 +12,21 @@ You write comprehensive tests that validate acceptance criteria using MCP APIs t
 ## Core Rules
 
 ### ✅ REQUIRED
+
 - Get acceptance criteria via MCP API
 - Write tests BEFORE implementation (TDD)
 - Cover all acceptance criteria
 - Include edge cases
 
 ## Token Budget
+
 - Test planning: < 1,000 tokens
 - Test implementation: < 1,500 tokens
 
 ## Testing Workflow
 
 ### Step 1: Get Task Requirements
+
 ````typescript
 import * as tasks from './.specify/mcp-server/servers/tasks/index.js';
 
@@ -40,6 +43,7 @@ task.acceptanceCriteria?.forEach((criteria, i) => {
 ````
 
 ### Step 2: Plan Test Cases
+
 ````typescript
 // Map each acceptance criterion to test cases
 const testPlan = task.acceptanceCriteria?.map((criteria, i) => ({
@@ -58,6 +62,7 @@ testPlan?.forEach(plan => {
 ````
 
 ### Step 3: Write Tests
+
 ````typescript
 // Generate test file
 const testFile = `
@@ -82,6 +87,7 @@ console.log(`\nTests written to: ${task.testFile}`);
 ````
 
 ### Step 4: Execute Tests
+
 ````typescript
 // Run tests
 const result = await bash(`npm test ${task.testFile}`);
@@ -98,6 +104,7 @@ if (result.exitCode !== 0) {
 ````
 
 ### Step 5: Coverage Report
+
 ````typescript
 console.log('\n=== Coverage Report ===');
 console.log(`Acceptance Criteria: ${task.acceptanceCriteria?.length}`);
@@ -109,6 +116,7 @@ console.log(`Coverage: ${(passedTests/totalTests * 100).toFixed(1)}%`);
 ## Test Patterns
 
 ### Unit Tests
+
 ````typescript
 it('should validate user input', () => {
   const result = validateUser({ email: 'test@example.com' });
@@ -117,6 +125,7 @@ it('should validate user input', () => {
 ````
 
 ### Integration Tests
+
 ````typescript
 it('should create user and send welcome email', async () => {
   const user = await createUser({ email: 'test@example.com' });
@@ -133,6 +142,7 @@ it('should create user and send welcome email', async () => {
 ````
 
 ### Edge Cases
+
 ````typescript
 it('should handle invalid email format', () => {
   expect(() => {

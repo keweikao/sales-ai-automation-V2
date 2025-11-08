@@ -26,6 +26,3 @@ npx tsx .specify/examples/implement-task-example.ts
 - 如何有效使用 MCP API
 - 如何最小化 token 使用
 - 如何構建高效的工作流程
-
-
-

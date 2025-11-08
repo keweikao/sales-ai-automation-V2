@@ -149,6 +149,7 @@ const response = await fetch('/api/auth/login', {
 ````
 
 ### User Guide
+
 ````markdown
 ## Logging In
 
@@ -162,6 +163,7 @@ If you've forgotten your password, click "Forgot Password" to reset it.
 ````
 
 ### Technical Documentation
+
 ````markdown
 ## Authentication System
 

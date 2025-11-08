@@ -168,6 +168,7 @@ console.log(`下一個任務: ${nextTask.id} - ${nextTask.title}`);
 ## 使用 Subagents 加速開發
 
 ### 情境 5：平行實作多個任務
+
 ```typescript
 // 使用 3 個 subagents 平行執行
 使用 3 個 speckit-implementer subagents 平行實作任務 1.1, 1.2, 1.3
@@ -179,6 +180,7 @@ console.log(`下一個任務: ${nextTask.id} - ${nextTask.title}`);
 ```
 
 ### 情境 6：完整功能開發
+
 ```
 使用 feature-development workflow 開發「使用者認證」功能
 

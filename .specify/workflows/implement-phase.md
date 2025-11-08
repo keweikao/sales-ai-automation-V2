@@ -5,6 +5,7 @@ Complete workflow for the implementation phase of a Speckit project.
 ## Overview
 
 The Implement phase is when you execute all planned tasks. This workflow maximizes efficiency through:
+
 - Parallel task execution
 - MCP API usage for minimal token consumption
 - Specialized subagents for different aspects
@@ -19,6 +20,7 @@ The Implement phase is when you execute all planned tasks. This workflow maximiz
 ## Workflow
 
 ### Step 1: Load Current Status (Main Agent)
+
 ```typescript
 import * as tasks from './.specify/mcp-server/servers/tasks/index.js';
 
@@ -36,6 +38,7 @@ console.log(`Completed: ${allTasks.length - pendingTasks.length}`);
 ```
 
 ### Step 2: Plan Execution Strategy (Subagent)
+
 ```
 使用 speckit-planner 建立執行策略：
 
@@ -48,6 +51,7 @@ Output: 批次執行計畫，識別可平行執行的任務組
 ### Step 3: Execute Task Batches (Subagents)
 
 #### Batch 1: Foundation Tasks
+
 ```
 批次 1：基礎任務（平行執行）
 
@@ -64,6 +68,7 @@ Subagent 3 (speckit-implementer): Task 1.3 - Configuration
 ```
 
 #### Batch 2: Core Logic Tasks
+
 ```
 批次 2：核心邏輯（平行執行）
 
@@ -77,6 +82,7 @@ Subagent 3 (speckit-implementer): Task 2.3 - Data Service
 ```
 
 #### Batch 3: Integration Tasks
+
 ```
 批次 3：整合任務（平行執行）
 
@@ -102,6 +108,7 @@ Subagent (speckit-tester): 持續測試
 ```
 
 ### Step 5: Final Integration (Main Agent)
+
 ```
 最後整合（主 Agent）
 
@@ -115,6 +122,7 @@ Subagent (speckit-tester): 持續測試
 ## Commands
 
 ### Start Implementation Phase
+
 ```
 開始實作階段
 
@@ -131,6 +139,7 @@ Subagent (speckit-tester): 持續測試
 ```
 
 ### Resume Implementation
+
 ```
 繼續實作階段
 
@@ -145,6 +154,7 @@ Subagent (speckit-tester): 持續測試
 ```
 
 ### Check Progress
+
 ```
 檢查實作進度
 

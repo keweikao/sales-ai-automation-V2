@@ -5,6 +5,7 @@ Use this workflow for developing a complete feature from spec to deployment.
 ## Workflow Stages
 
 ### Stage 1: Research & Planning (15 min)
+
 ```
 階段 1：研究與規劃
 
@@ -25,6 +26,7 @@ Subagent 2 (speckit-planner):
 ```
 
 ### Stage 2: Test-Driven Development (20 min)
+
 ```
 階段 2：測試驅動開發
 
@@ -42,6 +44,7 @@ Subagent 3 (speckit-tester): 撰寫任務 2.3 的測試
 ```
 
 ### Stage 3: Implementation (30 min)
+
 ```
 階段 3：實作
 
@@ -61,6 +64,7 @@ Subagent 3 (speckit-implementer): 實作任務 2.3
 ```
 
 ### Stage 4: Documentation (10 min)
+
 ```
 階段 4：文件
 
@@ -77,6 +81,7 @@ Subagent 3 (speckit-documenter): 更新技術文件
 ```
 
 ### Stage 5: Integration & Validation (10 min)
+
 ```
 階段 5：整合驗證（主 Agent）
 
