@@ -1,0 +1,28 @@
+{
+  "Speckit Complete Startup": {
+    "prefix": "speckit-start",
+    "body": [
+      "請執行 .specify/STARTUP.md 中的完整初始化流程。"
+    ],
+    "description": "Complete Speckit MCP initialization"
+  },
+  "Speckit Quick Startup": {
+    "prefix": "speckit-quick",
+    "body": [
+      "Speckit MCP 規則：",
+      "- 禁止讀 spec/plan/tasks/constitution",
+      "- 必須用 .specify/mcp-server/servers/ API",
+      "- Token < 1,500/回應",
+      "- 回應註明 [估計 token: XXX]",
+      "- 詳見 .specify/LLM-USAGE-GUIDE.md"
+    ],
+    "description": "Quick Speckit MCP rules reminder"
+  },
+  "Speckit Minimal Startup": {
+    "prefix": "speckit-min",
+    "body": [
+      "請讀 .specify/QUICK-START.txt"
+    ],
+    "description": "Minimal Speckit startup"
+  }
+}

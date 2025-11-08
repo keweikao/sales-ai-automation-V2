@@ -1,0 +1,74 @@
+# Speckit Code Execution 規則
+
+## 核心原則
+
+這個專案使用 **MCP Code Execution** 模式管理文件。
+你必須透過程式碼 API 存取 Speckit 文件，禁止直接讀取檔案。
+
+## 檔案存取規則
+
+### ❌ 絕對禁止
+- 直接讀取 `.specify/memory/constitution.md`
+- 直接讀取 `.specify/specs/*/spec.md`
+- 直接讀取 `.specify/specs/*/plan.md`
+- 直接讀取 `.specify/specs/*/tasks.md`
+- 使用 `fs.readFileSync` 或 `fs.readFile` 讀取上述文件
+
+### ✅ 必須使用
+- `.specify/mcp-server/servers/` 下的 API
+- `.specify/llm` 命令列工具
+- TypeScript 程式碼來查詢資訊
+
+## 工作流程
+
+### 當使用者說「開始實作任務 3.2」
+```typescript
+import * as tasks from './.specify/mcp-server/servers/tasks/index.js';
+
+const task = await tasks.getTaskById({
+  taskId: '3.2',
+  includeContext: true,
+});
+
+console.log(`任務: ${task.title}`);
+console.log(`描述: ${task.description}`);
+```
+
+### 當使用者說「查看專案原則」
+```typescript
+import * as constitution from './.specify/mcp-server/servers/constitution/index.js';
+
+const summary = await constitution.getConstitutionSummary();
+console.log(summary.summary);
+```
+
+## 必讀文件
+
+- `.specify/LLM-USAGE-GUIDE.md`
+
+## Token 優化目標
+
+- Constitution 階段: < 500 tokens
+- Specify 階段: < 800 tokens
+- Plan 階段: < 1,000 tokens
+- Implement 階段: < 1,500 tokens
+
+## 檢查清單
+
+- [ ] 沒有直接讀取原始文件
+- [ ] 使用 MCP API 或 CLI
+- [ ] Token 使用在目標範圍內
+- [ ] 回應中包含具體程式碼（不是要求使用者提供內容）
+
+## 快速啟動提醒
+
+每次新對話開始時，如果忘記規則，請立即執行：
+```
+請閱讀 .specify/STARTUP.md 完成初始化
+```
+
+或執行自我檢查：
+- [ ] 我會使用 .specify/mcp-server/servers/ API
+- [ ] 我不會直接讀取 spec/plan/tasks/constitution 文件
+- [ ] 我會在回應末尾註明 [估計 token: XXX]
+- [ ] 我的 token 使用量在目標範圍內
