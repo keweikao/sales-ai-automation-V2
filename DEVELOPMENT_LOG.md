@@ -293,9 +293,11 @@ This file tracks all development sessions to enable seamless continuation across
 #### Files Created/Modified
 
 **Created**:
+
 - `src/transcription/status_tracker.py`: 集中管理 Firestore 轉錄進度寫入。
 
 **Modified**:
+
 - `src/slack_app/main.py`: 按鈕 UX 調整、交易判斷修正、回傳的確認訊息更新以及 Cloud Tasks payload 帶入 `fileId`。
 - `src/slack_app/utils/file_pipeline.py`: Cloud Task payload 新增 `fileId` 並更新說明。
 - `src/transcription/main.py`: 串接 `TranscriptionStatusTracker`、紀錄下載/切割/轉錄/完成/失敗狀態，並帶入同一份 `file_info`。
@@ -305,11 +307,13 @@ This file tracks all development sessions to enable seamless continuation across
 #### Key Discussions & Decisions
 
 ##### 1. 轉錄併發策略
+
 **User Request**: 「不想為轉錄花太多錢，但要在 2-4 小時完成；一次可上傳多支。」
 **Decision**: 採「多實例、單 worker」；Cloud Run concurrency=1、max instances=5，並由 Cloud Tasks 以 `maxConcurrentDispatches=5` 控流。
 **Rationale**: 單實例只跑一支可避免 OOM，而多實例讓多支音檔可並行，無須人工判斷尖峰。
 
 ##### 2. 記憶體 vs 成本
+
 **User Request**: 「若 6Gi 不夠是否能自動升級到 8Gi？」
 **Decision**: Cloud Run 無法自動升級記憶體，改以監控告警 + 重新部署。暫以 6Gi，若仍 OOM，再換 8Gi；成本差異僅 ~$0.016/45分鐘音檔。
 **Rationale**: 最小化持續成本，同時給出快速切換方案。
@@ -335,6 +339,7 @@ This file tracks all development sessions to enable seamless continuation across
 #### Next Session Preparation
 
 **For Next AI Assistant**:
+
 - 監看 Cloud Run `transcription-service` 日誌，若 OOM 次數持續，升級至 8Gi。
 - 根據 Firestore 的 `analysis.transcription` 欄位，考慮在 Slack 通知顯示 chunk 進度。
 - 若有新的卡件，重派 Cloud Task 並記錄在 DEVELOPMENT_LOG。

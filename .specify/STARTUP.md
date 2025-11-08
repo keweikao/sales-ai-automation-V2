@@ -5,6 +5,7 @@
 ## 第一步：讀取指南
 
 請立即閱讀 `.specify/LLM-USAGE-GUIDE.md` 並確認你理解：
+
 1. MCP Code Execution 的核心概念
 2. 禁止事項和必須事項
 3. API 使用方式
@@ -35,6 +36,7 @@
 **只能透過以下兩種方式存取資訊：**
 
 #### 方式 1：TypeScript API
+
 ```typescript
 // Constitution
 import * as constitution from './.specify/mcp-server/servers/constitution/index.js';
@@ -49,6 +51,7 @@ const allTasks = await tasks.getAllTasks();
 ```
 
 #### 方式 2：CLI 工具
+
 ```bash
 # Constitution
 ./.specify/llm constitution-summary
@@ -73,6 +76,7 @@ const allTasks = await tasks.getAllTasks();
 | 完整 Implement 流程 | < 2,000 tokens | 包含相依檢查 + 實作 |
 
 **重要**：在每次回應中，你必須：
+
 1. 估計你使用的 token 數量
 2. 如果超過目標，主動優化並重新生成回應
 3. 在回應末尾註明：`[估計 token: XXX]`
@@ -80,6 +84,7 @@ const allTasks = await tasks.getAllTasks();
 ## 常見情境快速參考
 
 ### 情境 1：使用者說「查看專案原則」
+
 ```typescript
 import * as constitution from './.specify/mcp-server/servers/constitution/index.js';
 const summary = await constitution.getConstitutionSummary();
@@ -88,6 +93,7 @@ console.log(summary.summary);
 ```
 
 ### 情境 2：使用者說「實作任務 3.2」
+
 ```typescript
 import * as tasks from './.specify/mcp-server/servers/tasks/index.js';
 
@@ -108,6 +114,7 @@ console.log(`要修改的檔案:`, task.files);
 ```
 
 ### 情境 3：使用者說「搜尋關於資料庫的資訊」
+
 ```typescript
 import * as constitution from './.specify/mcp-server/servers/constitution/index.js';
 
@@ -125,6 +132,7 @@ result.sections.forEach(section => {
 ```
 
 ### 情境 4：使用者說「下一個任務是什麼」
+
 ```typescript
 import * as tasks from './.specify/mcp-server/servers/tasks/index.js';
 

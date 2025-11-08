@@ -33,6 +33,10 @@ env/
 *.swo
 .DS_Store
 
+# Node projects
+node_modules/
+.specify/logs/
+
 # Project specific
 *.log
 .env

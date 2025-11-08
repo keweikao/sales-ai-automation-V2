@@ -17,6 +17,7 @@
 **時間**：2-3 分鐘（包含驗證）
 
 **適用**：
+
 - 第一次使用新的 LLM
 - LLM 對專案不熟悉
 - 需要確保 LLM 完全理解規則
@@ -39,6 +40,7 @@ Speckit MCP 規則：
 **時間**：15-30 秒
 
 **適用**：
+
 - 已經熟悉的 LLM
 - 快速提醒規則
 - 日常切換
@@ -56,6 +58,7 @@ Speckit MCP 規則：
 **時間**：10 秒
 
 **適用**：
+
 - 非常熟悉的 LLM
 - 只需要快速提醒
 - 緊急情況
@@ -70,18 +73,21 @@ Speckit MCP 規則：
 請協助我查看任務 3.2 的資訊。
 ```
 
-### 正確回應：
+### 正確回應
+
 ```typescript
 import * as tasks from './.specify/mcp-server/servers/tasks/index.js';
 const task = await tasks.getTaskById({ taskId: '3.2', includeContext: true });
 ```
 
-### 錯誤回應：
+### 錯誤回應
+
 ```
 我需要先看 tasks.md 的內容...
 ```
 
 **如果是錯誤回應**，立即糾正：
+
 ```
 ❌ 錯了！請閱讀 .specify/STARTUP.md 重新初始化
 ```
@@ -91,15 +97,19 @@ const task = await tasks.getTaskById({ taskId: '3.2', includeContext: true });
 ## 🔧 不同 IDE 的使用方式
 
 ### Cursor
+
 Cursor 會自動讀取 `.cursorrules`，但建議還是執行「方式 2」提醒一次。
 
 ### Windsurf
+
 執行「方式 2」的快速啟動。
 
 ### GitHub Copilot
+
 在 Chat 視窗執行「方式 1」的完整啟動。
 
 ### Claude.ai / ChatGPT
+
 執行「方式 1」的完整啟動（因為沒有檔案系統存取）。
 
 ---

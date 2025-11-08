@@ -22,18 +22,21 @@
 ## 常見任務範例
 
 ### 取得任務資訊
+
 ```typescript
 import * as tasks from './.specify/mcp-server/servers/tasks/index.js';
 const task = await tasks.getTaskById({ taskId: '3.2', includeContext: true });
 ```
 
 ### 查看 Constitution
+
 ```typescript
 import * as constitution from './.specify/mcp-server/servers/constitution/index.js';
 const summary = await constitution.getConstitutionSummary();
 ```
 
 ### 搜尋資訊
+
 ```typescript
 const result = await constitution.searchConstitution({ query: 'code quality' });
 ```
