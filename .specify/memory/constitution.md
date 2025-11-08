@@ -107,9 +107,11 @@
 
 **Implementation**:
 
-- MUST surround bullet lists and fenced code blocks with single blank lines, matching `markdownlint` MD031/MD032 requirements.
+- MUST ensure all headings are surrounded by single blank lines (MD022).
+- MUST ensure all lists are surrounded by single blank lines (MD032).
+- MUST NOT use multiple consecutive blank lines (MD012).
 - MUST specify a language for every fenced code block (MD040).
-- MUST run `markdownlint` (or an equivalent formatting check) before submitting documentation changes and resolve reported issues.
+- MUST resolve all reported linting issues before considering a task complete.
 - SHOULD reference existing style guides (`DEVELOPMENT_GUIDELINES.md`, `docs/markdown-style.md` if present) when writing or updating docs.
 
 **Compliance**: Pull requests or commits that introduce lint violations MUST be corrected before work is considered complete. Outstanding Work Tracker entries should reflect any lint fixes performed.
