@@ -9,12 +9,13 @@ import os
 import re
 import threading
 from datetime import datetime, timedelta, timezone
-from typing import Optional
+from typing import Optional, Tuple
 
 from flask import Flask, request
 from google.cloud import firestore
 from slack_bolt import App
 from slack_bolt.adapter.flask import SlackRequestHandler
+from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
 
 from utils.case_management import (
@@ -62,6 +63,9 @@ TASK_LOCATION = os.getenv("TRANSCRIPTION_TASK_LOCATION", "asia-east1")
 TASK_HANDLER_URL = os.getenv("TRANSCRIPTION_TASK_HANDLER_URL")
 TASK_SERVICE_ACCOUNT = os.getenv("TRANSCRIPTION_TASK_SERVICE_ACCOUNT")
 SLACK_BOT_TOKEN = os.getenv("SLACK_BOT_TOKEN")
+PROGRESS_SHARED_TOKEN = os.getenv("SLACK_PROGRESS_TOKEN") or os.getenv("TRANSCRIPTION_PROGRESS_TOKEN")
+
+slack_client: Optional[WebClient] = WebClient(token=SLACK_BOT_TOKEN) if SLACK_BOT_TOKEN else None
 
 # ============================================
 # Command Handlers
@@ -784,6 +788,35 @@ def _process_modal_submission(
                 logger.warning("Failed to remove temp file: %s", local_path)
 
 
+def _resolve_notification_target(case_id: str, file_id: Optional[str]) -> Tuple[Optional[str], Optional[str], Optional[str]]:
+    """
+    Locate Slack channel/thread for a given case/file to post progress updates.
+    Returns (channel_id, thread_ts, customer_name).
+    """
+    if not db:
+        return None, None, None
+
+    channel_id = thread_ts = customer_name = None
+
+    case_snapshot = db.collection("cases").document(case_id).get()
+    if case_snapshot.exists:
+        case_data = case_snapshot.to_dict() or {}
+        customer_name = case_data.get("customerName")
+        notification = case_data.get("notification") or {}
+        channel_id = notification.get("slackChannelId")
+        thread_ts = notification.get("slackThreadTs") or notification.get("messageTs")
+
+    if not channel_id and file_id:
+        file_snapshot = db.collection("processed_files").document(file_id).get()
+        if file_snapshot.exists:
+            file_data = file_snapshot.to_dict() or {}
+            channel_id = channel_id or file_data.get("channelId")
+            thread_ts = thread_ts or file_data.get("threadTs") or file_data.get("messageTs")
+            customer_name = customer_name or file_data.get("customerName")
+
+    return channel_id, thread_ts, customer_name
+
+
 # ============================================
 # Flask Routes
 # ============================================
@@ -794,6 +827,82 @@ def slack_events():
     處理 Slack Events API 請求（包含 URL verification）
     """
     return handler.handle(request)
+
+
+@flask_app.route("/internal/transcription-progress", methods=["POST"])
+def handle_transcription_progress():
+    """
+    Receives transcription progress webhooks (e.g., when audio transcription completes)
+    and posts status updates back to Slack.
+    """
+    if PROGRESS_SHARED_TOKEN:
+        provided_token = request.headers.get("X-Progress-Token")
+        if provided_token != PROGRESS_SHARED_TOKEN:
+            logger.warning("Rejected transcription progress webhook: invalid token")
+            return {"error": "Unauthorized"}, 403
+
+    if not slack_client:
+        logger.warning("Slack client not initialized; skipping progress notification")
+        return {"error": "Slack client unavailable"}, 503
+
+    if not db:
+        logger.warning("Firestore unavailable; cannot resolve notification targets")
+        return {"error": "Firestore unavailable"}, 503
+
+    payload = request.get_json(silent=True) or {}
+    case_id = payload.get("caseId")
+    file_id = payload.get("fileId")
+    status = payload.get("status")
+
+    if not case_id or status != "transcribed":
+        logger.warning("Invalid transcription progress payload: %s", payload)
+        return {"error": "Invalid payload"}, 400
+
+    channel_id, thread_ts, customer_name = _resolve_notification_target(case_id, file_id)
+    if not channel_id:
+        logger.warning("No Slack channel found for case %s (file: %s)", case_id, file_id)
+        return {"status": "ignored", "reason": "channel_not_found"}, 200
+
+    progress_text = (
+        f"🎧 案件 `{case_id}` 的音檔已完成轉錄，"
+        "目前進入 Agent 6 / Agent 7 分析階段。\n"
+        "📡 正在生成銷售洞察與客戶摘要，完成後會自動通知您。"
+    )
+    context_text = "狀態：音檔已轉錄 ✅ · 分析中 🔄"
+    if customer_name:
+        context_text = f"{context_text} · 客戶：{customer_name}"
+
+    try:
+        slack_client.chat_postMessage(
+            channel=channel_id,
+            text=progress_text,
+            thread_ts=thread_ts,
+            blocks=[
+                {
+                    "type": "section",
+                    "text": {"type": "mrkdwn", "text": progress_text},
+                },
+                {
+                    "type": "context",
+                    "elements": [
+                        {
+                            "type": "mrkdwn",
+                            "text": context_text,
+                        }
+                    ],
+                },
+            ],
+        )
+        logger.info("Posted transcription progress update for case %s", case_id)
+    except SlackApiError as exc:
+        logger.error(
+            "Failed to post transcription progress for case %s: %s",
+            case_id,
+            exc.response.get("error"),
+        )
+        return {"error": "Failed to post Slack message"}, 500
+
+    return {"status": "ok"}, 200
 
 
 @flask_app.route("/slack/interactions", methods=["POST"])

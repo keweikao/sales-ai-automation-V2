@@ -10,6 +10,13 @@ from .base import GeminiJSONAgent, render_transcript
 PROMPT_PATH = Path(__file__).resolve().parent / "prompts" / "agent1-participant.md"
 
 
+def json_serializer(obj):
+    """JSON serializer for objects not serializable by default json code"""
+    if hasattr(obj, 'isoformat'):
+        return obj.isoformat()
+    raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
+
+
 def _format_speaker_stats(stats: Optional[Dict[str, Any]]) -> str:
     if not stats:
         return "（未提供說話者發言占比）"
@@ -48,7 +55,10 @@ class ParticipantProfileAgent(GeminiJSONAgent):
         metadata_json = ""
         if conversation_metadata:
             metadata_json = json.dumps(
-                conversation_metadata, ensure_ascii=False, indent=2
+                conversation_metadata,
+                ensure_ascii=False,
+                indent=2,
+                default=json_serializer,
             )
 
         sections = [

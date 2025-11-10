@@ -1,8 +1,20 @@
-"""Agent package exports."""
+"""
+Agent 8 - 對話式業務主管助理
 
-from .base import GeminiJSONAgent, GeminiResponse  # noqa: F401
-from .agent1_participant import ParticipantProfileAgent  # noqa: F401
-from .agent2_sentiment import SentimentAttitudeAgent  # noqa: F401
-from .agent3_needs import ProductNeedsAgent  # noqa: F401
-from .agent4_competitor import CompetitorIntelligenceAgent  # noqa: F401
-from .agent5_questionnaire import DiscoveryQuestionnaireAgent  # noqa: F401
+提供自然語言問答界面，讓業務主管可以隨時查詢團隊數據和業務洞察
+"""
+
+from .question_parser import QuestionParser, QuestionParams, QuestionType
+from .data_fetcher import DataFetcher, QueryResult
+from .conversation_manager import ConversationManager
+from .conversational_agent8 import ConversationalAgent8
+
+__all__ = [
+    "QuestionParser",
+    "QuestionParams",
+    "QuestionType",
+    "DataFetcher",
+    "QueryResult",
+    "ConversationManager",
+    "ConversationalAgent8"
+]

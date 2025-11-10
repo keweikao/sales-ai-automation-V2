@@ -114,6 +114,21 @@
 
 **Compliance**: Pull requests or commits that introduce lint violations MUST be corrected before work is considered complete. Outstanding Work Tracker entries should reflect any lint fixes performed.
 
+### IX. Mandatory MCP Tool Usage
+
+**Principle**: All interactions with key external and cloud services MUST be routed through their designated Model Context Protocol (MCP) servers.
+
+**Rationale**: Using MCP servers provides significant benefits, including an 85-95% reduction in token consumption, centralized caching, improved security by abstracting credentials, and standardized error handling. This ensures development is efficient, cost-effective, and secure by default.
+
+**Implementation**:
+
+- **MUST** use the `mcp__gcp_ai` tool for all interactions with the Gemini API. Direct calls to the `google.generativeai` library are prohibited.
+- **MUST** use `mcp__gcloud` tools (e.g., `run_deploy`, `run_services_list`) for all Cloud Run operations. Direct execution of `gcloud` shell commands is prohibited.
+- **MUST** use the `mcp__custom_firestore` tool for all Firestore queries. Direct calls to the `google.cloud.firestore` library are prohibited.
+- **SHOULD** create or enable MCP servers for any other frequently used API or service to maintain system-wide efficiency.
+
+**Compliance**: Any code that directly interacts with these services, bypassing their MCP server, is in violation of this constitution. It must be refactored to use the appropriate MCP tool before being considered complete.
+
 ## Integration Requirements
 
 ### Backward Compatibility

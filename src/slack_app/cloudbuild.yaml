@@ -1,0 +1,29 @@
+steps:
+# Build the container image
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['build', '-t', 'asia-east1-docker.pkg.dev/sales-ai-automation-v2/sales-ai-automation-v2/slack-app:latest', '.']
+  dir: 'src/slack_app'
+
+# Push the container image to Artifact Registry
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['push', 'asia-east1-docker.pkg.dev/sales-ai-automation-v2/sales-ai-automation-v2/slack-app:latest']
+
+# Deploy container image to Cloud Run
+- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  entrypoint: gcloud
+  args: [
+    'run',
+    'deploy',
+    'slack-app',
+    '--image', 'asia-east1-docker.pkg.dev/sales-ai-automation-v2/sales-ai-automation-v2/slack-app:latest',
+    '--region', 'asia-east1',
+    '--min-instances', '1',
+    '--cpu', '1',
+    '--memory', '512Mi',
+    '--concurrency', '5',
+    '--allow-unauthenticated',
+    '--set-env-vars=PYTHONPATH=/app,GCP_PROJECT_ID=sales-ai-automation-v2'
+  ]
+
+images:
+- 'asia-east1-docker.pkg.dev/sales-ai-automation-v2/sales-ai-automation-v2/slack-app:latest'

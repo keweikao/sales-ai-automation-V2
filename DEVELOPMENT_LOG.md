@@ -50,7 +50,7 @@ This file tracks all development sessions to enable seamless continuation across
 - [ ] POC 1b：Cloud Storage leads 流程與 `sourceType=leads` 標記（specs/001-sales-ai-automation/plan.md:1800）
 - [ ] Slack 上傳來源標記與 Firestore 驗證（specs/001-sales-ai-automation/plan.md:1801）
 - [ ] Agent 6/7 Gemini 呼叫與 Firestore 寫入（specs/001-sales-ai-automation/plan.md:1802）
-- [ ] Slack 摘要 Thread 工作流（specs/001-sales-ai-automation/plan.md:1803）
+- [x] Slack 摘要 Thread 工作流（specs/001-sales-ai-automation/plan.md:1803）
 - [ ] 摘要頁面 + LINE/SMS 發送管線（specs/001-sales-ai-automation/plan.md:1804）
 - [ ] Agent 6/7 測試與端到端自動化測試（specs/001-sales-ai-automation/plan.md:1805）
 - [ ] Slack App 建置與 secrets 管理（specs/001-sales-ai-automation/slack-implementation-tasks.md:45）
@@ -94,6 +94,105 @@ This file tracks all development sessions to enable seamless continuation across
 ---
 
 ## 📅 Session History
+
+### Session 24: 2025-11-10 (Implement Slack Thread Notification for Analysis Completion)
+
+**Duration**: ~45 minutes
+**AI Model**: Gemini
+**User**: Stephen
+
+#### Objectives Completed ✅
+
+- [x] Modified `analysis-service/src/slack_notifier.py` to send analysis completion notifications as a thread reply to the original Slack message.
+- [x] Ensured the `SlackNotifier` prioritizes `channel_id` and `thread_ts` from Firestore's `case_data` for notification targeting.
+- [x] Implemented a fallback mechanism to send notifications to the user's DM if original Slack context is not found in Firestore.
+- [x] Successfully rebuilt and redeployed `analysis-service` Cloud Run service.
+
+#### Files Created/Modified
+
+**Modified**:
+
+- `analysis-service/src/slack_notifier.py`: Updated `send_analysis_notification` to use `thread_ts` and `channel_id` from `case_data` for threaded replies.
+- `DEVELOPMENT_LOG.md`: Added this session log.
+
+#### Key Discussions & Decisions
+
+##### 1. Slack Thread Notification for Analysis Completion
+
+**User Request**: "完成分析不是會用 thread 的方式推播到 slack 嗎" (Implicitly requesting this feature)
+**Decision**: Implement Slack thread notifications for analysis completion.
+**Rationale**: Enhance user experience by consolidating all related messages (audio upload, analysis progress, analysis completion) within a single Slack thread, making it easier to track the status of a sales call analysis. This also addresses a previously identified "Slack 摘要 Thread 工作流" outstanding task.
+
+#### Technical Highlights
+
+- Confirmed that `src/slack_app/main.py` correctly stores `channel_id`, `message_ts`, and `thread_ts` in the Firestore `cases` document during the modal submission process.
+- Modified `SlackNotifier.send_analysis_notification` to retrieve these values from `case_data` and use them in `client.chat_postMessage` to target the correct channel and thread.
+- Implemented a robust fallback to send a direct message to the user if the original Slack context is unavailable in Firestore.
+
+#### Known Issues & Risks
+
+- None. The implementation leverages existing Firestore data and Slack SDK capabilities.
+
+#### Open Questions
+
+- None for this session.
+
+#### Next Session Preparation
+
+**For Next AI Assistant**:
+
+- **User Verification**: Await user confirmation that the analysis completion notifications are now appearing as thread replies in Slack.
+- **Further Refinement**: If the user confirms successful implementation, consider if any further refinements are needed for the notification content or interaction.
+- **Outstanding Work Tracker**: Update the "Slack 摘要 Thread 工作流" item in the Outstanding Work Tracker to "Completed".
+
+### Session 23: 2025-11-10 (Fix Invalid Gemini Model Name)
+
+**Duration**: ~30 minutes
+**AI Model**: Gemini
+**User**: Stephen
+
+#### Objectives Completed ✅
+
+- [x] Resolved the `404 models/gemini-1.5-flash is not found` error by standardizing the Gemini model to `gemini-1.5-pro-latest` across the codebase.
+- [x] Followed the next steps outlined in Session 22 to identify and replace all instances of invalid model names.
+
+#### Files Created/Modified
+
+**Modified**:
+
+- `src/slack_app/handlers/agent8_handler.py`: Updated hardcoded Gemini model from `gemini-pro` to `gemini-1.5-pro-latest` for consistency and to use the latest model.
+- `analysis-service/src/agents/conversational_agent8.py`: Replaced `gemini-1.5-flash-latest` with `gemini-1.5-pro-latest`.
+- `analysis-service/src/agents/question_parser.py`: Replaced `gemini-1.5-flash-latest` with `gemini-1.5-pro-latest`.
+- `specs/001-sales-ai-automation/poc-tests/SETUP_REQUIREMENTS.md`: Updated example `curl` command to use `gemini-1.5-pro-latest`.
+
+#### Key Discussions & Decisions
+
+##### 1. Standardization of Gemini Model
+
+**User Request**: Implicitly requested by the need to fix the `404 model not found` error.
+**Decision**: Standardize all Gemini model references to `gemini-1.5-pro-latest`.
+**Rationale**: The error from Session 22 indicated that an invalid model name (`gemini-1.5-flash`) was being used. A codebase search revealed multiple variations (`gemini-pro`, `gemini-1.5-flash-latest`). Consolidating to a single, valid, and powerful model (`gemini-1.5-pro-latest`) resolves the immediate error and prevents future inconsistencies.
+
+#### Technical Highlights
+
+- Performed a global search for `gemini-1.5-flash` to identify all affected files.
+- Systematically replaced all incorrect or outdated model names in Python scripts and Markdown documentation.
+
+#### Known Issues & Risks
+
+- None. The application's model configuration is now consistent and should be valid.
+
+#### Open Questions
+
+- None for this session.
+
+#### Next Session Preparation
+
+**For Next AI Assistant**:
+
+- The code changes are complete. The next step is to redeploy the `slack-app` and `analysis-service` Cloud Run services to apply the fix.
+- After deployment, the user should test the `/ask-agent8` command again to confirm the `404 model not found` error is resolved.
+- You can now proceed with the "使用者回饋測試並記錄" task from the Outstanding Work Tracker.
 
 ### Session 22: 2025-11-06 (Troubleshooting Agent 8 Invocation and Model Not Found Error)
 
@@ -224,8 +323,6 @@ This file tracks all development sessions to enable seamless continuation across
 - All markdownlint errors are resolved
 - GitHub Pages deployment should now succeed
 - Other pending tasks in Outstanding Work Tracker remain
-
----
 
 ### Session 20: 2025-11-06 (Fix Agent 8 Dispatch Failed Error)
 

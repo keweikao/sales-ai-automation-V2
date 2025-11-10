@@ -1,33 +1,31 @@
 steps:
-  # Build the container image
   - name: 'gcr.io/cloud-builders/docker'
     args:
       - 'build'
+      - '-t'
+      - 'asia-east1-docker.pkg.dev/sales-ai-automation-v2/sales-ai-automation-v2/slack-app:latest'
       - '-f'
-      - 'Dockerfile.slack'
-      - '-t'
-      - 'asia-east1-docker.pkg.dev/sales-ai-automation-v2/cloud-run-source-deploy/sales-ai-slack-app:$BUILD_ID'
-      - '-t'
-      - 'asia-east1-docker.pkg.dev/sales-ai-automation-v2/cloud-run-source-deploy/sales-ai-slack-app:latest'
+      - 'src/slack_app/Dockerfile'
       - '.'
 
-  # Push the container image to Artifact Registry
   - name: 'gcr.io/cloud-builders/docker'
     args:
       - 'push'
-      - 'asia-east1-docker.pkg.dev/sales-ai-automation-v2/cloud-run-source-deploy/sales-ai-slack-app:$BUILD_ID'
+      - 'asia-east1-docker.pkg.dev/sales-ai-automation-v2/sales-ai-automation-v2/slack-app:latest'
 
-  - name: 'gcr.io/cloud-builders/docker'
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
     args:
-      - 'push'
-      - 'asia-east1-docker.pkg.dev/sales-ai-automation-v2/cloud-run-source-deploy/sales-ai-slack-app:latest'
+      - 'run'
+      - 'deploy'
+      - 'slack-app'
+      - '--image=asia-east1-docker.pkg.dev/sales-ai-automation-v2/sales-ai-automation-v2/slack-app:latest'
+      - '--region=asia-east1'
+      - '--platform=managed'
+      - '--allow-unauthenticated'
+      - '--set-env-vars=SLACK_PROGRESS_TOKEN=3d4ebd6a1cfe8ac77a60e8a69cc4a52a57ad482e940e52d4eb2c17c6c45801d3'
 
 images:
-  - 'asia-east1-docker.pkg.dev/sales-ai-automation-v2/cloud-run-source-deploy/sales-ai-slack-app:$BUILD_ID'
-  - 'asia-east1-docker.pkg.dev/sales-ai-automation-v2/cloud-run-source-deploy/sales-ai-slack-app:latest'
+  - 'asia-east1-docker.pkg.dev/sales-ai-automation-v2/sales-ai-automation-v2/slack-app:latest'
 
-serviceAccount: 'projects/sales-ai-automation-v2/serviceAccounts/497329205771-compute@developer.gserviceaccount.com'
-
-options:
-  machineType: 'E2_HIGHCPU_8'
-  logging: CLOUD_LOGGING_ONLY
+timeout: 1200s

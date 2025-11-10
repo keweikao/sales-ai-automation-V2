@@ -1,3 +1,4 @@
+
 """
 數據查詢模塊 - 從 Firestore 查詢相關案件
 
@@ -42,7 +43,7 @@ class DataFetcher:
                 raise ValueError("GCP_PROJECT_ID 未設定")
             self.db = firestore.Client(project=project_id)
 
-        self.collection_name = os.getenv("FIRESTORE_COLLECTION", "opportunities")
+        self.collection_name = os.getenv("FIRESTORE_COLLECTION", "cases")
 
     def _parse_timerange(self, time_range: str) -> tuple:
         """

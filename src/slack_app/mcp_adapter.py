@@ -374,7 +374,7 @@ class ToolRegistry:
         return params
 
 
-from .monitoring.token_tracker import TokenUsageTracker
+from monitoring.token_tracker import TokenUsageTracker
 
 class MCPAdapter:
     """

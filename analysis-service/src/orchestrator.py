@@ -1,0 +1,560 @@
+"""
+Multi-Agent Orchestrator for Sales AI Automation System.
+
+Orchestrates parallel execution of Agent 1-5 for analyzing sales call transcripts,
+then sequentially executes Agent 6-7 for synthesis and customer summary generation.
+
+Architecture:
+  - Agents 1-5: Execute in parallel using asyncio
+  - Agent 6: Synthesizes results from Agents 1-5
+  - Agent 7: Generates customer-facing summary
+
+Usage:
+    orchestrator = MultiAgentOrchestrator()
+    results = await orchestrator.analyze_transcript(
+        case_id="CASE123",
+        transcript_segments=[...],
+        speaker_statistics={...}
+    )
+"""
+
+from __future__ import annotations
+
+import asyncio
+import logging
+import time
+from dataclasses import dataclass, field
+from typing import Any, Dict, List, Optional
+
+from .agents.agent1_participant import ParticipantProfileAgent
+from .agents.agent2_sentiment import SentimentAttitudeAgent
+from .agents.agent3_needs import ProductNeedsAgent
+from .agents.agent4_competitor import CompetitorAnalysisAgent
+from .agents.agent5_questionnaire import QuestionnaireAgent
+
+logger = logging.getLogger(__name__)
+
+
+class RetryableError(Exception):
+    """Error that can be retried (e.g., network timeout, rate limit)."""
+    pass
+
+
+class NonRetryableError(Exception):
+    """Error that should not be retried (e.g., invalid format, auth error)."""
+    pass
+
+
+class InsufficientDataError(Exception):
+    """Not enough agents succeeded to proceed with synthesis."""
+    pass
+
+
+@dataclass
+class AgentResult:
+    """Result from a single agent execution."""
+    agent_id: str
+    success: bool
+    data: Optional[Dict[str, Any]] = None
+    error: Optional[str] = None
+    error_type: Optional[str] = None  # 'retryable' or 'non_retryable'
+    duration: float = 0.0
+    retry_count: int = 0
+    raw_output: Optional[str] = None
+
+
+@dataclass
+class AnalysisResult:
+    """Complete analysis result from all agents."""
+    case_id: str
+    success: bool
+    agent_results: Dict[str, AgentResult] = field(default_factory=dict)
+    total_duration: float = 0.0
+    error: Optional[str] = None
+
+    def get_agent_data(self, agent_id: str) -> Optional[Dict[str, Any]]:
+        """Get structured data from a specific agent."""
+        result = self.agent_results.get(agent_id)
+        return result.data if result and result.success else None
+
+
+class MultiAgentOrchestrator:
+    """
+    Orchestrates parallel execution of multiple AI agents for sales call analysis.
+    """
+
+    def __init__(
+        self,
+        model_name: str = "gemini-2.0-flash-exp",
+        temperature: float = 0.2,
+        min_success_threshold: int = 3,
+        enable_agent_retry: bool = True,
+        agent_retry_attempts: int = 2,
+        model_config: Optional[Dict[str, str]] = None,
+    ):
+        """
+        Initialize the orchestrator with agent instances.
+
+        Args:
+            model_name: Default Gemini model to use for all agents
+            temperature: Temperature setting for generation
+            min_success_threshold: Minimum number of agents that must succeed (default: 3/5)
+            enable_agent_retry: Whether to retry individual agent failures
+            agent_retry_attempts: Number of retry attempts per agent (default: 2)
+            model_config: Optional dict mapping agent names to specific model names
+        """
+        self.model_name = model_name
+        self.temperature = temperature
+        self.min_success_threshold = min_success_threshold
+        self.enable_agent_retry = enable_agent_retry
+        self.agent_retry_attempts = agent_retry_attempts
+        self.model_config = model_config or {}
+
+        # Initialize agents (will be created on first use to ensure env vars are set)
+        self._agents: Optional[Dict[str, Any]] = None
+
+    def _ensure_agents(self) -> Dict[str, Any]:
+        """Lazy initialization of agent instances."""
+        if self._agents is None:
+            logger.info("Initializing Agent 1-5 instances...")
+            self._agents = {
+                "agent1": ParticipantProfileAgent(
+                    model_name=self.model_config.get("agent1", self.model_name),
+                    temperature=self.temperature
+                ),
+                "agent2": SentimentAttitudeAgent(
+                    model_name=self.model_config.get("agent2", self.model_name),
+                    temperature=self.temperature
+                ),
+                "agent3": ProductNeedsAgent(
+                    model_name=self.model_config.get("agent3", self.model_name),
+                    temperature=self.temperature
+                ),
+                "agent4": CompetitorAnalysisAgent(
+                    model_name=self.model_config.get("agent4", self.model_name),
+                    temperature=self.temperature
+                ),
+                "agent5": QuestionnaireAgent(
+                    model_name=self.model_config.get("agent5", self.model_name),
+                    temperature=self.temperature
+                ),
+            }
+            logger.info(f"Initialized {len(self._agents)} agents successfully")
+        return self._agents
+
+    def _classify_error(self, error: Exception) -> str:
+        """
+        Classify error as retryable or non-retryable.
+
+        Retryable errors:
+        - Network timeouts
+        - Rate limits (429)
+        - Temporary service unavailable (503)
+        - JSON parsing errors (LLM output issues)
+
+        Non-retryable errors:
+        - Authentication errors (401, 403)
+        - Invalid input format
+        - Configuration errors
+        """
+        error_str = str(error).lower()
+
+        # Retryable patterns
+        retryable_patterns = [
+            'timeout', 'timed out',
+            'rate limit', '429',
+            'service unavailable', '503',
+            'connection', 'network',
+            'json', 'parse',
+            'temporary', 'transient',
+        ]
+
+        for pattern in retryable_patterns:
+            if pattern in error_str:
+                return 'retryable'
+
+        # Non-retryable patterns
+        non_retryable_patterns = [
+            'unauthorized', '401',
+            'forbidden', '403',
+            'not found', '404',
+            'invalid', 'bad request', '400',
+            'api key', 'authentication',
+        ]
+
+        for pattern in non_retryable_patterns:
+            if pattern in error_str:
+                return 'non_retryable'
+
+        # Default: treat as retryable to be safe
+        return 'retryable'
+
+    async def _run_agent_with_retry(
+        self,
+        agent_id: str,
+        agent: Any,
+        transcript_segments: List[Dict[str, Any]],
+        speaker_statistics: Optional[Dict[str, Any]] = None,
+        conversation_metadata: Optional[Dict[str, Any]] = None,
+    ) -> AgentResult:
+        """
+        Execute agent with retry logic for transient failures.
+
+        Returns:
+            AgentResult with retry_count populated
+        """
+        max_attempts = self.agent_retry_attempts + 1 if self.enable_agent_retry else 1
+        last_error = None
+        error_type = None
+
+        for attempt in range(max_attempts):
+            try:
+                result = await self._run_agent_async(
+                    agent_id=agent_id,
+                    agent=agent,
+                    transcript_segments=transcript_segments,
+                    speaker_statistics=speaker_statistics,
+                    conversation_metadata=conversation_metadata,
+                )
+                result.retry_count = attempt
+                return result
+
+            except Exception as e:
+                last_error = e
+                error_type = self._classify_error(e)
+
+                if error_type == 'non_retryable':
+                    logger.warning(f"{agent_id} failed with non-retryable error: {e}")
+                    break
+
+                if attempt < max_attempts - 1:
+                    backoff_time = 5 * (2 ** attempt)  # 5s, 10s
+                    logger.warning(
+                        f"{agent_id} failed (attempt {attempt + 1}/{max_attempts}), "
+                        f"retrying in {backoff_time}s: {e}"
+                    )
+                    await asyncio.sleep(backoff_time)
+                else:
+                    logger.error(
+                        f"{agent_id} failed after {max_attempts} attempts: {e}"
+                    )
+
+        # All attempts failed
+        return AgentResult(
+            agent_id=agent_id,
+            success=False,
+            error=str(last_error),
+            error_type=error_type,
+            retry_count=max_attempts - 1,
+        )
+
+    async def _run_agent_1(
+        self,
+        agent,
+        transcript_segments,
+        speaker_statistics,
+        conversation_metadata
+    ) -> AgentResult:
+        """Run Agent 1 (Participant) with speaker_statistics."""
+        start_time = time.time()
+        try:
+            loop = asyncio.get_event_loop()
+            result = await loop.run_in_executor(
+                None,
+                lambda: agent.analyze(
+                    transcript_segments=transcript_segments,
+                    speaker_statistics=speaker_statistics,
+                    conversation_metadata=conversation_metadata,
+                )
+            )
+            duration = time.time() - start_time
+            logger.info(f"agent1 completed successfully in {duration:.2f}s")
+            return AgentResult(agent_id="agent1", success=True, data=result, duration=duration)
+        except Exception as e:
+            duration = time.time() - start_time
+            logger.error(f"agent1 failed: {str(e)}", exc_info=True)
+            return AgentResult(agent_id="agent1", success=False, error=str(e), duration=duration)
+
+    async def _run_agent_2(
+        self,
+        agent,
+        transcript_segments,
+        participant_insights,
+        conversation_metadata
+    ) -> AgentResult:
+        """Run Agent 2 (Sentiment) with participant_insights."""
+        start_time = time.time()
+        try:
+            loop = asyncio.get_event_loop()
+            result = await loop.run_in_executor(
+                None,
+                lambda: agent.analyze(
+                    transcript_segments=transcript_segments,
+                    participant_insights=participant_insights,
+                    conversation_metadata=conversation_metadata,
+                )
+            )
+            duration = time.time() - start_time
+            logger.info(f"agent2 completed successfully in {duration:.2f}s")
+            return AgentResult(agent_id="agent2", success=True, data=result, duration=duration)
+        except Exception as e:
+            duration = time.time() - start_time
+            logger.error(f"agent2 failed: {str(e)}", exc_info=True)
+            return AgentResult(agent_id="agent2", success=False, error=str(e), duration=duration)
+
+    async def _run_agent_3(
+        self,
+        agent,
+        transcript_segments,
+        participant_insights,
+        sentiment_insights,
+        conversation_metadata
+    ) -> AgentResult:
+        """Run Agent 3 (Needs) with participant and sentiment insights."""
+        start_time = time.time()
+        try:
+            loop = asyncio.get_event_loop()
+            result = await loop.run_in_executor(
+                None,
+                lambda: agent.analyze(
+                    transcript_segments=transcript_segments,
+                    participant_insights=participant_insights,
+                    sentiment_insights=sentiment_insights,
+                    conversation_metadata=conversation_metadata,
+                )
+            )
+            duration = time.time() - start_time
+            logger.info(f"agent3 completed successfully in {duration:.2f}s")
+            return AgentResult(agent_id="agent3", success=True, data=result, duration=duration)
+        except Exception as e:
+            duration = time.time() - start_time
+            logger.error(f"agent3 failed: {str(e)}", exc_info=True)
+            return AgentResult(agent_id="agent3", success=False, error=str(e), duration=duration)
+
+    async def _run_agent_4(
+        self,
+        agent,
+        transcript_segments,
+        participant_insights,
+        sentiment_insights,
+        conversation_metadata
+    ) -> AgentResult:
+        """Run Agent 4 (Competitor) with participant and sentiment insights."""
+        start_time = time.time()
+        try:
+            loop = asyncio.get_event_loop()
+            result = await loop.run_in_executor(
+                None,
+                lambda: agent.analyze(
+                    transcript_segments=transcript_segments,
+                    participant_insights=participant_insights,
+                    sentiment_insights=sentiment_insights,
+                    conversation_metadata=conversation_metadata,
+                )
+            )
+            duration = time.time() - start_time
+            logger.info(f"agent4 completed successfully in {duration:.2f}s")
+            return AgentResult(agent_id="agent4", success=True, data=result, duration=duration)
+        except Exception as e:
+            duration = time.time() - start_time
+            logger.error(f"agent4 failed: {str(e)}", exc_info=True)
+            return AgentResult(agent_id="agent4", success=False, error=str(e), duration=duration)
+
+    async def _run_agent_5(
+        self,
+        agent,
+        transcript_segments,
+        participant_insights,
+        sentiment_insights,
+        product_needs,
+        conversation_metadata
+    ) -> AgentResult:
+        """Run Agent 5 (Questionnaire) with all previous insights."""
+        start_time = time.time()
+        try:
+            loop = asyncio.get_event_loop()
+            result = await loop.run_in_executor(
+                None,
+                lambda: agent.analyze(
+                    transcript_segments=transcript_segments,
+                    participant_insights=participant_insights,
+                    sentiment_insights=sentiment_insights,
+                    product_needs=product_needs,
+                    conversation_metadata=conversation_metadata,
+                )
+            )
+            duration = time.time() - start_time
+            logger.info(f"agent5 completed successfully in {duration:.2f}s")
+            return AgentResult(agent_id="agent5", success=True, data=result, duration=duration)
+        except Exception as e:
+            duration = time.time() - start_time
+            logger.error(f"agent5 failed: {str(e)}", exc_info=True)
+            return AgentResult(agent_id="agent5", success=False, error=str(e), duration=duration)
+
+    def _build_failed_result(self, case_id: str, agent_results: dict, start_time: float) -> AnalysisResult:
+        """Build a failed AnalysisResult when Agent 1 fails."""
+        total_duration = time.time() - start_time
+        return AnalysisResult(
+            case_id=case_id,
+            success=False,
+            agent_results=agent_results,
+            total_duration=total_duration,
+            error="Agent 1 (Participant) failed - cannot continue pipeline"
+        )
+
+    async def analyze_transcript(
+        self,
+        case_id: str,
+        transcript_segments: List[Dict[str, Any]],
+        speaker_statistics: Optional[Dict[str, Any]] = None,
+        conversation_metadata: Optional[Dict[str, Any]] = None,
+    ) -> AnalysisResult:
+        """
+        Execute Agents 1-5 sequentially with dependency passing.
+
+        Agent execution order:
+        1. Agent 1 (Participant) - uses speaker_statistics
+        2. Agent 2 (Sentiment) - uses Agent 1's output as participant_insights
+        3. Agents 3-4 (Needs, Competitor) - use Agent 1 & 2's outputs (parallel)
+        4. Agent 5 (Questionnaire) - uses Agent 1, 2, 3's outputs
+
+        Args:
+            case_id: Unique identifier for the case
+            transcript_segments: List of transcript segments with speaker info
+            speaker_statistics: Speaker time percentages (e.g., {"Speaker 1": 45.2})
+            conversation_metadata: Additional context about the conversation
+
+        Returns:
+            AnalysisResult containing all agent outputs and metadata
+        """
+        logger.info(f"Starting multi-agent sequential analysis for case {case_id}")
+        start_time = time.time()
+
+        agents = self._ensure_agents()
+        agent_results = {}
+
+        # --- Phase 1: Agent 1 (Participant Profile) ---
+        logger.info("Phase 1: Executing Agent 1 (Participant)")
+        result_agent1 = await self._run_agent_1(
+            agents['agent1'],
+            transcript_segments,
+            speaker_statistics,
+            conversation_metadata
+        )
+        agent_results['agent1'] = result_agent1
+
+        if not result_agent1.success:
+            logger.error("Agent 1 failed - aborting analysis pipeline")
+            return self._build_failed_result(case_id, agent_results, start_time)
+
+        # --- Phase 2: Agent 2 (Sentiment) ---
+        logger.info("Phase 2: Executing Agent 2 (Sentiment)")
+        result_agent2 = await self._run_agent_2(
+            agents['agent2'],
+            transcript_segments,
+            result_agent1.data,
+            conversation_metadata
+        )
+        agent_results['agent2'] = result_agent2
+
+        if not result_agent2.success:
+            logger.warning("Agent 2 failed - continuing with limited data")
+
+        # --- Phase 3: Agents 3-4 (Needs, Competitor) in parallel ---
+        logger.info("Phase 3: Executing Agents 3-4 (Needs, Competitor) in parallel")
+        result_agent3, result_agent4 = await asyncio.gather(
+            self._run_agent_3(
+                agents['agent3'],
+                transcript_segments,
+                result_agent1.data,
+                result_agent2.data if result_agent2.success else None,
+                conversation_metadata
+            ),
+            self._run_agent_4(
+                agents['agent4'],
+                transcript_segments,
+                result_agent1.data,
+                result_agent2.data if result_agent2.success else None,
+                conversation_metadata
+            ),
+            return_exceptions=False
+        )
+        agent_results['agent3'] = result_agent3
+        agent_results['agent4'] = result_agent4
+
+        # --- Phase 4: Agent 5 (Questionnaire) ---
+        logger.info("Phase 4: Executing Agent 5 (Questionnaire)")
+        result_agent5 = await self._run_agent_5(
+            agents['agent5'],
+            transcript_segments,
+            result_agent1.data,
+            result_agent2.data if result_agent2.success else None,
+            result_agent3.data if result_agent3.success else None,
+            conversation_metadata
+        )
+        agent_results['agent5'] = result_agent5
+
+        # --- Final Summary ---
+        total_duration = time.time() - start_time
+        successful_results = [r for r in agent_results.values() if r.success]
+        failed_results = [r for r in agent_results.values() if not r.success]
+        success_count = len(successful_results)
+
+        success = success_count >= self.min_success_threshold
+        error = None
+
+        if not success:
+            failed_agents = [r.agent_id for r in failed_results]
+            error = (
+                f"Insufficient data: only {success_count}/{len(agents)} agents succeeded "
+                f"(minimum required: {self.min_success_threshold}). "
+                f"Failed agents: {', '.join(failed_agents)}"
+            )
+            logger.error(f"Analysis failed for case {case_id}: {error}")
+        elif failed_results:
+            failed_agents = [r.agent_id for r in failed_results]
+            logger.warning(
+                f"Analysis completed with partial success for case {case_id}: "
+                f"{success_count}/{len(agents)} agents succeeded. "
+                f"Failed: {', '.join(failed_agents)}"
+            )
+        else:
+            logger.info(
+                f"Analysis completed successfully for case {case_id} in {total_duration:.2f}s"
+            )
+
+        return AnalysisResult(
+            case_id=case_id,
+            success=success,
+            agent_results=agent_results,
+            total_duration=total_duration,
+            error=error,
+        )
+
+    def get_analysis_summary(self, result: AnalysisResult) -> Dict[str, Any]:
+        """
+        Generate a summary of the analysis results.
+
+        Args:
+            result: AnalysisResult from analyze_transcript()
+
+        Returns:
+            Dictionary with summary statistics
+        """
+        summary = {
+            "case_id": result.case_id,
+            "success": result.success,
+            "total_duration": round(result.total_duration, 2),
+            "agents": {},
+        }
+
+        for agent_id, agent_result in result.agent_results.items():
+            summary["agents"][agent_id] = {
+                "success": agent_result.success,
+                "duration": round(agent_result.duration, 2),
+                "has_data": agent_result.data is not None,
+            }
+            if agent_result.error:
+                summary["agents"][agent_id]["error"] = agent_result.error
+
+        return summary

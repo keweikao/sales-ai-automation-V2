@@ -2,9 +2,12 @@
 import os
 import logging
 import json
+import tempfile
+from typing import Optional
+
+import requests
 from flask import Flask, request, jsonify
 from google.cloud import storage, tasks_v2, firestore
-import tempfile
 
 from .pipeline import OptimizedTranscriptionPipeline
 from .status_tracker import TranscriptionStatusTracker
@@ -98,6 +101,39 @@ SERVICE_ACCOUNT_EMAIL = os.environ.get(
     "SERVICE_ACCOUNT_EMAIL",
     "497329205771-compute@developer.gserviceaccount.com"
 )
+SLACK_PROGRESS_ENDPOINT = os.environ.get("SLACK_PROGRESS_ENDPOINT")
+SLACK_PROGRESS_TOKEN = os.environ.get("SLACK_PROGRESS_TOKEN")
+
+
+def notify_slack_progress(*, case_id: Optional[str], file_id: Optional[str], status: str) -> None:
+    """Send transcription progress to Slack service when configured."""
+    if not SLACK_PROGRESS_ENDPOINT or not case_id:
+        return
+
+    payload = {
+        "caseId": case_id,
+        "fileId": file_id,
+        "status": status,
+    }
+    headers = {"Content-Type": "application/json"}
+    if SLACK_PROGRESS_TOKEN:
+        headers["X-Progress-Token"] = SLACK_PROGRESS_TOKEN
+
+    try:
+        response = requests.post(
+            SLACK_PROGRESS_ENDPOINT,
+            headers=headers,
+            json=payload,
+            timeout=10,
+        )
+        if response.status_code >= 300:
+            logger.warning(
+                "Slack progress webhook returned status %s: %s",
+                response.status_code,
+                response.text[:256],
+            )
+    except Exception as exc:  # pylint: disable=broad-except
+        logger.warning("Failed to notify Slack progress endpoint: %s", exc)
 
 # --- Flask Routes ---
 
@@ -168,11 +204,15 @@ def transcribe_audio():
                     logger.info(f"Saving transcription to Firestore for case {case_id}")
                     case_ref = db.collection('cases').document(case_id)
 
+                    # Extract audio duration from audio_info
+                    audio_info = result.get("audio_info", {})
+                    audio_duration = audio_info.get("duration", 0)
+
                     transcription_data = {
-                        "text": result.get("transcription", ""),
+                        "text": result.get("full_text", ""),
                         "segments": result.get("segments", []),
                         "speakers": result.get("speakers", []),
-                        "duration": result.get("audio_duration", 0),
+                        "duration": audio_duration,
                         "language": result.get("language", "zh"),
                     }
 
@@ -194,6 +234,7 @@ def transcribe_audio():
                             merge=True,
                         )
                     status_tracker.mark_completed(case_id=case_id, file_id=file_id)
+                    notify_slack_progress(case_id=case_id, file_id=file_id, status="transcribed")
 
                     # Trigger analysis via Cloud Tasks
                     if tasks_client:

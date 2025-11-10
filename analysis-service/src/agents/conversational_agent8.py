@@ -1,3 +1,4 @@
+
 """
 Agent 8 核心模塊 - 對話式業務主管助理
 
@@ -10,7 +11,15 @@ import json
 import logging
 from typing import Dict, Any, List, Optional
 from pathlib import Path
-import google.generativeai as genai
+
+try:
+    import vertexai
+    from vertexai.generative_models import GenerationConfig, GenerativeModel
+except ImportError:
+    vertexai = None
+    GenerativeModel = None
+    GenerationConfig = None
+
 from .question_parser import QuestionParser, QuestionParams, QuestionType
 from .data_fetcher import DataFetcher, QueryResult
 from .conversation_manager import ConversationManager
@@ -23,28 +32,36 @@ class ConversationalAgent8:
 
     def __init__(
         self,
-        gemini_api_key: Optional[str] = None,
-        db_client: Optional = None
+        db_client: Optional = None,
+        model_name: str = "gemini-1.0-pro"
     ):
         """
         初始化 Agent 8
 
         Args:
-            gemini_api_key: Gemini API Key
             db_client: Firestore Client（可選）
+            model_name: Gemini 模型名稱
         """
+        if vertexai is None or GenerativeModel is None:
+            raise ValueError(
+                "google-cloud-aiplatform 套件未安裝，無法呼叫 Gemini 模型。"
+            )
+
+        # Initialize Vertex AI SDK to use Application Default Credentials
+        GCP_PROJECT = os.environ.get("GCP_PROJECT", "sales-ai-automation-v2")
+        GCP_LOCATION = os.environ.get("GCP_LOCATION", "asia-east1")
+        try:
+            vertexai.init(project=GCP_PROJECT, location=GCP_LOCATION)
+        except Exception as e:
+            raise ValueError(f"Vertex AI 初始化失敗: {e}") from e
+
         # 初始化問題解析器和數據查詢器
-        self.parser = QuestionParser(gemini_api_key)
+        self.parser = QuestionParser(model_name=model_name)
         self.fetcher = DataFetcher(db_client=db_client)
         self.conversation_manager = ConversationManager(db_client=db_client)
 
-        # 初始化 Gemini 模型用於生成回答
-        api_key = gemini_api_key or os.getenv("GEMINI_API_KEY")
-        if not api_key:
-            raise ValueError("GEMINI_API_KEY 未設定")
-
-        genai.configure(api_key=api_key)
-        self.model = genai.GenerativeModel('gemini-2.0-flash-exp')
+        # 初始化 Gemini 模型用於生成回答（使用 Vertex AI SDK）
+        self.model = GenerativeModel(model_name)
 
         # 載入 System Prompt v2
         self.system_prompt = self._load_system_prompt()
@@ -56,15 +73,14 @@ class ConversationalAgent8:
         Returns:
             System Prompt 內容
         """
-        prompt_path = Path(__file__).parent / "prompts" / "agent8_system_prompt_v2.txt"
+        prompt_path = Path(__file__).parent.parent / "prompts" / "agent8_system_prompt_v2.md"
 
-        # 如果文件存在就讀取，否則使用內嵌版本
         if prompt_path.exists():
-            with open(prompt_path, 'r', encoding='utf-8') as f:
-                return f.read()
+            return prompt_path.read_text(encoding='utf-8')
         else:
+            logger.warning(f"Prompt file not found at {prompt_path}, using fallback.")
             # 內嵌簡化版 Prompt v2
-            return """你是 iCHEF 業務主管的專屬智能助理 Agent 8。
+            return '''你是 iCHEF 業務主管的專屬智能助理 Agent 8。
 
 ## 核心特質
 
@@ -104,7 +120,7 @@ class ConversationalAgent8:
 - 量化數據 + 質性洞察
 - 具體、可執行的建議
 - 友善、專業的語氣
-"""
+'''
 
     def _build_answer_prompt(
         self,
@@ -146,7 +162,7 @@ class ConversationalAgent8:
         if is_topic_switch:
             topic_switch_note = "\n\n**注意**：用戶切換了話題，這是一個新的問題方向。請重新聚焦新問題並回答。\n"
 
-        prompt = f"""{self.system_prompt}
+        prompt = f'''{self.system_prompt}
 
 ## 當前任務
 
@@ -174,7 +190,7 @@ class ConversationalAgent8:
 4. **提出建議**（具體、可執行的行動項）
 
 現在請用繁體中文回答：
-"""
+'''
         return prompt
 
     def _prepare_cases_summary(self, cases: List[Dict]) -> str:
@@ -348,10 +364,11 @@ class ConversationalAgent8:
 
         response = self.model.generate_content(
             prompt,
-            generation_config=genai.types.GenerationConfig(
+            generation_config=GenerationConfig(
                 temperature=0.7,  # 適中的溫度，保持回答自然但穩定
                 max_output_tokens=1024,
             )
         )
 
         return response.text.strip()
+

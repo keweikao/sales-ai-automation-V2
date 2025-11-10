@@ -15,7 +15,14 @@ import json
 from typing import Dict, Any, Optional
 from enum import Enum
 from pydantic import BaseModel
-import google.generativeai as genai
+
+try:
+    import vertexai
+    from vertexai.generative_models import GenerationConfig, GenerativeModel
+except ImportError:
+    vertexai = None
+    GenerativeModel = None
+    GenerationConfig = None
 
 
 class QuestionType(str, Enum):
@@ -51,19 +58,28 @@ class QuestionParams(BaseModel):
 class QuestionParser:
     """問題解析器"""
 
-    def __init__(self, gemini_api_key: Optional[str] = None):
+    def __init__(self, model_name: str = "gemini-1.0-pro"): # Removed gemini_api_key
         """
         初始化問題解析器
 
         Args:
-            gemini_api_key: Gemini API Key，如果不提供則從環境變數讀取
+            model_name: Gemini 模型名稱
         """
-        api_key = gemini_api_key or os.getenv("GEMINI_API_KEY")
-        if not api_key:
-            raise ValueError("GEMINI_API_KEY 未設定")
+        if vertexai is None or GenerativeModel is None:
+            raise ValueError(
+                "google-cloud-aiplatform 套件未安裝，無法呼叫 Gemini 模型。"
+            )
 
-        genai.configure(api_key=api_key)
-        self.model = genai.GenerativeModel('gemini-2.0-flash-exp')
+        # Initialize Vertex AI SDK to use Application Default Credentials
+        # This will use the service account in the Cloud Run environment.
+        GCP_PROJECT = os.environ.get("GCP_PROJECT", "sales-ai-automation-v2")
+        GCP_LOCATION = os.environ.get("GCP_LOCATION", "asia-east1")
+        try:
+            vertexai.init(project=GCP_PROJECT, location=GCP_LOCATION)
+        except Exception as e:
+            raise ValueError(f"Vertex AI 初始化失敗: {e}") from e
+
+        self.model = GenerativeModel(model_name) # Use Vertex AI GenerativeModel
 
     def _build_parsing_prompt(self, question: str, conversation_history: Optional[list] = None) -> str:
         """
@@ -79,31 +95,39 @@ class QuestionParser:
         history_context = ""
         if conversation_history:
             history_context = "\n\n對話歷史：\n"
-            for msg in conversation_history[-3:]:  # 只取最近 3 輪
+            for msg in conversation_history[-3:]:
                 history_context += f"用戶: {msg.get('question', '')}\n"
                 history_context += f"AI: {msg.get('answer', '')[:100]}...\n"
 
-        prompt = f"""你是 Agent 8 的問題解析助手，負責分析業務主管的問題並提取查詢參數。
+        prompt = f'''你是 Agent 8 的問題解析助手，負責分析業務主管的問題並提取查詢參數。
 
 ## 問題類型定義
 
 1. **team_overview** - 團隊整體表現
-   - 例如：「今天團隊表現如何？」「本週完成幾件案件？」「有哪些案件需要關注？」
+   - 例如：「今天團隊表現如何？」
+   - 例如：「本週完成幾件案件？」
+   - 例如：「有哪些案件需要關注？」
 
 2. **sales_rep_performance** - 個人業務績效
-   - 例如：「王小明本週表現如何？」「誰的健康度最低？」「陳美玲有什麼問題？」
+   - 例如：「王小明本週表現如何？」
+   - 例如：「誰的健康度最低？」
+   - 例如：「陳美玲有什麼問題？」
 
 3. **case_details** - 案件詳細分析
-   - 例如：「#202501-IC003 的情況如何？」「健康度低於 50 的案件有哪些？」
+   - 例如：「#202501-IC003 的情況如何？」
+   - 例如：「健康度低於 50 的案件有哪些？」
 
 4. **competitor_intelligence** - 競品情報
-   - 例如：「Eats365 最近被提到幾次？」「客戶對競品的評價如何？」
+   - 例如：「Eats365 最近被提到幾次？」
+   - 例如：「客戶對競品的評價如何？」
 
 5. **product_demand** - 產品需求洞察
-   - 例如：「掃碼點餐功能的需求如何？」「最熱門的功能是什麼？」
+   - 例如：「掃碼點餐功能的需求如何？」
+   - 例如：「最熱門的功能是什麼？」
 
 6. **trend_comparison** - 趨勢對比
-   - 例如：「本週 vs 上週，健康度有什麼變化？」「王小明本月跟上月比較如何？」
+   - 例如：「本週 vs 上週，健康度有什麼變化？」
+   - 例如：「王小明本月跟上月比較如何？」
 
 ## 時間範圍對應
 
@@ -147,7 +171,7 @@ class QuestionParser:
 2. 只輸出 JSON，不要有其他文字
 3. 如果問題使用代詞（「他」、「這個」、「那個」），請根據對話歷史推斷指代對象
 4. 時間範圍預設為 "recent" 如果沒有明確指定
-"""
+'''
         return prompt
 
     def parse_question_sync(
@@ -170,7 +194,7 @@ class QuestionParser:
 
             response = self.model.generate_content(
                 prompt,
-                generation_config=genai.types.GenerationConfig(
+                generation_config=GenerationConfig( # Use Vertex AI GenerationConfig
                     temperature=0.1,
                 )
             )

@@ -16,12 +16,15 @@ soundfile==0.12.1
 # Utilities
 numpy>=1.24.0
 typing-extensions>=4.8.0
-importlib-metadata>=3.6.0
+importlib-metadata>=6.0.0
 
 # Web Server
 Flask>=2.2.0
 gunicorn>=21.2.0
 google-cloud-storage>=2.10.0
+google-cloud-firestore>=2.11.0
+google-cloud-tasks>=2.14.0
+requests>=2.31.0
 
 # Optional: Speaker diarization
 pyannote.audio==3.1.1

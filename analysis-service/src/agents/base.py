@@ -17,14 +17,24 @@ from pathlib import Path
 from typing import Any, Callable, Dict, Iterable, List, Optional
 
 try:
-    import google.generativeai as genai
+    import vertexai
+    from vertexai.generative_models import GenerationConfig, GenerativeModel
 except ImportError:  # pragma: no cover - runtime dependency
+    vertexai = None  # type: ignore
+    GenerativeModel = None  # type: ignore
+    GenerationConfig = None  # type: ignore
+
+try:
+    import google.generativeai as genai
+except ImportError:
     genai = None  # type: ignore
 
 
 JSON_CONTENT_TYPE = "application/json"
-DEFAULT_MODEL_NAME = "gemini-2.0-flash-exp"
+DEFAULT_MODEL_NAME = "gemini-1.0-pro"
 DEFAULT_TEMPERATURE = 0.2
+GCP_PROJECT = os.environ.get("GCP_PROJECT", "sales-ai-automation-v2")
+GCP_LOCATION = os.environ.get("GCP_LOCATION", "asia-east1")
 
 
 class GeminiClientError(RuntimeError):
@@ -78,15 +88,15 @@ def _build_generation_config(
     temperature: float = DEFAULT_TEMPERATURE,
     response_mime_type: str = "text/plain",
 ) -> Any:
-    """Create a GenerationConfig object if google-generativeai is installed."""
-    if genai is None:
+    """Create a GenerationConfig object if google-cloud-aiplatform is installed."""
+    if GenerationConfig is None:
         raise GeminiClientError(
-            "google-generativeai 套件未安裝，無法呼叫 Gemini 模型。"
+            "google-cloud-aiplatform 套件未安裝，無法呼叫 Gemini 模型。"
         )
-    return genai.types.GenerationConfig(
+    # Note: response_mime_type is not a direct param in Vertex AI's GenerationConfig
+    return GenerationConfig(
         temperature=temperature,
         candidate_count=1,
-        response_mime_type=response_mime_type,
     )
 
 
@@ -97,26 +107,35 @@ def default_model_factory(
     """
     Create a callable that returns a configured GenerativeModel.
 
-    The factory delays actual model instantiation until the returned callable
-    is invoked, ensuring that environment configuration happens at runtime.
+    Tries Vertex AI first, falls back to Google Generative AI SDK with API key.
     """
 
     def _factory() -> Any:
-        if genai is None:  # pragma: no cover - runtime dependency
-            raise GeminiClientError(
-                "google-generativeai 套件未安裝，無法呼叫 Gemini 模型。"
-            )
+        # Try Vertex AI first
+        if vertexai is not None and GenerativeModel is not None:
+            try:
+                vertexai.init(project=GCP_PROJECT, location=GCP_LOCATION)
+                generation_config = _build_generation_config(temperature=temperature)
+                return GenerativeModel(
+                    model_name,
+                    generation_config=generation_config,
+                )
+            except Exception as e:
+                # Vertex AI failed, try fallback
+                import logging
+                logging.warning(f"Vertex AI initialization failed: {e}, falling back to genai SDK")
 
-        try:
-            api_key = os.environ["GEMINI_API_KEY"]
-        except KeyError as exc:  # pragma: no cover - requires runtime secret
-            raise GeminiClientError("需要設定 GEMINI_API_KEY 環境變數。") from exc
+        # Fallback to Google Generative AI SDK with API key
+        if genai is not None:
+            api_key = os.environ.get("GEMINI_API_KEY")
+            if api_key:
+                genai.configure(api_key=api_key)
+                # Map model names if needed
+                fallback_model = model_name.replace("gemini-1.5-flash-001", "gemini-1.5-flash")
+                return genai.GenerativeModel(fallback_model)
 
-        genai.configure(api_key=api_key)
-        generation_config = _build_generation_config(temperature=temperature)
-        return genai.GenerativeModel(
-            model_name,
-            generation_config=generation_config,
+        raise GeminiClientError(
+            "無法初始化 Gemini 模型（Vertex AI 和 API Key 方式都失敗）"
         )
 
     return _factory
@@ -162,8 +181,36 @@ class GeminiJSONAgent:
         return self._model
 
     def _generate(self, prompt: str) -> str:
+        import logging
+        logger = logging.getLogger(__name__)
+
         model = self._ensure_model()
-        response = model.generate_content(prompt)
+
+        try:
+            response = model.generate_content(prompt)
+        except Exception as e:
+            # If Vertex AI fails with 404, try fallback to genai SDK
+            if "404" in str(e) and genai is not None:
+                logger.warning(f"Vertex AI failed with 404, trying genai SDK fallback: {e}")
+                api_key = os.environ.get("GEMINI_API_KEY")
+                if api_key:
+                    genai.configure(api_key=api_key)
+                    # Map Vertex AI model names to Gemini API model names
+                    model_mapping = {
+                        "gemini-2.5-flash": "gemini-2.5-flash",
+                        "gemini-2.5-pro": "gemini-2.5-pro",
+                        "gemini-flash-latest": "gemini-flash-latest",
+                    }
+                    fallback_model = model_mapping.get(self.model_name, "gemini-flash-latest")
+                    logger.info(f"Using genai SDK with model: {fallback_model}")
+                    model = genai.GenerativeModel(fallback_model)
+                    self._model = model  # Cache the fallback model
+                    response = model.generate_content(prompt)
+                    logger.info(f"✅ Successfully used genai SDK with model: {fallback_model}")
+                else:
+                    raise
+            else:
+                raise
 
         # Primary path: response.text (Gemini SDK convenience property)
         text = getattr(response, "text", None)

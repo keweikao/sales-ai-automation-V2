@@ -9,10 +9,17 @@ from .base import GeminiJSONAgent, render_transcript
 PROMPT_PATH = Path(__file__).resolve().parent / "prompts" / "agent3-product-needs.md"
 
 
+def json_serializer(obj):
+    """JSON serializer for objects not serializable by default json code"""
+    if hasattr(obj, 'isoformat'):
+        return obj.isoformat()
+    raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
+
+
 def _serialize_optional_context(label: str, payload: Optional[Dict[str, Any]]) -> str:
     if not payload:
         return f"（未提供{label}）"
-    return json.dumps(payload, ensure_ascii=False, indent=2)
+    return json.dumps(payload, ensure_ascii=False, indent=2, default=json_serializer)
 
 
 class ProductNeedsAgent(GeminiJSONAgent):
@@ -34,16 +41,19 @@ class ProductNeedsAgent(GeminiJSONAgent):
 
         participant_block = _serialize_optional_context("參與者資訊", participant_insights)
         sentiment_block = _serialize_optional_context("情緒洞察", sentiment_insights)
-
+        
         metadata_json = ""
         if conversation_metadata:
             metadata_json = json.dumps(
-                conversation_metadata, ensure_ascii=False, indent=2
+                conversation_metadata,
+                ensure_ascii=False,
+                indent=2,
+                default=json_serializer,
             )
 
         sections = [
             self.prompt_template.strip(),
-            "\n\n=== 參與者角色（Agent 1） ===\n",
+            "\n\n=== 參與者資訊（Agent 1） ===\n",
             participant_block,
             "\n\n=== 情緒與態度（Agent 2） ===\n",
             sentiment_block,
