@@ -12,6 +12,8 @@
 
 ---
 
+<a id="新增功能"></a>
+
 ## 🎯 新增功能
 
 ### Task 6.1: Agent 6 結果顯示
@@ -69,6 +71,8 @@
 
 ---
 
+<a id="文件結構"></a>
+
 ## 📁 文件結構
 
 ```
@@ -87,6 +91,8 @@ src/slack_app/
 ```
 
 ---
+
+<a id="整合步驟"></a>
 
 ## 🔧 整合步驟
 
@@ -181,6 +187,8 @@ def on_analysis_complete(case_id: str, user_id: str):
 
 ---
 
+<a id="使用範例"></a>
+
 ## 💡 使用範例
 
 ### 範例 1: 發送 Agent 6 通知
@@ -232,6 +240,8 @@ success = editor.open_edit_modal(
 詳見 `integration_example.py` 中的 `example_complete_analysis_flow()` 函數
 
 ---
+
+<a id="測試指南"></a>
 
 ## 🧪 測試指南
 

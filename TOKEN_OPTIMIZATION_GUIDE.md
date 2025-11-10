@@ -35,12 +35,14 @@
 ### 1️⃣ 直接工具（Read/Edit/Bash）
 
 **使用條件**：
+
 - ✅ 已知確切檔案路徑
 - ✅ 單次操作不超過 3 步
 - ✅ 不需要重複執行
 - ✅ 檔案小於 100 行
 
 **範例**：
+
 ```bash
 # ✅ 適合：讀取小型 config 檔案
 Read(/path/to/config.yaml)
@@ -59,6 +61,7 @@ Bash("gcloud logging read") # 會產生大量 log，消耗過多 tokens
 ### 2️⃣ MCP Server（透過 MCP 協議呼叫外部服務）
 
 **使用條件**：
+
 - ✅ 需要重複呼叫同一 API
 - ✅ 批次操作（列表、查詢、刪除）
 - ✅ 有現成 MCP server 可用
@@ -67,6 +70,7 @@ Bash("gcloud logging read") # 會產生大量 log，消耗過多 tokens
 **優先使用場景**：
 
 #### A. Google Cloud 操作
+
 ```python
 # ❌ 直接呼叫（高 token 消耗）
 Bash("gcloud logging read 'resource.type=cloud_run_revision' --limit=50")
@@ -82,6 +86,7 @@ mcp__gcloud_logging.read(
 ```
 
 #### B. Firestore 批次查詢
+
 ```python
 # ❌ 直接呼叫（需要完整 SDK context）
 Bash("python3 -c 'from google.cloud import firestore; db=firestore.Client(); ...'")
@@ -98,6 +103,7 @@ mcp__firestore.query(
 ```
 
 #### C. Slack 通知
+
 ```python
 # ❌ 直接呼叫（需要完整 curl 命令 + response）
 Bash('curl -X POST https://slack.com/api/chat.postMessage ...')
@@ -115,8 +121,10 @@ mcp__slack.send_message(
 **Token 節省**：85%（批次操作）、95%（快取查詢）
 
 **設定方式**：
+
 1. 安裝 MCP server：`npm install -g @modelcontextprotocol/server-gcloud`
 2. 配置 `~/.claude/mcp_config.json`：
+
 ```json
 {
   "mcpServers": {
@@ -150,6 +158,7 @@ mcp__slack.send_message(
 ### 3️⃣ Subagent（Task tool）
 
 **使用條件**：
+
 - ✅ 需要探索大型檔案或目錄
 - ✅ 多輪試錯（測試不同參數）
 - ✅ 需要隔離 context（避免污染主對話）
@@ -158,6 +167,7 @@ mcp__slack.send_message(
 **優先使用場景**：
 
 #### A. 程式碼探索
+
 ```python
 # ❌ 直接搜尋（佔用主對話 context）
 Grep(pattern="class.*Agent", path="analysis-service/src")
@@ -180,6 +190,7 @@ Task(
 ```
 
 #### B. 錯誤診斷（多輪試錯）
+
 ```python
 # ❌ 直接診斷（每次嘗試都佔用主對話）
 Bash("gcloud logging read 'severity>=ERROR' --limit=100")
@@ -204,6 +215,7 @@ Task(
 ```
 
 #### C. 模型測試
+
 ```python
 # ❌ 直接測試（每次失敗都累積 context）
 Bash("python3 test_model.py --model=gemini-pro")  # 失敗
@@ -233,6 +245,7 @@ Task(
 **Token 節省**：70%（程式碼探索）、60%（試錯隔離）
 
 **使用技巧**：
+
 1. 明確指定回傳格式（避免 Subagent 回傳過多內容）
 2. 使用 `model="haiku"` 參數來降低 Subagent 內部消耗
 3. 要求 Subagent 只回傳摘要，不要貼完整程式碼

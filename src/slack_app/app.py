@@ -94,6 +94,9 @@ def handle_add_file_details_button(ack, body, client, logger):
     
     file_id = body["actions"][0]["value"] # Get file_id from the button's value
     trigger_id = body["trigger_id"] # Get trigger_id from the payload
+    channel_id = body["channel"]["id"]
+    # The thread_ts is in the message context
+    thread_ts = body["message"]["thread_ts"]
     
     try:
         # Open a modal to collect metadata
@@ -102,7 +105,8 @@ def handle_add_file_details_button(ack, body, client, logger):
             view={
                 "type": "modal",
                 "callback_id": "upload_audio_modal",
-                "private_metadata": file_id, # Pass the file_id to the modal
+                # Pass file_id, channel_id, and thread_ts to the modal
+                "private_metadata": f"{file_id}|{channel_id}|{thread_ts}",
                 "title": {"type": "plain_text", "text": "Audio File Details"},
                 "submit": {"type": "plain_text", "text": "Submit"},
                 "close": {"type": "plain_text", "text": "Cancel"},
@@ -148,8 +152,14 @@ def handle_modal_submission(ack, body, client, view, logger):
 
     user_id = body["user"]["id"]
     
-    # Retrieve the file_id from private_metadata
-    file_id = view["private_metadata"]
+    # Retrieve the file_id, channel_id, and thread_ts from private_metadata
+    private_metadata = view["private_metadata"]
+    try:
+        file_id, channel_id, thread_ts = private_metadata.split("|")
+    except ValueError:
+        logger.error(f"Invalid private_metadata format: {private_metadata}")
+        # Optionally, send an error message to the user
+        return
     
     # Retrieve submitted values
     submitted_values = view["state"]["values"]
@@ -160,13 +170,27 @@ def handle_modal_submission(ack, body, client, view, logger):
     logger.info(f"  - File ID: {file_id}")
     logger.info(f"  - Customer ID: {customer_id}")
     logger.info(f"  - Store Name: {store_name}")
+    logger.info(f"  - Target Channel: {channel_id}")
+    logger.info(f"  - Target Thread: {thread_ts}")
 
     # TODO: Add logic to start the backend processing with this information
-    # For now, send a confirmation message to the user in a DM
+    # For now, send a confirmation message to the original thread
     try:
+        # Create the confirmation message using the example format
+        confirmation_text = (
+            f":white_check_mark: 案件已建立並開始轉錄與分析\n"
+            f":file_folder: 案件編號：`{file_id}`\n" # Using file_id as a placeholder for case_id
+            f":bust_in_silhouette: 客戶編號：`{customer_id}`\n"
+            f":convenience_store: 客戶名稱：{store_name}\n"
+            f":telephone_receiver: 客戶電話：未提供\n"
+            f":memo: 備註：無\n"
+            f":dart: 我們會在分析完成後自動通知您。"
+        )
+
         client.chat_postMessage(
-            channel=user_id, # Send as a DM to the user
-            text=f"感謝！我們已收到您檔案的詳細資訊，將很快開始處理。\n- 檔案 ID: `{file_id}`\n- 客戶編號: `{customer_id}`\n- 店名: `{store_name}`"
+            channel=channel_id,
+            thread_ts=thread_ts,
+            text=confirmation_text
         )
         # Optionally, update the original message in the channel to show it's processed
         # client.chat_update(
@@ -176,7 +200,7 @@ def handle_modal_submission(ack, body, client, view, logger):
         #     blocks=[] # Clear blocks if desired
         # )
     except SlackApiError as e:
-        logger.error(f"Failed to send confirmation message to user {user_id}: {e.response['error']}")
+        logger.error(f"Failed to send confirmation message to thread {thread_ts}: {e.response['error']}")
     except Exception as e:
         logger.error(f"Unexpected error in handle_modal_submission: {e}")
 

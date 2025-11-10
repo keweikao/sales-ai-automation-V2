@@ -679,3 +679,61 @@ This file tracks all development sessions to enable seamless continuation across
 ## 📚 Reference Documentation
 
 ### External Resources
+
+### Session 21: 2025-11-10 (Checklist Consolidation, Agent 5 Hotfix, Slack Sync)
+
+**Duration**: ~3.5 hours  
+**AI Model**: Codex CLI（GPT-5）  
+**User**: Stephen
+
+#### Objectives Completed ✅
+
+- [x] Consolidated `PRE_DEVELOPMENT_CHECKLIST.md` into `QUICK_START_FOR_AI.md` and updated all scripts/prompts to reference the new section while leaving a compatibility stub file.
+- [x] Fixed the Agent 5 (Questionnaire) prompt signature mismatch, redeployed `analysis-service`, and re-ran case `202511-IC004` to confirm all six agents succeed.
+- [x] Posted the refreshed Agent 5 summary back into the original Slack upload thread after verifying the bot token flow.
+- [x] Began enabling diarization for `transcription-service` by updating `cloudbuild.transcription.yaml` with the new env/secret requirements (build blocked pending Hugging Face secret).
+- [x] Resolved markdownlint violations across the repo and added a lint checklist item to the Quick Start self-check.
+
+#### Files Created/Modified
+
+**Created**:
+- `PRE_DEVELOPMENT_CHECKLIST.md` (stub pointing to Quick Start section)
+
+**Modified**:
+- `QUICK_START_FOR_AI.md`, `.claude/pre_task_prompt.md`, `scripts/setup_mcp_infrastructure.sh`: moved checklist content in-file and retargeted all references.
+- `analysis-service/src/agents/agent5_questionnaire.py`, `analysis-service/cloudbuild.yaml`: updated prompt builder parameters, enabled questionnaire context, and redeployed.
+- `analysis-service/trigger_analysis.py`, `analysis-service/src/main.py`: exercised Cloud Tasks trigger to validate the new Agent 5 pipeline.
+- `cloudbuild.transcription.yaml`: added diarization env vars and secret wiring for future redeploy.
+- `AGENT6_AGENT7_ANALYSIS.md`, `TOKEN_OPTIMIZATION_GUIDE.md`, `src/slack_app/INTEGRATION_README.md`, `DEVELOPMENT_LOG.md`: fixed markdownlint (MD001/MD022/MD031/MD032/MD047/MD051) issues; Quick Start self-check now requires markdownlint passing.
+
+#### Key Discussions & Decisions
+
+1. **Single Source for Pre-Dev Checklist**  
+   - Decided to house the entire checklist within `QUICK_START_FOR_AI.md` to cut down on context-switching. Legacy references (scripts, prompts, stub file) now point to the new section rather than duplicating content.
+
+2. **Agent 5 Prompt Contract**  
+   - Agent 5 must consume participant/sentiment/needs insights so orchestrator output stays linear. The class now mirrors Agents 3-4 and we verified the fix via a full Cloud Tasks run on `202511-IC004`, including manual Slack confirmation.
+
+3. **Diarization Rollout Plan**  
+   - Enabled the Cloud Run deployment config to expect `ENABLE_DIARIZATION=true` and `HUGGINGFACE_TOKEN`, but deployment currently fails because the secret does not exist yet. Decision: leave YAML ready and call out secret creation as a prerequisite for the next session.
+
+#### Technical Highlights
+
+- Redeployed `analysis-service` (revision `analysis-service-00047-rgr`) after updating the Docker image; Firestore now shows Agent 5 success with six questionnaire topics and we re-used the SlackNotifier logic to push a human-readable summary.
+- Posted directly to the original Slack thread once the refreshed `slack-bot-token` was installed, confirming the bot app (`Sales_Analysis_AI`) can summarize long-form outputs back to DMs.
+- Updated `cloudbuild.transcription.yaml` to pass diarization env vars and set-secrets (pointing to `huggingface-token`), preparing the service for pyannote diarization once credentials are provisioned.
+- Addressed 40+ markdownlint hits (MD001/MD022/MD031/MD032/MD047/MD051) across Quick Start, token guide, Slack integration README, etc., and documented the lint gate in the Quick Start self-check.
+
+#### Known Issues & Risks
+
+1. **Transcription Build Fails (missing secret)**  
+   - Cloud Build step 2 fails with `Secret .../huggingface-token/versions/latest was not found`. Create the secret (or adjust the deployment) before rerunning the build/deploy pipeline.
+
+2. **Markdownlint Verification Pending**  
+   - Lint fixes applied manually; `markdownlint-cli2` was not executed locally (tooling unavailable). CI should re-run to confirm no remaining MD0xx violations.
+
+#### Next Session Preparation
+
+- Provision `huggingface-token` in Secret Manager (or change Cloud Build to reference the actual secret name) and rerun `gcloud builds submit --config cloudbuild.transcription.yaml .` to complete the diarization rollout.
+- Execute `markdownlint-cli2` (or the project’s lint workflow) to confirm the new requirement is satisfied and update any remaining files flagged by CI.
+- Consider automating the “analysis completion → Slack thread post” by re-enabling `SlackNotifier.send_analysis_notification` once `channel_id`/`thread_ts` are consistently captured in Firestore.

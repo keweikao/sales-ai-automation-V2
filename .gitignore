@@ -63,3 +63,6 @@ sdd-*/
 # CLI downloads
 q/
 *.sig
+
+.gemini/
+gha-creds-*.json

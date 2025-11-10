@@ -166,6 +166,7 @@
 ### 場景 1: Google Cloud 操作
 
 **需求識別**：
+
 - 需要呼叫 `gcloud` 命令 3 次以上
 - 需要讀取 Cloud Logging、查詢 Firestore、管理 Cloud Run
 
@@ -199,15 +200,23 @@ EOF
 ```
 
 **成本效益**：
+
+
+
 - 建置時間：10 分鐘
+
 - Token 節省：85%（每次呼叫從 ~5000 tokens → ~750 tokens）
+
 - 適用任務：日誌查詢、服務部署、資源管理
+
+
 
 ---
 
 ### 場景 2: 自定義 API（無現成 MCP Server）
 
 **需求識別**：
+
 - 需要呼叫內部 API 或第三方 API
 - 預期會重複呼叫 5 次以上
 - API 回傳資料需要過濾/摘要
@@ -345,10 +354,10 @@ EOF
 # 5. 測試
 python3 tools/my_service/mcp_server.py
 # 輸入: {"method": "tools/list"}
-# 應回傳: {"tools": [{"name": "my_service_query", ...}]}
-```
+`# 應回傳: {"tools": [{"name": "my_service_query", ...}]}`
 
 **成本效益**：
+
 - 建置時間：15-20 分鐘
 - Token 節省：90%（過濾 + 欄位選擇）
 - 適用任務：內部 API、第三方整合
@@ -360,6 +369,7 @@ python3 tools/my_service/mcp_server.py
 ### 場景 3: 程式碼探索（不知道檔案在哪）
 
 **識別條件**：
+
 - 需要搜尋 "所有實作 X 的檔案"
 - 需要理解 "系統架構"
 - 不確定要讀哪些檔案
@@ -403,6 +413,7 @@ Task(
 ### 場景 4: 多輪試錯（測試參數、模型）
 
 **識別條件**：
+
 - 需要測試多個參數組合
 - 不確定哪個配置會成功
 - 預期會失敗 3 次以上
@@ -852,10 +863,12 @@ Bash("gcloud run services list")
 - [x] 使用 Subagent (Explore)
 
 #### 4. 試錯需求
+
 - [x] 需要測試多個模型參數: 是
 - [x] 使用 Subagent (general-purpose)
 
 #### 5. 最終方案
+
 - **主要方法**: MCP + Subagent
 - **預期 Token**: ~5,000 tokens
 - **預期節省**: 87%
@@ -884,7 +897,6 @@ Bash("gcloud run services list")
 6. ✅ 使用 `mcp__gcloud.run_deploy()` 部署（150 tokens）
 
 **總計**: ~5,150 tokens（vs. 直接工具 ~39,000 tokens）
-```
 
 ---
 
@@ -996,7 +1008,9 @@ Before responding to user, verify:
 - [ ] I understand current phase (Phase 0 - POC Validation)
 - [ ] I know what was done in last session
 - [ ] I know what the next steps are
+- [ ] Markdown 變更需通過 markdownlint-cli2
 - [ ] I will not re-discuss finalized decisions
+- [ ] Markdown 變更已通過 `markdownlint-cli2`（無 MD0xx 錯誤）
 - [ ] **I will record this session before ending** ⚠️ **MANDATORY**
 
 ---
