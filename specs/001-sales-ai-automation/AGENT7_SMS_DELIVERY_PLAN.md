@@ -34,6 +34,7 @@
 ### 使用者流程
 
 ```
+
 業務 (Slack)
   ↓
 點擊「✅ 確認送出」按鈕
@@ -50,6 +51,7 @@
 客戶收到簡訊
   ↓
 點擊短網址查看摘要網頁
+
 ```
 
 ---
@@ -59,6 +61,7 @@
 ### 整體架構圖
 
 ```
+
 ┌─────────────────────────────────────────────────────────────┐
 │                         Slack App                            │
 │  - agent7_notifier.py (發送預覽訊息)                         │
@@ -89,6 +92,7 @@
         │  Customer Browser │
         │  (查看摘要網頁)   │
         └───────────────────┘
+
 ```
 
 ### 服務列表
@@ -145,6 +149,7 @@
 #### 1. Cases Collection 新增欄位
 
 ```javascript
+
 cases/{caseId}
 {
   // === 現有欄位（省略）===
@@ -172,11 +177,13 @@ cases/{caseId}
     "uniqueVisitors": ["ip_hash_1", "ip_hash_2"]  // 隱私考量：使用 hash
   }
 }
+
 ```
 
 #### 2. 新增 Collection：shortUrls
 
 ```javascript
+
 shortUrls/{shortCode}
 {
   "shortCode": "abc123",  // 6-8 字元隨機碼
@@ -187,6 +194,7 @@ shortUrls/{shortCode}
   "clickCount": 5,
   "lastClickedAt": Timestamp
 }
+
 ```
 
 ---
@@ -202,6 +210,7 @@ shortUrls/{shortCode}
 **修改位置**：Line 173-180
 
 **修改內容**：
+
 ```python
 # 更新「確認送出」按鈕的警告訊息
 blocks.append({
@@ -211,9 +220,11 @@ blocks.append({
         "text": "⚠️ 點擊「確認送出」後，系統將：\n1️⃣ 生成客戶摘要網頁\n2️⃣ 發送簡訊（含短網址）至客戶手機"
     }]
 })
+
 ```
 
 **驗收**：
+
 - [ ] Slack 訊息顯示更新後的警告文字
 - [ ] 按鈕功能正常（點擊後觸發 action）
 
@@ -246,11 +257,13 @@ blocks.append({
    - 發送 Slack 確認訊息
 
 **依賴**：
+
 - Slack SDK
 - Firestore Client
 - MCP Cloud Tasks 工具
 
 **驗收**：
+
 - [ ] 點擊「確認送出」按鈕後顯示 Modal
 - [ ] Modal 正確顯示客戶資料
 - [ ] 電話號碼驗證正常
@@ -262,7 +275,9 @@ blocks.append({
 **檔案**：`src/slack_app/main.py`
 
 **修改內容**：
+
 ```python
+
 from handlers.summary_sender import (
     handle_confirm_send_summary,
     handle_send_summary_confirmed
@@ -277,9 +292,11 @@ def confirm_send_action(ack, body, client):
 @app.view("send_summary_confirmed")
 def send_confirmed_view(ack, body, view, client):
     handle_send_summary_confirmed(ack, body, view, client, db)
+
 ```
 
 **驗收**：
+
 - [ ] Slack App 啟動無錯誤
 - [ ] Action handler 正確註冊
 - [ ] 端到端測試通過
@@ -293,7 +310,9 @@ def send_confirmed_view(ack, body, view, client):
 **路徑**：`summary-webpage-service/`
 
 **目錄結構**：
+
 ```
+
 summary-webpage-service/
 ├── Dockerfile
 ├── requirements.txt
@@ -306,21 +325,26 @@ summary-webpage-service/
 │   └── img/
 │       └── ichef_logo.png
 └── cloudbuild.yaml
+
 ```
 
 **檔案內容**：
 
 **requirements.txt**：
+
 ```
 fastapi==0.104.1
 uvicorn[standard]==0.24.0
 jinja2==3.1.2
 google-cloud-firestore==2.13.1
 python-multipart==0.0.6
+
 ```
 
 **Dockerfile**：
+
 ```dockerfile
+
 FROM python:3.11-slim
 
 WORKDIR /app
@@ -331,13 +355,18 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080"]
+
 ```
 
 **cloudbuild.yaml**：
+
 ```yaml
+
 steps:
+
   - name: 'gcr.io/cloud-builders/docker'
     args:
+
       - 'build'
       - '-t'
       - 'asia-east1-docker.pkg.dev/sales-ai-automation-v2/sales-ai-automation-v2/summary-webpage-service:latest'
@@ -345,12 +374,14 @@ steps:
 
   - name: 'gcr.io/cloud-builders/docker'
     args:
+
       - 'push'
       - 'asia-east1-docker.pkg.dev/sales-ai-automation-v2/sales-ai-automation-v2/summary-webpage-service:latest'
 
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: gcloud
     args:
+
       - 'run'
       - 'deploy'
       - 'summary-webpage-service'
@@ -361,12 +392,15 @@ steps:
       - '--set-env-vars=GCP_PROJECT_ID=sales-ai-automation-v2'
 
 images:
+
   - 'asia-east1-docker.pkg.dev/sales-ai-automation-v2/sales-ai-automation-v2/summary-webpage-service:latest'
 
 timeout: 1200s
+
 ```
 
 **驗收**：
+
 - [ ] 目錄結構建立完成
 - [ ] 所有設定檔案就位
 
@@ -393,11 +427,13 @@ timeout: 1200s
    - 健康檢查端點
 
 **關鍵函數**：
+
 - `generate_access_token()` - 使用 `secrets.token_urlsafe(32)`
 - `generate_short_code()` - 6-8 字元隨機碼（避免碰撞）
 - `update_view_analytics()` - 更新訪問統計
 
 **驗收**：
+
 - [ ] 所有端點回應正常
 - [ ] Access token 驗證有效
 - [ ] Firestore 讀寫正確
@@ -408,13 +444,16 @@ timeout: 1200s
 **檔案**：`summary-webpage-service/templates/summary_template.html`
 
 **設計要求**：
+
 - RWD 響應式設計（支援手機、平板、桌面）
 - 清晰的視覺層次
 - 專業的配色（iCHEF 品牌色）
 - 可列印友好
 
 **模板結構**：
+
 ```html
+
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
@@ -508,9 +547,11 @@ timeout: 1200s
     </div>
 </body>
 </html>
+
 ```
 
 **驗收**：
+
 - [ ] 在手機上顯示正常
 - [ ] 在平板上顯示正常
 - [ ] 在桌面上顯示正常
@@ -522,12 +563,14 @@ timeout: 1200s
 **檔案**：`summary-webpage-service/static/css/styles.css`
 
 **設計重點**：
+
 - 使用 iCHEF 品牌色（橘色 #FF6B35）
 - 清晰的字型（Noto Sans TC）
 - 適當的留白和間距
 - 卡片式設計
 
 **驗收**：
+
 - [ ] 視覺設計專業
 - [ ] 配色協調
 - [ ] 字體大小適中
@@ -542,7 +585,9 @@ timeout: 1200s
 **路徑**：`sms-service/`
 
 **目錄結構**：
+
 ```
+
 sms-service/
 ├── Dockerfile
 ├── requirements.txt
@@ -553,18 +598,23 @@ sms-service/
 │   ├── twilio_provider.py
 │   └── mitake_provider.py  # 三竹資訊（備選）
 └── cloudbuild.yaml
+
 ```
 
 **requirements.txt**：
+
 ```
+
 fastapi==0.104.1
 uvicorn[standard]==0.24.0
 google-cloud-firestore==2.13.1
 twilio==8.10.0
 python-multipart==0.0.6
+
 ```
 
 **驗收**：
+
 - [ ] 目錄結構建立完成
 
 #### Task 3.2: 實作 Twilio Provider
@@ -572,6 +622,7 @@ python-multipart==0.0.6
 **檔案**：`sms-service/providers/base.py`
 
 ```python
+
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Optional
@@ -587,11 +638,13 @@ class SMSProvider(ABC):
     def send_sms(self, to: str, message: str) -> SMSResult:
         """發送簡訊"""
         pass
+
 ```
 
 **檔案**：`sms-service/providers/twilio_provider.py`
 
 ```python
+
 from twilio.rest import Client
 from .base import SMSProvider, SMSResult
 
@@ -612,9 +665,11 @@ class TwilioProvider(SMSProvider):
             return SMSResult(success=True, message_id=msg.sid)
         except Exception as e:
             return SMSResult(success=False, error=str(e))
+
 ```
 
 **驗收**：
+
 - [ ] Twilio SDK 整合成功
 - [ ] 發送簡訊功能正常
 - [ ] 錯誤處理完善
@@ -643,7 +698,9 @@ class TwilioProvider(SMSProvider):
    - 健康檢查
 
 **簡訊內容模板**：
+
 ```python
+
 SMS_TEMPLATE = """【iCHEF】您好 {customer_name}，
 
 感謝今日與 {sales_rep_name} 的會議討論。
@@ -654,9 +711,11 @@ SMS_TEMPLATE = """【iCHEF】您好 {customer_name}，
 如有任何問題，歡迎隨時聯繫。
 
 iCHEF 團隊 敬上"""
+
 ```
 
 **驗收**：
+
 - [ ] 簡訊發送成功
 - [ ] Firestore 狀態更新正確
 - [ ] Webhook 接收正常
@@ -665,19 +724,25 @@ iCHEF 團隊 敬上"""
 #### Task 3.4: 環境變數與 Secret 設定
 
 **Secret Manager 設定**：
+
 ```bash
 # 建立 Twilio secrets
 gcloud secrets create twilio-account-sid --data-file=- <<< "AC..."
 gcloud secrets create twilio-auth-token --data-file=- <<< "..."
 gcloud secrets create twilio-from-number --data-file=- <<< "+1..."
+
 ```
 
 **cloudbuild.yaml 設定**：
+
 ```yaml
+
 - '--set-secrets=TWILIO_ACCOUNT_SID=twilio-account-sid:latest,TWILIO_AUTH_TOKEN=twilio-auth-token:latest,TWILIO_FROM_NUMBER=twilio-from-number:latest'
+
 ```
 
 **驗收**：
+
 - [ ] Secrets 建立成功
 - [ ] Cloud Run 可讀取 secrets
 - [ ] 敏感資訊不外洩
@@ -689,16 +754,20 @@ gcloud secrets create twilio-from-number --data-file=- <<< "+1..."
 #### Task 4.1: 建立 Cloud Tasks Queue
 
 **指令**：
+
 ```bash
+
 gcloud tasks queues create summary-delivery-queue \
   --location=asia-east1 \
   --max-concurrent-dispatches=10 \
   --max-attempts=3 \
   --min-backoff=10s \
   --max-backoff=300s
+
 ```
 
 **驗收**：
+
 - [ ] Queue 建立成功
 - [ ] 參數設定正確
 
@@ -707,7 +776,9 @@ gcloud tasks queues create summary-delivery-queue \
 **檔案**：`tools/cloud_tasks/mcp_server.py`
 
 **新增函數**：
+
 ```python
+
 def create_summary_delivery_tasks(
     case_id: str,
     project: str = "sales-ai-automation-v2",
@@ -756,10 +827,13 @@ def create_summary_delivery_tasks(
         "webpage_task_name": webpage_response.name,
         "sms_task_name": sms_response.name
     }
+
 ```
 
 **MCP Tool Definition**：
+
 ```python
+
 TOOL_DEFINITIONS.append({
     "name": "create_summary_delivery_tasks",
     "description": "建立客戶摘要發送任務鏈（生成網頁 + 發送簡訊）",
@@ -773,9 +847,11 @@ TOOL_DEFINITIONS.append({
         "required": ["case_id"]
     }
 })
+
 ```
 
 **驗收**：
+
 - [ ] MCP 工具註冊成功
 - [ ] 測試呼叫正常
 - [ ] Cloud Tasks 建立成功
@@ -785,7 +861,9 @@ TOOL_DEFINITIONS.append({
 **檔案**：`src/slack_app/handlers/summary_sender.py`
 
 **修改 handle_send_summary_confirmed()**：
+
 ```python
+
 def handle_send_summary_confirmed(ack, body, view, client, db):
     # ... 前面的程式碼 ...
 
@@ -817,9 +895,11 @@ def handle_send_summary_confirmed(ack, body, view, client, db):
              f"📄 網頁生成任務：{task_result['webpage_task_name']}\n" +
              f"📱 簡訊發送任務：{task_result['sms_task_name']}"
     )
+
 ```
 
 **驗收**：
+
 - [ ] Modal 提交後建立 Cloud Tasks
 - [ ] Slack 訊息顯示任務資訊
 - [ ] 端到端流程正常
@@ -831,11 +911,13 @@ def handle_send_summary_confirmed(ack, body, view, client, db):
 #### Task 5.1: 單元測試
 
 **測試檔案**：
+
 - `summary-webpage-service/tests/test_main.py`
 - `sms-service/tests/test_providers.py`
 - `sms-service/tests/test_main.py`
 
 **測試覆蓋**：
+
 - [ ] HTML 模板渲染測試
 - [ ] Access token 驗證測試
 - [ ] 簡訊發送測試（mock Twilio）
@@ -872,35 +954,49 @@ def handle_send_summary_confirmed(ack, body, view, client, db):
 **部署清單**：
 
 1. **部署 summary-webpage-service**
+
    ```bash
+
    cd summary-webpage-service
    gcloud builds submit --config cloudbuild.yaml
+
    ```
 
 2. **部署 sms-service**
+
    ```bash
+
    cd sms-service
    gcloud builds submit --config cloudbuild.yaml
+
    ```
 
 3. **部署 slack-app（更新版）**
+
    ```bash
+
    gcloud builds submit --config cloudbuild.slack.yaml
+
    ```
 
 4. **更新 MCP config**
+
    ```bash
    # 測試 MCP 工具
    echo '{"method": "tools/call", "params": {"name": "create_summary_delivery_tasks", "arguments": {"case_id": "TEST-001"}}}' | python3 tools/cloud_tasks/mcp_server.py
+
    ```
 
 5. **驗證服務 URL**
+
    ```bash
    # 檢查所有服務是否正常運行
    gcloud run services list --platform managed --region asia-east1
+
    ```
 
 **驗收**：
+
 - [ ] 所有服務部署成功
 - [ ] 健康檢查通過
 - [ ] 服務間可正常通訊
@@ -934,15 +1030,18 @@ def handle_send_summary_confirmed(ack, body, view, client, db):
    - [ ] `smsMessageId` 存在
 
 5. **監控日誌**
+
    ```bash
    # 檢查 summary-webpage-service 日誌
    gcloud logging read 'resource.type="cloud_run_revision" resource.labels.service_name="summary-webpage-service"' --limit 50
 
    # 檢查 sms-service 日誌
    gcloud logging read 'resource.type="cloud_run_revision" resource.labels.service_name="sms-service"' --limit 50
+
    ```
 
 **驗收**：
+
 - [ ] 端到端流程完整通過
 - [ ] 無錯誤日誌
 - [ ] 效能符合預期（生成 < 5s, 發送 < 10s）
@@ -986,6 +1085,7 @@ def handle_send_summary_confirmed(ack, body, view, client, db):
 ### 功能驗收
 
 #### Slack 互動
+
 - [ ] 點擊「✅ 確認送出」按鈕後顯示確認 Modal
 - [ ] Modal 正確顯示客戶電話、摘要預覽、簡訊內容
 - [ ] 客戶電話為空時，顯示輸入 Modal
@@ -993,6 +1093,7 @@ def handle_send_summary_confirmed(ack, body, view, client, db):
 - [ ] Modal 提交後顯示確認訊息
 
 #### 網頁生成
+
 - [ ] 網頁生成時間 < 5 秒
 - [ ] 網頁內容完整（摘要、決議、下一步、聯絡人）
 - [ ] 網頁 RWD 響應式設計正常（手機、平板、桌面）
@@ -1001,12 +1102,14 @@ def handle_send_summary_confirmed(ack, body, view, client, db):
 - [ ] 短網址重定向正確
 
 #### 簡訊發送
+
 - [ ] 簡訊發送時間 < 10 秒（從 Modal 提交算起）
 - [ ] 簡訊內容包含短網址
 - [ ] 簡訊成功發送至客戶手機
 - [ ] 投遞狀態追蹤正常（webhook 回調）
 
 #### 資料記錄
+
 - [ ] Firestore `customerSummaryDelivery` 所有欄位正確記錄
 - [ ] `webPageAnalytics` 訪問統計正常
 - [ ] `shortUrls` collection 資料正確
@@ -1015,6 +1118,7 @@ def handle_send_summary_confirmed(ack, body, view, client, db):
 ### 非功能驗收
 
 #### 效能
+
 - [ ] 網頁生成時間 < 5 秒
 - [ ] 簡訊發送時間 < 10 秒
 - [ ] 網頁訪問速度 < 2 秒
@@ -1022,12 +1126,14 @@ def handle_send_summary_confirmed(ack, body, view, client, db):
 - [ ] 支援 100+ 並發訪問
 
 #### 穩定性
+
 - [ ] 錯誤處理完善（電話錯誤、API 失敗等）
 - [ ] 重試機制正常（Cloud Tasks 重試）
 - [ ] 降級處理（簡訊失敗時的備案）
 - [ ] 日誌記錄完整
 
 #### 安全性
+
 - [ ] Access token 長度 32 字元以上
 - [ ] Access token 無法預測
 - [ ] 短網址無法枚舉
@@ -1035,6 +1141,7 @@ def handle_send_summary_confirmed(ack, body, view, client, db):
 - [ ] Secrets 管理正確（不外洩）
 
 #### 使用者體驗
+
 - [ ] Slack 訊息清晰易懂
 - [ ] Modal 介面友好
 - [ ] 網頁設計專業美觀
@@ -1106,6 +1213,7 @@ def handle_send_summary_confirmed(ack, body, view, client, db):
 ### A. 簡訊內容範本
 
 ```
+
 【iCHEF】您好 {{ customer_name }}，
 
 感謝今日與 {{ sales_rep_name }} 的會議討論。
@@ -1116,11 +1224,14 @@ def handle_send_summary_confirmed(ack, body, view, client, db):
 如有任何問題，歡迎隨時聯繫。
 
 iCHEF 團隊 敬上
+
 ```
 
 **字數統計**：
+
 - 固定文字：約 50 個中文字
 - 變數長度：
+
   - customer_name: 2-4 字
   - sales_rep_name: 2-4 字
   - short_url: 25 字元
@@ -1129,6 +1240,7 @@ iCHEF 團隊 敬上
 ### B. 短網址生成邏輯
 
 ```python
+
 import secrets
 import string
 
@@ -1154,11 +1266,13 @@ def generate_unique_short_code(db: firestore.Client, max_attempts: int = 5) -> s
         if not check_collision(code, db):
             return code
     raise Exception("無法生成唯一短網址碼")
+
 ```
 
 ### C. Twilio Webhook 驗證
 
 ```python
+
 from twilio.request_validator import RequestValidator
 
 def validate_twilio_webhook(request: Request, auth_token: str) -> bool:
@@ -1170,6 +1284,7 @@ def validate_twilio_webhook(request: Request, auth_token: str) -> bool:
     params = dict(request.form)
 
     return validator.validate(url, params, signature)
+
 ```
 
 ### D. 錯誤代碼定義

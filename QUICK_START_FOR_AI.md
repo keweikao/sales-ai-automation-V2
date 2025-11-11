@@ -4,6 +4,12 @@
 
 **Reading Time**: 5 minutes
 
+**⚠️ 重要說明**：
+
+- **MCP Server**：所有 AI 模型皆可使用（Claude, GPT, Gemini 等）✅
+- **Subagent (Task tool)**：僅限 Claude 專屬功能 ⚠️
+- 非 Claude 模型請優先使用 MCP Server，或告知使用者功能限制
+
 ---
 
 ## 🚀 Start Here (Essential Reading Order)
@@ -25,12 +31,17 @@
 1. 與遠端同步，確保程式碼與文件為最新。
 2. 閱讀 `DEVELOPMENT_LOG.md`，分析 `Outstanding Work Tracker`。
 3. 從待辦事項中選擇一個任務。
-4. **執行開發前置評估（見本檔案「開發前置檢查清單」段落）** ⭐ **新增**
-   - 檢查是否需要建置 MCP Server
-   - 評估是否使用 Subagent
-   - 選擇最經濟的開發方式
-5. 向您**提案**要執行的任務、使用方法、預期成本並請求**確認**。
-6. 在您同意後，開始執行。
+4. **⚠️ 強制執行「第零步：MCP/Subagent 評估」（見下方檢查點）** ⭐ **必做**
+   - 在執行任何 gcloud/Bash/Read/Grep 之前
+   - 檢查是否有現成 MCP Server
+   - 評估是否需要建置 MCP 或使用 Subagent
+   - 選擇最經濟的開發方式（MCP > Subagent > 直接工具）
+5. **執行開發前置評估（見本檔案「開發前置檢查清單」段落）**
+   - 任務分析（4 個問題）
+   - 決策流程圖
+   - 建置計畫（如需要）
+6. 向您**提案**要執行的任務、使用方法、預期成本並請求**確認**。
+7. 在您同意後，開始執行。
 
 這個標準化指令確保了開發流程的一致性與可預測性，同時優化 Token 使用成本。
 
@@ -43,11 +54,75 @@
 
 ---
 
-## 🚨 STOP - 在開始寫程式碼前
+## 🚨 STOP - 在執行任何操作前（強制檢查點）
+
+> **⚠️ 強制規則 1 - 工具使用**：在執行任何 `Bash`、`Read`、`Grep`、`Glob` 等工具之前，**必須先**完成以下評估。
+>> **違規範例**：直接執行 `gcloud` 命令、直接 `Read` 多個檔案、直接 `Grep` 搜尋 → ❌ **禁止**
+>> **正確做法**：先評估 → 選擇 MCP/Subagent → 再執行 → ✅ **允許**
+>
+> **⚠️ 強制規則 2 - Git 部署**：在執行任何 `git commit` 或 `git push` 之前，**必須**使用 `/deploy` command。
+>> **違規範例**：直接執行 `git add . && git commit && git push` → ❌ **禁止**
+>> **正確做法**：使用 `/deploy` → 自動檢查 markdownlint、Python syntax、YAML syntax → 通過後才部署 → ✅ **允許**
+>
+> **🤖 AI 模型支援說明**：
+>
+>> - **MCP Server**：所有 AI 模型皆可使用（Claude, GPT, Gemini, 等）
+>> - **Subagent (Task tool)**：**僅限 Claude 專屬功能**
+>> - 如果您不是 Claude：請使用 MCP Server 或明確告知使用者「Subagent 功能僅 Claude 可用」
+
+### 第零步：強制 MCP/Subagent 評估（2 分鐘，任何操作前必做）
+
+**在執行任何操作之前，必須先自問：**
+
+```
+┌─────────────────────────────────────────────────────────┐
+│ ⚠️  MCP/Subagent 檢查（任何操作前必做）                  │
+├─────────────────────────────────────────────────────────┤
+│ 1. 我準備要做什麼操作？                                  │
+│    ☐ 查詢 GCP 資源（gcloud, Cloud Tasks, Logging...）   │
+│    ☐ 搜尋程式碼（多個檔案、不確定位置）                  │
+│    ☐ 讀取多個檔案（>2 個）                               │
+│    ☐ 執行測試/試錯                                       │
+│    ☐ 其他重複性操作                                      │
+│                                                          │
+│ 2. 是否有現成的 MCP Server 可用？                        │
+│    → 執行：cat ~/.claude/mcp_config.json | jq .mcpServers │
+│    → 如果有匹配的 server：使用 MCP                       │
+│    → 如果沒有但操作會重複 3+ 次：建置 MCP               │
+│                                                          │
+│ 3. 是否需要探索/試錯？                                   │
+│    → 需要搜尋多個檔案：使用 Explore Subagent (Claude)   │
+│    → 需要多輪試錯：使用 general-purpose Subagent (Claude)│
+│    → 如果不是 Claude：使用 MCP 或告知使用者限制          │
+│                                                          │
+│ 4. 決策結果：                                            │
+│    ☐ 使用 MCP Server（已存在或值得建置）✅ 所有 AI 可用  │
+│    ☐ 使用 Subagent（探索/試錯）⚠️ 僅 Claude 可用         │
+│    ☐ 直接工具（單一、簡單、已知路徑的操作）             │
+└─────────────────────────────────────────────────────────┘
+```
+
+**⚠️ 違規範例（禁止）：**
+
+```python
+❌ 直接執行：gcloud logging read ...
+❌ 直接執行：gcloud tasks list ...
+❌ 直接執行：Grep(pattern="agent6", path=".")
+❌ 直接執行：Read("file1.py"), Read("file2.py"), Read("file3.py")
+```
+
+**✅ 正確做法：**
+
+```python
+✅ 先評估：這個操作會查詢 GCP Logging，屬於 GCP API 呼叫
+✅ 檢查 MCP：cat ~/.claude/mcp_config.json（如果有 gcloud MCP → 使用它）
+✅ 如果沒有 MCP 且會重複 3+ 次 → 使用 Subagent 或建置 MCP
+✅ 如果是探索性搜尋 → 使用 Explore Subagent
+```
 
 ### 第一步：任務分析（5 分鐘思考時間）
 
-回答以下 4 個問題：
+**完成第零步評估後**，回答以下 4 個問題：
 
 ```
 ┌──────────────────────────────────────────────────────────┐
@@ -78,6 +153,12 @@
 
 ```
 收到開發任務
+    ↓
+┌──────────────────────────────────────────┐
+│ 步驟 0: 強制 MCP/Subagent 評估（必做）    │ ← ⚠️ 【任何操作前必做】
+│ - 在執行任何 Bash/Read/Grep/Glob 之前     │
+│ - 先完成「第零步」檢查清單                │
+└──────────────────────────────────────────┘
     ↓
 ┌────────────────────────────┐
 │ 步驟 1: 檢查現有 MCP Server │ ← 【強制執行】
@@ -362,7 +443,15 @@ python3 tools/my_service/mcp_server.py
 
 ## 🤖 Subagent 使用 SOP
 
-### 場景 3: 程式碼探索（不知道檔案在哪）
+> **⚠️ Claude 專屬功能**：本章節描述的 Subagent (Task tool) 功能**僅限 Claude 可用**。
+>
+> **如果您不是 Claude**：
+> - 無法使用 `Task()` 工具
+> - 請改用 MCP Server 或直接工具
+> - 需要探索/試錯時，建議明確告知使用者「此功能需要 Claude」
+> - 或請使用者提供更具體的檔案路徑/搜尋範圍
+
+### 場景 3: 程式碼探索（不知道檔案在哪）【Claude 專屬】
 
 **識別條件**：
 
@@ -406,7 +495,7 @@ Task(
 
 ---
 
-### 場景 4: 多輪試錯（測試參數、模型）
+### 場景 4: 多輪試錯（測試參數、模型）【Claude 專屬】
 
 **識別條件**：
 
@@ -453,16 +542,18 @@ Task(
 
 ## 📊 決策矩陣速查表
 
-| 任務類型 | 呼叫次數 | 資料量 | 試錯 | 推薦方法 | Token 節省 | 建置時間 |
-|---------|---------|--------|------|---------|-----------|---------|
-| GCP API 呼叫 | 3+ | 大 | 否 | **MCP** | 85% | 10 分鐘 |
-| Firestore 批次查詢 | 5+ | 大 | 否 | **MCP** | 90% | 10 分鐘 |
-| Slack 通知 | 任意 | 小 | 否 | **MCP** | 95% | 5 分鐘 |
-| 程式碼探索 | 1 | 大 | 是 | **Subagent** | 70% | 0 分鐘 |
-| 參數測試 | 1 | 中 | 是 | **Subagent** | 60% | 0 分鐘 |
-| 錯誤診斷 | 1 | 大 | 是 | **Subagent** | 75% | 0 分鐘 |
-| 單檔案修改 | 1 | 小 | 否 | **直接工具** | 0% | 0 分鐘 |
-| 簡單命令 | 1 | 小 | 否 | **直接工具** | 0% | 0 分鐘 |
+> **說明**：Subagent 為 Claude 專屬功能。非 Claude 模型請使用 MCP 或直接工具。
+
+| 任務類型 | 呼叫次數 | 資料量 | 試錯 | 推薦方法 | AI 支援 | Token 節省 | 建置時間 |
+|---------|---------|--------|------|---------|---------|-----------|---------|
+| GCP API 呼叫 | 3+ | 大 | 否 | **MCP** | 全部 ✅ | 85% | 10 分鐘 |
+| Firestore 批次查詢 | 5+ | 大 | 否 | **MCP** | 全部 ✅ | 90% | 10 分鐘 |
+| Slack 通知 | 任意 | 小 | 否 | **MCP** | 全部 ✅ | 95% | 5 分鐘 |
+| 程式碼探索 | 1 | 大 | 是 | **Subagent** | Claude ⚠️ | 70% | 0 分鐘 |
+| 參數測試 | 1 | 中 | 是 | **Subagent** | Claude ⚠️ | 60% | 0 分鐘 |
+| 錯誤診斷 | 1 | 大 | 是 | **Subagent** | Claude ⚠️ | 75% | 0 分鐘 |
+| 單檔案修改 | 1 | 小 | 否 | **直接工具** | 全部 ✅ | 0% | 0 分鐘 |
+| 簡單命令 | 1 | 小 | 否 | **直接工具** | 全部 ✅ | 0% | 0 分鐘 |
 
 ---
 
@@ -986,6 +1077,114 @@ Ask user to confirm:
 
 ---
 
+## 🚀 Git 部署規範（強制執行）
+
+### ⚠️ 絕對禁止直接使用 git commit/push
+
+**錯誤做法** ❌：
+
+```bash
+# 禁止！這會跳過所有品質檢查
+git add .
+git commit -m "message"
+git push
+```
+
+**正確做法** ✅：
+
+```bash
+# 步驟 1: 暫存要提交的檔案
+git add file1.md file2.py file3.yaml
+
+# 步驟 2: 使用 /deploy command
+/deploy
+```
+
+### `/deploy` Command 自動執行的檢查
+
+當你使用 `/deploy` 時，系統會自動：
+
+1. **獲取暫存檔案清單**
+   - 使用 `git diff --cached --name-only`
+
+2. **分類檢查各類型檔案**
+   - **Markdown (.md)**: `npx markdownlint-cli2` - 檢查 MD001-MD053 所有規則
+   - **Python (.py)**: `python3 -m py_compile` - 檢查語法錯誤
+   - **YAML (.yaml/.yml)**: YAML parser - 檢查格式錯誤
+   - **JSON (.json)**: JSON parser - 檢查格式錯誤
+
+3. **產生詳細檢查報告**
+   - 顯示每個檔案的檢查結果
+   - 列出所有錯誤與警告
+   - 提供修復建議
+
+4. **執行部署決策**
+   - **全部通過** → 自動執行 `git commit` 和 `git push`
+   - **有錯誤** → 拒絕部署，要求先修復
+
+### 常見 Markdownlint 錯誤與修復
+
+**MD031 - Fenced code blocks should be surrounded by blank lines**
+
+```markdown
+❌ 錯誤：
+**驗收標準**:
+- [ ] 測試通過
+```python
+def foo():
+    pass
+```
+
+✅ 正確：
+**驗收標準**:
+
+- [ ] 測試通過
+
+```python
+def foo():
+    pass
+```
+
+（注意程式碼區塊前後的空行）
+
+```
+
+**MD032 - Lists should be surrounded by blank lines**
+
+```markdown
+❌ 錯誤：
+這是一段文字
+- 項目 1
+- 項目 2
+接下來的文字
+
+✅ 正確：
+這是一段文字
+
+- 項目 1
+- 項目 2
+
+接下來的文字
+（注意列表前後的空行）
+```
+
+### 如果檢查失敗該怎麼辦
+
+1. **查看錯誤報告** - `/deploy` 會顯示所有錯誤
+2. **逐一修復** - 使用 Edit 工具修正每個錯誤
+3. **重新執行** - 修復後再次執行 `/deploy`
+4. **重複直到通過** - 只有全部檢查通過才能部署
+
+### 為什麼需要這個規範
+
+1. **防止低品質程式碼進入 repository**
+2. **確保所有文件符合 linting 標準**
+3. **避免 CI/CD pipeline 失敗**
+4. **維持程式碼庫的一致性**
+5. **減少 code review 的負擔**
+
+---
+
 ## 📞 Emergency References
 
 **If confused about project goals**:
@@ -1012,13 +1211,45 @@ Before responding to user, verify:
 - [ ] I understand current phase (Phase 0 - POC Validation)
 - [ ] I know what was done in last session
 - [ ] I know what the next steps are
-- [ ] Markdown 變更需通過 markdownlint-cli2
+- [ ] **Before using ANY tool (Bash/Read/Grep/Glob), I will check MCP/Subagent first** ⚠️ **MANDATORY**
+- [ ] I will not execute `gcloud`, `Read`, `Grep`, `Glob` without evaluating MCP/Subagent
+- [ ] **Before ANY git commit/push, I will use `/deploy` command** ⚠️ **MANDATORY**
+- [ ] I will NEVER use `git commit` or `git push` directly without `/deploy` validation
 - [ ] I will not re-discuss finalized decisions
-- [ ] Markdown 變更已通過 `markdownlint-cli2`（無 MD0xx 錯誤）
 - [ ] **I will record this session before ending** ⚠️ **MANDATORY**
+
+---
+
+---
+
+## ⚠️ 最重要的提醒
+
+### 在執行任何工具之前，請先完成「第零步：MCP/Subagent 評估」
+
+**違規後果**：
+
+- 浪費大量 tokens（可能增加 5-10 倍成本）
+- 降低開發效率
+- 累積無用的 context
+
+**正確流程**：
+
+1. 看到任務 → 先評估 MCP/Subagent（2 分鐘）
+2. 選擇最佳工具 → 再執行操作
+3. 節省 60-90% tokens → 更快完成任務
+
+**優先順序**：MCP（✅ 所有 AI） > Subagent（⚠️ 僅 Claude） > 直接工具
+
+**如果您不是 Claude**：
+
+- ✅ **可以使用**：MCP Server、直接工具（Read/Edit/Bash）
+- ❌ **無法使用**：Subagent (Task tool)
+- 💡 **替代方案**：優先建置 MCP Server，或使用多次直接工具組合（但注意 token 成本）
+- 📢 **告知使用者**：如需探索/試錯功能，建議使用 Claude
 
 ---
 
 #### Welcome to the project! You're now ready to continue development. 🚀
 
-*Last Updated: 2025-01-29 by Claude Sonnet 4.5*
+*Last Updated: 2025-11-12 by Claude Sonnet 4.5*
+*Major Update: Added mandatory MCP/Subagent pre-check before any tool execution*
