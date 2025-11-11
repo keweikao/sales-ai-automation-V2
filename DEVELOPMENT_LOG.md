@@ -700,6 +700,7 @@ This file tracks all development sessions to enable seamless continuation across
 - `PRE_DEVELOPMENT_CHECKLIST.md` (stub pointing to Quick Start section)
 
 **Modified**:
+
 - `QUICK_START_FOR_AI.md`, `.claude/pre_task_prompt.md`, `scripts/setup_mcp_infrastructure.sh`: moved checklist content in-file and retargeted all references.
 - `analysis-service/src/agents/agent5_questionnaire.py`, `analysis-service/cloudbuild.yaml`: updated prompt builder parameters, enabled questionnaire context, and redeployed.
 - `analysis-service/trigger_analysis.py`, `analysis-service/src/main.py`: exercised Cloud Tasks trigger to validate the new Agent 5 pipeline.

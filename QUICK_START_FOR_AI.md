@@ -201,15 +201,11 @@ EOF
 
 **成本效益**：
 
-
-
 - 建置時間：10 分鐘
 
 - Token 節省：85%（每次呼叫從 ~5000 tokens → ~750 tokens）
 
 - 適用任務：日誌查詢、服務部署、資源管理
-
-
 
 ---
 
@@ -736,6 +732,14 @@ sales-ai-automation-V2/
 - Event-driven architecture (not polling)
 - Chinese language optimization
 
+### Markdownlint Checklist（文件撰寫必讀）
+
+- 依 `DEVELOPMENT_GUIDELINES.md:260-261`：
+  - `npx markdownlint-cli2 --fix "**/*.md" "#node_modules"`
+  - `npx markdownlint-cli2 "**/*.md" "#node_modules"`（確保零 MD0xx）
+- 依 `memory/constitution.md` VIII：標題、清單、程式碼區塊前後需留一行空白，並在提交前消除所有 markdownlint 警告。
+- 所有 Markdown 變更未通過 `markdownlint-cli2` 不得提交（已加入自我檢查表）。
+
 ### Token Optimization First ⭐ **NEW**
 
 Before starting **any** development task, complete this **5-minute assessment**:
@@ -750,7 +754,7 @@ cat ~/.claude/mcp_config.json | jq '.mcpServers | keys'
 mkdir -p ~/.claude && echo '{"mcpServers":{}}' > ~/.claude/mcp_config.json
 ```
 
-#### Step 2: 評估任務需求（回答以下問題）
+### Step 2: 評估任務需求（回答以下問題）
 
 ```
 ┌──────────────────────────────────────────────────────────┐
