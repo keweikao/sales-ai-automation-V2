@@ -42,4 +42,4 @@ ENV WHISPER_MODEL_SIZE=tiny \
 
 # Entrypoint handles warm-up then executes CMD
 ENTRYPOINT ["/app/docker/entrypoint.sh"]
-CMD ["python", "-m", "specify_cli"]
+CMD ["gunicorn", "-w", "1", "-b", "0.0.0.0:8080", "--timeout", "3600", "src.transcription.main:flask_app"]
