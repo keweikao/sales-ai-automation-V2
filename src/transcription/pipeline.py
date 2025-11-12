@@ -206,7 +206,10 @@ class OptimizedTranscriptionPipeline:
             merged_result["segments"] = self._assign_speakers_to_segments(
                 merged_result["segments"], diarization_segments
             )
-            merged_result["speakers"] = diarizer.summarize(diarization_segments)
+
+            # 再次檢查 diarizer 是否有效（防禦性編程）
+            if diarizer is not None:
+                merged_result["speakers"] = diarizer.summarize(diarization_segments)
 
             # 立即釋放 diarizer 記憶體
             self._cleanup_diarizer()
@@ -284,7 +287,8 @@ class OptimizedTranscriptionPipeline:
         if not self.enable_diarization:
             return None
 
-        if self.diarizer is None and not self.diarization_error:
+        # 如果 diarizer 不存在，嘗試創建（即使之前失敗過也可能重試成功）
+        if self.diarizer is None:
             try:
                 logger.info("Loading diarization model...")
                 self._log_memory_usage("Before diarization model load")
@@ -295,12 +299,15 @@ class OptimizedTranscriptionPipeline:
                     allow_overlap=self._diarization_config["allow_overlap"],
                 )
 
+                # 成功創建後清除之前的錯誤標記
+                self.diarization_error = None
                 self._log_memory_usage("After diarization model load")
             except RuntimeError as exc:
                 self.diarization_error = str(exc)
                 logger.warning(
                     "Speaker diarization disabled: %s", self.diarization_error
                 )
+                return None
 
         return self.diarizer
 
