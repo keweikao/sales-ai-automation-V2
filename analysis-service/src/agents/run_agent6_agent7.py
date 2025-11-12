@@ -3,6 +3,10 @@
 Utility script for executing Agent 6 (Sales Coach Synthesizer) and Agent 7 (Customer Summary)
 using the current prompt drafts and sample outputs from Agents 1–5.
 
+New in this version:
+- `--agents {both,6,7}` lets you run each agent independently.
+- When running Agent 7 only, provide `--agent6-structured-input` or use `--mock-scenario`.
+
 Requirements
 ------------
 - python >= 3.9
@@ -20,11 +24,11 @@ Usage
 Mock Mode
 ---------
     python analysis-service/src/agents/run_agent6_agent7.py --mock-scenario positive \
-        --output-dir ./tmp/agent67_mock
+        --agents both --output-dir ./tmp/agent67_mock
 
 Available scenarios: positive | negative | insufficient
 
-The script loads the transcript, merges Agent 1–5 outputs, runs Agent 6 then Agent 7,
+The script loads the transcript, merges Agent 1–5 outputs, runs Agent 6 and/or Agent 7,
 prints the structured results, and optionally writes them to disk for review.
 """
 
@@ -46,8 +50,13 @@ except ImportError as exc:  # pragma: no cover - convenience guard for local run
         "Install with `pip install google-generativeai`."
     ) from exc
 
-
 REPO_ROOT = Path(__file__).resolve().parents[3]
+MODULE_ROOT = Path(__file__).resolve().parents[1]
+if str(MODULE_ROOT) not in sys.path:  # pragma: no cover - CLI helper path setup
+    sys.path.insert(0, str(MODULE_ROOT))
+
+from agents.agent6_sales_coach import SalesCoachAgent  # pylint: disable=wrong-import-position
+
 PROMPT_DIR = Path(__file__).resolve().parent / "prompts"
 MOCK_FIXTURE_DIR = REPO_ROOT / "analysis-service" / "tests" / "fixtures" / "agent67"
 
@@ -102,32 +111,6 @@ def configure_model(model_name: str, temperature: float) -> genai.GenerativeMode
         response_mime_type="text/plain",
     )
     return genai.GenerativeModel(model_name, generation_config=generation_config)
-
-
-def build_agent6_prompt(
-    prompt_template: str,
-    transcript: str,
-    inputs: Dict[str, Any],
-) -> str:
-    context = {
-        "caseId": inputs.get("caseId"),
-        "customer": inputs.get("customer", {}),
-        "agents": {
-            key: value
-            for key, value in inputs.get("agentOutputs", {}).items()
-            if key.startswith("agent")
-        },
-    }
-
-    serialized_context = json.dumps(context, ensure_ascii=False, indent=2)
-
-    return (
-        f"{prompt_template}\n\n"
-        "=== Case Context (JSON) ===\n"
-        f"{serialized_context}\n\n"
-        "=== Transcript (Raw) ===\n"
-        f"{transcript.strip()}\n"
-    )
 
 
 def build_agent7_prompt(
@@ -201,135 +184,185 @@ def save_output(directory: Path, filename: str, content: Any) -> None:
             json.dump(content, fh, ensure_ascii=False, indent=2)
 
 
-def main() -> int:
-    parser = argparse.ArgumentParser(description="Execute Agent 6 and Agent 7 prompts.")
+def execute_agent6(
+    inputs: Dict[str, Any],
+    transcript: str,
+    output_dir: Path,
+    mock_agent6: Optional[Dict[str, Any]],
+    model_name: str,
+    temperature: float,
+) -> Tuple[Dict[str, Any], str, float]:
+    if mock_agent6 is not None:
+        agent6_structured = mock_agent6
+        raw_output = json.dumps(agent6_structured, ensure_ascii=False, indent=2)
+        duration = 0.0
+    else:
+        agent = SalesCoachAgent(model_name=model_name, temperature=temperature)
+        case_metadata = {
+            "caseId": inputs.get("caseId"),
+            "customer": inputs.get("customer", {}),
+        }
+        start = time.time()
+        agent_response = agent.invoke(
+            agent_outputs=inputs.get("agentOutputs", {}),
+            transcript_text=transcript,
+            case_metadata=case_metadata,
+            conversation_metadata=inputs.get("conversationMetadata"),
+        )
+        agent6_structured = agent_response.data
+        raw_output = agent_response.raw_text
+        duration = time.time() - start
+
+    save_output(output_dir, "agent6_raw.txt", raw_output)
+    save_output(output_dir, "agent6_structured.json", agent6_structured)
+
+    print("\n=== Agent 6 (Sales Coach) ===")
+    print(f"- Duration: {duration:.2f}s")
+    print(json.dumps(agent6_structured, ensure_ascii=False, indent=2))
+
+    return agent6_structured, raw_output, duration
+
+
+def execute_agent7(
+    inputs: Dict[str, Any],
+    transcript: str,
+    prompt_template: str,
+    output_dir: Path,
+    mock_agent7: Optional[Dict[str, Any]],
+    model_name: str,
+    temperature: float,
+    agent6_structured: Dict[str, Any],
+) -> Tuple[Dict[str, Any], str, float]:
+    if mock_agent7 is not None:
+        agent7_summary = mock_agent7
+        raw_output = json.dumps(agent7_summary, ensure_ascii=False, indent=2)
+        duration = 0.0
+    else:
+        model = configure_model(model_name, temperature)
+        prompt7 = build_agent7_prompt(prompt_template, transcript, inputs, agent6_structured)
+        raw_output, duration = run_model(model, prompt7)
+        agent7_summary = extract_json(raw_output)
+
+    save_output(output_dir, "agent7_raw.txt", raw_output)
+    save_output(output_dir, "agent7_summary.json", agent7_summary)
+
+    print("\n=== Agent 7 (Customer Summary) ===")
+    print(f"- Duration: {duration:.2f}s")
+    print(json.dumps(agent7_summary, ensure_ascii=False, indent=2))
+
+    return agent7_summary, raw_output, duration
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Run Agent 6 and/or Agent 7 locally.")
     parser.add_argument(
         "--inputs",
         type=Path,
-        default=Path("analysis-service/tests/samples/sample_agent_inputs.json"),
-        help="Path to JSON file containing transcript reference and Agent 1–5 outputs.",
+        required=False,
+        default=REPO_ROOT / "analysis-service" / "tests" / "samples" / "sample_agent_inputs.json",
+        help="Path to JSON file containing transcript + Agent1-5 outputs.",
     )
     parser.add_argument(
-        "--model",
-        default="gemini-2.0-flash-exp",
-        help="Gemini model name (default: gemini-2.0-flash-exp).",
-    )
-    parser.add_argument(
-        "--temperature",
-        type=float,
-        default=0.3,
-        help="Sampling temperature for Gemini (default: 0.3).",
-    )
-    parser.add_argument(
-        "--mock-scenario",
-        choices=sorted(MOCK_SCENARIOS.keys()),
-        default=None,
-        help="Use predefined mock responses instead of calling Gemini.",
+        "--transcript",
+        type=Path,
+        required=False,
+        default=REPO_ROOT / "analysis-service" / "tests" / "samples" / "sample_transcript.txt",
+        help="Path to raw transcript file.",
     )
     parser.add_argument(
         "--output-dir",
         type=Path,
-        default=None,
-        help="Optional directory to write agent outputs.",
+        default=Path("./tmp/agent67"),
+        help="Directory to write outputs.",
     )
-
-    args = parser.parse_args()
-
-    inputs_path = args.inputs if args.inputs.is_absolute() else (REPO_ROOT / args.inputs)
-    if not inputs_path.exists():
-        raise SystemExit(f"Input file not found: {inputs_path}")
-
-    inputs = load_json(inputs_path)
-
-    transcript_path = inputs.get("transcriptPath")
-    if not transcript_path:
-        raise SystemExit("`transcriptPath` missing from inputs JSON.")
-
-    transcript_file = (
-        Path(transcript_path)
-        if Path(transcript_path).is_absolute()
-        else (REPO_ROOT / transcript_path)
+    parser.add_argument(
+        "--mock-scenario",
+        choices=list(MOCK_SCENARIOS.keys()),
+        help="Use bundled fixtures instead of real Gemini calls.",
     )
+    parser.add_argument(
+        "--agents",
+        choices=["both", "6", "7"],
+        default="both",
+        help="Choose which agent(s) to run.",
+    )
+    parser.add_argument(
+        "--agent6-structured-input",
+        type=Path,
+        help="Path to existing Agent 6 structured JSON (required when running only Agent 7 without mock).",
+    )
+    parser.add_argument(
+        "--model",
+        default="gemini-2.5-pro",
+        help="Gemini model name.",
+    )
+    parser.add_argument(
+        "--temperature",
+        type=float,
+        default=0.2,
+        help="Generation temperature.",
+    )
+    return parser.parse_args()
 
-    if not transcript_file.exists():
-        raise SystemExit(f"Transcript file not found: {transcript_file}")
 
-    transcript_text = load_file(transcript_file)
+def main() -> None:
+    args = parse_args()
 
-    agent6_prompt = load_file(PROMPT_DIR / "agent6-coach.md")
-    agent7_prompt = load_file(PROMPT_DIR / "agent7-summary.md")
+    run_agent6_flag = args.agents in ("both", "6")
+    run_agent7_flag = args.agents in ("both", "7")
 
-    use_mock = args.mock_scenario is not None
-    if not use_mock:
-        model = configure_model(args.model, args.temperature)
-    else:
-        mock_paths = MOCK_SCENARIOS[args.mock_scenario]
-        if not mock_paths["agent6"].exists() or not mock_paths["agent7"].exists():
-            raise SystemExit(f"Mock fixtures missing for scenario '{args.mock_scenario}'")
+    if not (run_agent6_flag or run_agent7_flag):
+        raise SystemExit("At least one agent must be selected.")
 
-    # ----- Agent 6 -----
-    if use_mock:
-        mock_payload = load_json(mock_paths["agent6"])
-        agent6_raw = json.dumps(mock_payload, ensure_ascii=False, indent=2)
-        agent6_structured = mock_payload.get("structured", {})
-        agent6_duration = 0.0
-        print("[Mock Mode] Loaded Agent 6 fixture:", mock_paths["agent6"])
-    else:
-        combined_agent6_prompt = build_agent6_prompt(agent6_prompt, transcript_text, inputs)
-        agent6_raw, agent6_duration = run_model(model, combined_agent6_prompt)
+    inputs = load_json(args.inputs)
+    transcript = load_file(args.transcript)
+    prompt_agent7 = load_file(PROMPT_DIR / "agent7-summary.md")
 
-        try:
-            agent6_structured = extract_json(agent6_raw)
-        except (ValueError, json.JSONDecodeError) as exc:
-            print("\n[Agent 6] Failed to parse JSON response. Raw output preserved.", file=sys.stderr)
-            print(str(exc), file=sys.stderr)
-            agent6_structured = {}
+    output_dir = args.output_dir
+    output_dir.mkdir(parents=True, exist_ok=True)
 
-    print("=== Agent 6: Sales Coach Synthesizer ===")
-    print(f"Duration: {agent6_duration:.2f}s")
-    print(json.dumps(agent6_structured, ensure_ascii=False, indent=2))
+    mock_agent6 = None
+    mock_agent7 = None
+    if args.mock_scenario:
+        scenario = MOCK_SCENARIOS[args.mock_scenario]
+        mock_agent6 = load_json(scenario["agent6"])
+        mock_agent7 = load_json(scenario["agent7"])
 
-    # ----- Agent 7 -----
-    if use_mock:
-        mock_payload = load_json(mock_paths["agent7"])
-        agent7_raw = json.dumps(mock_payload, ensure_ascii=False, indent=2)
-        agent7_structured = mock_payload.get("customerSummary", {})
-        agent7_duration = 0.0
-        print("[Mock Mode] Loaded Agent 7 fixture:", mock_paths["agent7"])
-    else:
-        combined_agent7_prompt = build_agent7_prompt(
-            agent7_prompt,
-            transcript_text,
-            inputs,
-            agent6_structured,
+    agent6_structured: Optional[Dict[str, Any]] = None
+
+    if run_agent6_flag:
+        agent6_structured, _, _ = execute_agent6(
+            inputs=inputs,
+            transcript=transcript,
+            output_dir=output_dir,
+            mock_agent6=mock_agent6,
+            model_name=args.model,
+            temperature=args.temperature,
         )
-        agent7_raw, agent7_duration = run_model(model, combined_agent7_prompt)
+    elif run_agent7_flag:
+        if mock_agent6 is not None:
+            agent6_structured = mock_agent6
+        elif args.agent6_structured_input:
+            agent6_structured = load_json(args.agent6_structured_input)
+        else:
+            raise SystemExit(
+                "Running only Agent 7 requires either --mock-scenario "
+                "or --agent6-structured-input pointing to an existing JSON file."
+            )
 
-        try:
-            agent7_structured = extract_json(agent7_raw)
-        except (ValueError, json.JSONDecodeError) as exc:
-            print("\n[Agent 7] Failed to parse JSON response. Raw output preserved.", file=sys.stderr)
-            print(str(exc), file=sys.stderr)
-            agent7_structured = {}
-
-    print("\n=== Agent 7: Customer Summary ===")
-    print(f"Duration: {agent7_duration:.2f}s")
-    print(json.dumps(agent7_structured, ensure_ascii=False, indent=2))
-
-    if args.output_dir:
-        output_dir = (
-            args.output_dir
-            if args.output_dir.is_absolute()
-            else (REPO_ROOT / args.output_dir)
+    if run_agent7_flag:
+        assert agent6_structured is not None
+        execute_agent7(
+            inputs=inputs,
+            transcript=transcript,
+            prompt_template=prompt_agent7,
+            output_dir=output_dir,
+            mock_agent7=mock_agent7,
+            model_name=args.model,
+            temperature=args.temperature,
+            agent6_structured=agent6_structured,
         )
-        save_output(output_dir, "agent6_raw.txt", agent6_raw)
-        save_output(output_dir, "agent6_structured.json", agent6_structured)
-        save_output(output_dir, "agent7_raw.txt", agent7_raw)
-        save_output(output_dir, "agent7_structured.json", agent7_structured)
-        print(f"\nOutputs saved to {output_dir}")
-
-    return 0
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    main()

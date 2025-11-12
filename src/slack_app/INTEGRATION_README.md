@@ -113,6 +113,26 @@ SLACK_BOT_TOKEN=xoxb-your-bot-token
 SLACK_SIGNING_SECRET=your-signing-secret
 SLACK_APP_TOKEN=xapp-your-app-token  # For Socket Mode
 GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account.json
+SUMMARY_BASE_URL=https://summary-web-service-xxxx.a.run.app
+SHORT_URL_BASE=https://summary-web-service-xxxx.a.run.app/s
+SUMMARY_DELIVERY_QUEUE=summary-delivery-queue
+SUMMARY_DELIVERY_LOCATION=asia-east1
+SUMMARY_DELIVERY_HANDLER_URL=https://slack-app-xxxx.a.run.app/internal/summary-delivery
+# SUMMARY_INTERNAL_TOKEN 可省略，預設共用 SLACK_PROGRESS_TOKEN
+TWILIO_ACCOUNT_SID=ACxxxxxxxxxxxxxxxxxxxx
+TWILIO_AUTH_TOKEN=your-auth-token
+TWILIO_PHONE_NUMBER=+886xxxxxxxxx
+```
+
+建立 Cloud Tasks 佇列（一次性）：
+
+```bash
+gcloud tasks queues create summary-delivery-queue \
+  --location=asia-east1 \
+  --max-concurrent-dispatches=10 \
+  --max-attempts=3 \
+  --min-backoff=10s \
+  --max-backoff=300s
 ```
 
 ### 步驟 3: 匯入模組
@@ -171,17 +191,17 @@ def handle_confirm_send(ack, body, logger):
 
 ```python
 # 當 Agent 1-7 全部完成時
-def on_analysis_complete(case_id: str, user_id: str):
+def on_analysis_complete(case_id: str, channel_id: str):
     # 發送 Agent 6 結果
     agent6_notifier.send_agent6_notification(
         case_id=case_id,
-        user_id=user_id
+        user_id=channel_id
     )
 
     # 發送 Agent 7 預覽
     agent7_notifier.send_agent7_preview(
         case_id=case_id,
-        user_id=user_id
+        channel_id=channel_id
     )
 ```
 
@@ -216,7 +236,7 @@ agent7 = Agent7Notifier(slack_client, db_client)
 # 發送預覽
 success = agent7.send_agent7_preview(
     case_id="CASE_20251110_001",
-    user_id="U01234567",
+    channel_id="D01234567",
     is_edited=False  # 標記是否已編輯
 )
 ```
@@ -238,6 +258,17 @@ success = editor.open_edit_modal(
 ### 範例 4: 完整流程
 
 詳見 `integration_example.py` 中的 `example_complete_analysis_flow()` 函數
+
+### Task 6.5-6.7: 摘要網頁 + 簡訊發送 + 確認送出
+
+- 在 web-service 中新增 `/summary/<caseId>` 頁面（Markdown→HTML、紀錄 viewCount）
+- Slack `確認送出` 按鈕會開啟 Modal，允許確認/覆寫電話號碼
+- Modal submit 會建立 Cloud Task（`SUMMARY_DELIVERY_QUEUE`）呼叫 `/internal/summary-delivery`：
+  - 先產生摘要連結與短網址（`SUMMARY_BASE_URL` + `SHORT_URL_BASE`）
+  - 若有 Twilio 憑證則發送 SMS，並寫入 Firestore `delivery.*`
+  - 在原 Thread 回覆成功/失敗訊息與連結
+
+> ⚠️ 若尚未設定 Twilio，流程仍會產生摘要連結但以「skipped」狀態回報，方便先驗證 UI 流程。
 
 ---
 
@@ -279,6 +310,21 @@ def test_build_agent6_blocks():
     assert blocks[0]['type'] == 'header'
 ```
 
+### CI 測試指令
+
+```bash
+# Agent 6/7 Prompt 合約與 CLI（analysis-service）
+make test-agent67
+
+# Slack 卡片與互動流程（使用 mock Slack client）
+make test-slack
+
+# 一次跑完全部測試
+make test-all
+```
+
+> `src/slack_app/test_notifications.py` 會模擬 Slack API，輸出完整 Block Kit 結構，方便於本地或 CI 中驗證格式。
+
 ### 整合測試
 
 ```python
@@ -286,17 +332,17 @@ def test_build_agent6_blocks():
 def test_integration():
     """整合測試：發送完整通知流程"""
     case_id = "TEST_CASE_001"
-    user_id = "U01234567"  # Your Slack user ID
+    channel_id = "D01234567"  # Slack DM channel id
 
     # 確保 Firestore 有測試資料
     # ... setup test data ...
 
     # 測試 Agent 6
-    success_6 = agent6_notifier.send_agent6_notification(case_id, user_id)
+    success_6 = agent6_notifier.send_agent6_notification(case_id, channel_id)
     assert success_6
 
     # 測試 Agent 7
-    success_7 = agent7_notifier.send_agent7_preview(case_id, user_id)
+    success_7 = agent7_notifier.send_agent7_preview(case_id, channel_id)
     assert success_7
 ```
 

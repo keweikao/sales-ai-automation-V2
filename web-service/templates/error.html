@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>摘要無法顯示</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}" />
+  </head>
+  <body>
+    <main class="error">
+      <h1>😥 很抱歉，暫時無法顯示摘要</h1>
+      <p>{{ message }}</p>
+      <p class="error__note">
+        如果此問題持續發生，請聯絡 iCHEF 支援團隊並提供案件編號。
+      </p>
+    </main>
+  </body>
+</html>

@@ -239,7 +239,7 @@ class Agent6Notifier:
     def send_agent6_notification(
         self,
         case_id: str,
-        user_id: str,
+        user_id: Optional[str] = None,
         thread_ts: Optional[str] = None
     ) -> bool:
         """
@@ -275,6 +275,15 @@ class Agent6Notifier:
             agent6_data = agent6_result.get('data', {})
             if not agent6_data:
                 logger.error(f"No Agent 6 data for case {case_id}")
+                return False
+
+            if not user_id:
+                uploaded_by = case_data.get('uploadedBy')
+                if uploaded_by:
+                    user_id = self.get_user_slack_id(uploaded_by)
+
+            if not user_id:
+                logger.error(f"No Slack user/channel found for case {case_id}")
                 return False
 
             # Build message blocks

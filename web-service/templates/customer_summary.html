@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{{ customer_name }} - 客戶摘要</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}" />
+  </head>
+  <body>
+    <header class="hero">
+      <div class="hero__badge">iCHEF Customer Summary</div>
+      <h1>{{ customer_name }}</h1>
+      <p class="hero__meta">
+        案件編號：{{ case_id }}{% if meeting_date %} ｜ 會議時間：{{ meeting_date }}{% endif %}
+        {% if last_updated %} ｜ 更新時間：{{ last_updated }}{% endif %}
+      </p>
+      {% if summary_text %}
+      <p class="hero__lead">{{ summary_text }}</p>
+      {% endif %}
+      {% if line_url or sales_rep_phone or sales_rep_email %}
+      <div class="hero__cta">
+        {% if line_url %}
+        <a class="button button--primary" href="{{ line_url }}" target="_blank" rel="noopener">
+          透過 LINE 聯絡我們
+        </a>
+        {% endif %}
+        {% if sales_rep_phone %}
+        <a class="button" href="tel:{{ sales_rep_phone }}">撥打業務電話</a>
+        {% endif %}
+      </div>
+      {% endif %}
+    </header>
+
+    <main class="content">
+      <section class="card">
+        <h2>會議重點</h2>
+        <article class="markdown" aria-live="polite">
+          {{ summary_html | safe }}
+        </article>
+      </section>
+
+      {% if key_decisions %}
+      <section class="card">
+        <h2>關鍵決議</h2>
+        <ul class="timeline">
+          {% for decision in key_decisions %}
+          <li>
+            <h3>{{ decision.title }}</h3>
+            {% if decision.quote %}
+            <blockquote>{{ decision.quote }}</blockquote>
+            {% endif %}
+            <p class="timeline__meta">
+              {% if decision.speakerId %}由 {{ decision.speakerId }} 討論{% endif %}
+              {% if decision.timestamp %} · {{ decision.timestamp }}{% endif %}
+            </p>
+          </li>
+          {% endfor %}
+        </ul>
+      </section>
+      {% endif %}
+
+      {% if next_steps_customer or next_steps_ichef %}
+      <section class="grid">
+        {% if next_steps_customer %}
+        <div class="card">
+          <h2>客戶待辦事項</h2>
+          <ul class="checklist">
+            {% for step in next_steps_customer %}
+            <li>
+              <p>{{ step.description }}</p>
+              <p class="checklist__meta">
+                負責人：{{ step.owner or '未指定' }}
+                {% if step.dueDate %} · 截止：{{ step.dueDate }}{% endif %}
+              </p>
+            </li>
+            {% endfor %}
+          </ul>
+        </div>
+        {% endif %}
+        {% if next_steps_ichef %}
+        <div class="card">
+          <h2>iCHEF 待辦事項</h2>
+          <ul class="checklist">
+            {% for step in next_steps_ichef %}
+            <li>
+              <p>{{ step.description }}</p>
+              <p class="checklist__meta">
+                負責人：{{ step.owner or '未指定' }}
+                {% if step.dueDate %} · 截止：{{ step.dueDate }}{% endif %}
+              </p>
+            </li>
+            {% endfor %}
+          </ul>
+        </div>
+        {% endif %}
+      </section>
+      {% endif %}
+
+      <section class="card card--muted">
+        <h2>聯絡資訊</h2>
+        <div class="contact-grid">
+          <div>
+            <h3>iCHEF 專案團隊</h3>
+            <p>{{ sales_rep_name or '專案顧問' }}</p>
+            {% if sales_rep_email %}
+            <p><strong>Email：</strong> <a href="mailto:{{ sales_rep_email }}">{{ sales_rep_email }}</a></p>
+            {% endif %}
+            {% if sales_rep_phone %}
+            <p><strong>電話：</strong> <a href="tel:{{ sales_rep_phone }}">{{ sales_rep_phone }}</a></p>
+            {% endif %}
+          </div>
+          {% if contacts.customer %}
+          <div>
+            <h3>客戶窗口</h3>
+            <p>{{ contacts.customer }}</p>
+          </div>
+          {% endif %}
+          {% if contacts.ichef %}
+          <div>
+            <h3>其他聯絡人</h3>
+            <p>{{ contacts.ichef }}</p>
+          </div>
+          {% endif %}
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <p>© {{ current_year }} iCHEF | 本頁面僅供此次會議參考使用。</p>
+    </footer>
+  </body>
+</html>

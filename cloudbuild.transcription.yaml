@@ -24,10 +24,10 @@ steps:
       - '--region=asia-east1'
       - '--platform=managed'
       - '--allow-unauthenticated'
-      - '--memory=4Gi'
+      - '--memory=8Gi'
       - '--cpu=2'
       - '--timeout=3600'
-      - '--set-env-vars=GCP_PROJECT_ID=sales-ai-automation-v2,SLACK_PROGRESS_ENDPOINT=https://slack-app-acv3ye2faq-de.a.run.app/internal/transcription-progress,SLACK_PROGRESS_TOKEN=3d4ebd6a1cfe8ac77a60e8a69cc4a52a57ad482e940e52d4eb2c17c6c45801d3,ENABLE_DIARIZATION=true,DIARIZATION_MODEL=pyannote/speaker-diarization,DIARIZATION_ALLOW_OVERLAP=false'
+      - '--set-env-vars=GCP_PROJECT_ID=sales-ai-automation-v2,SLACK_PROGRESS_ENDPOINT=https://slack-app-acv3ye2faq-de.a.run.app/internal/transcription-progress,SLACK_PROGRESS_TOKEN=3d4ebd6a1cfe8ac77a60e8a69cc4a52a57ad482e940e52d4eb2c17c6c45801d3,ENABLE_DIARIZATION=true,DIARIZATION_MODEL=pyannote/speaker-diarization,DIARIZATION_ALLOW_OVERLAP=false,MAX_WORKERS=2'
       - '--set-secrets=HUGGINGFACE_TOKEN=huggingface-token:latest'
       - '--no-traffic'  # Deploy without traffic first
       - '--tag=candidate'  # Tag the new revision

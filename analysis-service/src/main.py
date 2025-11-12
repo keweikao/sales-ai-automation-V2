@@ -11,9 +11,12 @@ Architecture:
 - Agent 8: Conversational Q&A interface
 """
 
+import json
 import os
 import logging
 import asyncio
+import urllib.request
+import urllib.error
 from typing import Dict, Any, Optional
 from datetime import datetime
 
@@ -41,6 +44,9 @@ GEMINI_MODEL_FAST = "gemini-2.5-flash"  # For simple tasks (Agent 1, 2, 4)
 GEMINI_MODEL_PRO = "gemini-2.5-pro"     # For complex tasks (Agent 3, 5, 8)
 GEMINI_MODEL_DEFAULT = "gemini-flash-latest"  # Default fallback
 
+AGENT6_NOTIFICATION_ENDPOINT = os.environ.get("AGENT6_NOTIFICATION_ENDPOINT")
+AGENT6_NOTIFICATION_TOKEN = os.environ.get("AGENT6_NOTIFICATION_TOKEN")
+
 # --- Initialize Clients ---
 try:
     # Firestore client for reading transcripts and writing analysis results
@@ -65,6 +71,7 @@ try:
         min_success_threshold=3,  # Require at least 3/5 agents to succeed
         enable_agent_retry=True,
         agent_retry_attempts=2,
+        db_client=db,
     )
     logger.info("Multi-Agent Orchestrator initialized successfully")
 except Exception as e:
@@ -95,6 +102,38 @@ try:
 except Exception as e:
     logger.error(f"Failed to initialize Slack Notifier: {e}", exc_info=True)
     slack_notifier = None
+
+
+def trigger_agent6_notification(case_id: str) -> None:
+    """
+    Notify Slack app to send Agent 6 card via internal endpoint.
+    """
+    if not AGENT6_NOTIFICATION_ENDPOINT:
+        return
+
+    payload = json.dumps({"caseId": case_id}).encode("utf-8")
+    headers = {"Content-Type": "application/json"}
+    token = AGENT6_NOTIFICATION_TOKEN or os.environ.get("SLACK_PROGRESS_TOKEN")
+    if token:
+        headers["X-Progress-Token"] = token
+
+    request_obj = urllib.request.Request(
+        AGENT6_NOTIFICATION_ENDPOINT,
+        data=payload,
+        headers=headers,
+        method="POST",
+    )
+
+    try:
+        with urllib.request.urlopen(request_obj, timeout=10) as response:  # nosec B310
+            if response.status >= 300:
+                logger.warning(
+                    "Agent 6 notification endpoint returned %s for case %s",
+                    response.status,
+                    case_id,
+                )
+    except urllib.error.URLError as exc:
+        logger.error("Failed to trigger Agent 6 notification for %s: %s", case_id, exc)
 
 
 # --- Helper Functions ---
@@ -227,6 +266,16 @@ def save_analysis_to_firestore(case_id: str, analysis_result: Any) -> bool:
                 analysis_data['agents'][agent_id]['error'] = agent_result.error
                 analysis_data['agents'][agent_id]['errorType'] = agent_result.error_type
 
+        # Promote Agent 6 structured/raw outputs to top-level analysis fields
+        agent6_result = analysis_result.agent_results.get('agent6')
+        if agent6_result and agent6_result.success and agent6_result.data:
+            structured = agent6_result.data.get('structured')
+            raw_output = agent6_result.data.get('rawOutput')
+            if structured:
+                analysis_data['structured'] = structured
+            if raw_output:
+                analysis_data['rawOutput'] = raw_output
+
         # Update Firestore
         case_ref.update({
             'analysis': analysis_data,
@@ -323,6 +372,10 @@ def analyze_transcript():
             except Exception as e:
                 logger.error(f"Error sending Slack notification: {e}", exc_info=True)
                 # Don't fail the request
+
+        agent6_result = analysis_result.agent_results.get("agent6")
+        if agent6_result and agent6_result.success:
+            trigger_agent6_notification(case_id)
 
         # Determine response based on analysis result
         if analysis_result.success:

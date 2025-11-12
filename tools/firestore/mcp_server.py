@@ -51,7 +51,8 @@ def query_firestore(
     filters: Optional[List[Dict[str, Any]]] = None,
     limit: int = 10,
     fields: Optional[List[str]] = None,
-    order_by: Optional[str] = None
+    order_by: Optional[str] = None,
+    direction: str = "ASCENDING"
 ) -> Dict[str, Any]:
     """
     Query Firestore with filtering and field selection.
@@ -77,7 +78,8 @@ def query_firestore(
             for f in filters:
                 query = query.where(f["field"], f["op"], f["value"])
         if order_by:
-            query = query.order_by(order_by)
+            sort_direction = firestore.Query.DESCENDING if direction.upper() == "DESCENDING" else firestore.Query.ASCENDING
+            query = query.order_by(order_by, direction=sort_direction)
         if limit:
             query = query.limit(limit)
 
@@ -133,7 +135,8 @@ def handle_request(request: dict) -> dict:
                             },
                             "limit": {"type": "integer", "default": 10},
                             "fields": {"type": "array", "items": {"type": "string"}},
-                            "order_by": {"type": "string"}
+                            "order_by": {"type": "string"},
+                            "direction": {"type": "string", "enum": ["ASCENDING", "DESCENDING"], "default": "ASCENDING"}
                         },
                         "required": ["collection"]
                     }

@@ -207,6 +207,9 @@ class OptimizedTranscriptionPipeline:
                 merged_result["segments"], diarization_segments
             )
             merged_result["speakers"] = diarizer.summarize(diarization_segments)
+
+            # 立即釋放 diarizer 記憶體
+            self._cleanup_diarizer()
         elif self.enable_diarization and not diarizer:
             merged_result["diarization_error"] = self.diarization_error
 
@@ -283,11 +286,16 @@ class OptimizedTranscriptionPipeline:
 
         if self.diarizer is None and not self.diarization_error:
             try:
+                logger.info("Loading diarization model...")
+                self._log_memory_usage("Before diarization model load")
+
                 self.diarizer = create_diarizer(
                     model_name=self._diarization_config["model_name"],
                     use_auth_token=self._diarization_config["auth_token"],
                     allow_overlap=self._diarization_config["allow_overlap"],
                 )
+
+                self._log_memory_usage("After diarization model load")
             except RuntimeError as exc:
                 self.diarization_error = str(exc)
                 logger.warning(
@@ -295,6 +303,42 @@ class OptimizedTranscriptionPipeline:
                 )
 
         return self.diarizer
+
+    def _cleanup_diarizer(self):
+        """釋放 diarizer 記憶體"""
+        if self.diarizer is not None:
+            logger.info("Releasing diarization model from memory...")
+            self._log_memory_usage("Before diarizer cleanup")
+
+            # 明確刪除 diarizer 物件
+            del self.diarizer
+            self.diarizer = None
+
+            # 強制垃圾回收
+            import gc
+            gc.collect()
+
+            self._log_memory_usage("After diarizer cleanup")
+            logger.info("Diarization model memory released")
+
+    def _log_memory_usage(self, context: str = ""):
+        """記錄記憶體使用情況"""
+        try:
+            import psutil
+            memory = psutil.virtual_memory()
+            process = psutil.Process()
+            process_memory = process.memory_info().rss / 1024 / 1024 / 1024  # GB
+
+            logger.info(
+                f"Memory usage [{context}]: "
+                f"System={memory.percent:.1f}%, "
+                f"Process={process_memory:.2f}GB"
+            )
+        except ImportError:
+            # psutil not available, skip logging
+            pass
+        except Exception as e:
+            logger.debug(f"Failed to log memory usage: {e}")
 
     def _get_audio_info(self, audio_path: str) -> Dict:
         """

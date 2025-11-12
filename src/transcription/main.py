@@ -8,6 +8,7 @@ from typing import Optional
 import requests
 from flask import Flask, request, jsonify
 from google.cloud import storage, tasks_v2, firestore
+from google.api_core.exceptions import NotFound
 
 from .pipeline import OptimizedTranscriptionPipeline
 from .status_tracker import TranscriptionStatusTracker
@@ -147,9 +148,13 @@ def transcribe_audio():
         return jsonify({"error": "Transcription pipeline is not available."}), 500
 
     # --- 1. Get GCS URI from request ---
+    logger.info(f"Received raw request body: {request.data}")
+    logger.info(f"Received raw request body: {request.data}")
     data = request.get_json()
     if not data:
         return jsonify({"error": "Missing request body"}), 400
+
+    logger.info(f"Received raw request data: {json.dumps(data)}")
 
     # Accept both 'gcs_uri' and 'gcsPath' for compatibility
     gcs_uri = data.get("gcs_uri") or data.get("gcsPath")
@@ -179,7 +184,13 @@ def transcribe_audio():
             logger.info(f"Downloading gs://{bucket_name}/{blob_name} to {temp_audio_file.name}")
             bucket = storage_client.bucket(bucket_name)
             blob = bucket.blob(blob_name)
-            blob.download_to_filename(temp_audio_file.name)
+            try:
+                blob.download_to_filename(temp_audio_file.name)
+            except NotFound:
+                error_message = f"GCS object not found: {gcs_uri}"
+                logger.error(error_message)
+                status_tracker.mark_failed(case_id=case_id, file_id=file_id, error=error_message)
+                return jsonify({"error": error_message}), 404
             
             local_audio_path = temp_audio_file.name
 

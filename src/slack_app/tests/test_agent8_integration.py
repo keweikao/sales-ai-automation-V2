@@ -4,9 +4,21 @@ Agent 8 整合測試
 測試 Agent 8 的核心功能
 """
 
-import pytest
+import importlib.util
 import os
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import MagicMock, Mock, patch
+
+import pytest
+
+def _has_spec(name: str) -> bool:
+    try:
+        return importlib.util.find_spec(name) is not None
+    except ModuleNotFoundError:
+        return False
+
+
+if not (_has_spec("agents.question_parser") and _has_spec("handlers.agent8_handler")):
+    pytestmark = pytest.mark.skip(reason="Agent 8 modules not available in this environment")
 
 
 class TestAgent8Integration:

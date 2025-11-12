@@ -67,18 +67,18 @@ def send_agent6_notification(case_id: str, user_id: str, thread_ts: str = None):
 # Task 6.2: Agent 7 Summary Preview & Buttons
 # ============================================================================
 
-def send_agent7_preview(case_id: str, user_id: str, thread_ts: str = None):
+def send_agent7_preview(case_id: str, channel_id: str, thread_ts: str = None):
     """
     Call this function when Agent 7 completes customer summary.
 
     Example usage:
         # In your analysis completion handler
         if agent7_completed:
-            send_agent7_preview(case_id, user_id, thread_ts)
+            send_agent7_preview(case_id, channel_id, thread_ts)
     """
     success = agent7_notifier.send_agent7_preview(
         case_id=case_id,
-        user_id=user_id,
+        channel_id=channel_id,
         thread_ts=thread_ts
     )
     if success:
@@ -169,10 +169,11 @@ def handle_edit_summary_submission(ack, body, view, logger):
         logger.info(f"✅ Summary edited successfully for case {case_id}")
 
         # Send updated preview
-        # (In production, you should update the existing message instead)
+        # (In production,你應更新原訊息；此處示範重新開啟 DM 後推送)
+        dm_channel = app.client.conversations_open(users=user_id)["channel"]["id"]
         agent7_notifier.send_agent7_preview(
             case_id=case_id,
-            user_id=user_id,
+            channel_id=dm_channel,
             is_edited=True
         )
 
@@ -206,7 +207,7 @@ def handle_confirm_send(ack, body, logger):
 # Example: Complete Analysis Flow
 # ============================================================================
 
-def example_complete_analysis_flow(case_id: str, user_id: str):
+def example_complete_analysis_flow(case_id: str, channel_id: str):
     """
     Example of how to use all three tasks together when analysis completes.
 
@@ -217,7 +218,7 @@ def example_complete_analysis_flow(case_id: str, user_id: str):
     # Step 1: Send Agent 6 results (Sales Coaching)
     agent6_success = send_agent6_notification(
         case_id=case_id,
-        user_id=user_id
+        user_id=channel_id
     )
 
     if not agent6_success:
@@ -226,7 +227,7 @@ def example_complete_analysis_flow(case_id: str, user_id: str):
     # Step 2: Send Agent 7 preview (Customer Summary)
     agent7_success = send_agent7_preview(
         case_id=case_id,
-        user_id=user_id
+        channel_id=channel_id
     )
 
     if not agent7_success:
@@ -245,8 +246,8 @@ if __name__ == "__main__":
     logger.info("Starting Slack app with Agent 6/7 integration...")
 
     # Example: Trigger notifications for a test case
-    # send_agent6_notification("TEST_CASE_001", "U01234567")
-    # send_agent7_preview("TEST_CASE_001", "U01234567")
+    # send_agent6_notification("TEST_CASE_001", "D01234567")
+    # send_agent7_preview("TEST_CASE_001", "D01234567")
 
     # Start the app
     from slack_bolt.adapter.socket_mode import SocketModeHandler

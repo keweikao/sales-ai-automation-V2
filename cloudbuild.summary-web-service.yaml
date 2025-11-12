@@ -1,0 +1,32 @@
+steps:
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-t'
+      - 'asia-east1-docker.pkg.dev/sales-ai-automation-v2/sales-ai-automation-v2/summary-web-service:latest'
+      - '-f'
+      - 'web-service/Dockerfile'
+      - '.'
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - 'asia-east1-docker.pkg.dev/sales-ai-automation-v2/sales-ai-automation-v2/summary-web-service:latest'
+
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - 'summary-web-service'
+      - '--image=asia-east1-docker.pkg.dev/sales-ai-automation-v2/sales-ai-automation-v2/summary-web-service:latest'
+      - '--region=asia-east1'
+      - '--platform=managed'
+      - '--allow-unauthenticated'
+      - '--service-account=497329205771-compute@developer.gserviceaccount.com'
+      - '--set-env-vars=GCP_PROJECT_ID=sales-ai-automation-v2'
+
+images:
+  - 'asia-east1-docker.pkg.dev/sales-ai-automation-v2/sales-ai-automation-v2/summary-web-service:latest'
+
+timeout: 1200s

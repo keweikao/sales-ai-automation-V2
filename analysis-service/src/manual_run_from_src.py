@@ -49,6 +49,7 @@ async def main():
                 "agent5": GEMINI_MODEL_PRO,
             },
             min_success_threshold=3,
+            db_client=db,
         )
         logger.info("Multi-Agent Orchestrator initialized successfully.")
     except Exception as e:

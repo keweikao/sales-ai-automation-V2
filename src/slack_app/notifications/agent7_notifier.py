@@ -185,7 +185,7 @@ class Agent7Notifier:
     def send_agent7_preview(
         self,
         case_id: str,
-        user_id: str,
+        channel_id: str,
         thread_ts: Optional[str] = None,
         is_edited: bool = False
     ) -> bool:
@@ -194,7 +194,7 @@ class Agent7Notifier:
 
         Args:
             case_id: Case ID
-            user_id: Slack user ID
+            channel_id: Slack channel (DM) ID
             thread_ts: Optional thread timestamp to reply in
             is_edited: Whether the summary has been edited
 
@@ -220,6 +220,10 @@ class Agent7Notifier:
                 logger.error(f"No customer summary markdown for case {case_id}")
                 return False
 
+            if not channel_id:
+                logger.error("No Slack channel provided for Agent 7 preview (%s)", case_id)
+                return False
+
             # Build message blocks
             case_metadata = {
                 'storeName': case_data.get('storeName'),
@@ -234,19 +238,25 @@ class Agent7Notifier:
 
             # Send message
             response = self.client.chat_postMessage(
-                channel=user_id,
+                channel=channel_id,
                 thread_ts=thread_ts,
                 text=f"📝 客戶摘要預覽 - {case_metadata.get('storeName', case_id)}",
                 blocks=blocks
             )
 
             if response['ok']:
-                logger.info(f"Sent Agent 7 preview for case {case_id} to {user_id}")
+                logger.info("Sent Agent 7 preview for case %s to channel %s", case_id, channel_id)
 
                 # Update Firestore with notification timestamp
-                case_ref.update({
-                    'analysis.customerSummary.previewSentAt': firestore.SERVER_TIMESTAMP
-                })
+                update_payload = {
+                    'analysis.customerSummary.previewSentAt': firestore.SERVER_TIMESTAMP,
+                    'notification.agent7MessageTs': response['ts'],
+                    'notification.agent7ChannelId': channel_id,
+                }
+                if thread_ts:
+                    update_payload['notification.agent7ThreadTs'] = thread_ts
+
+                case_ref.update(update_payload)
 
                 return True
             else:
@@ -277,6 +287,10 @@ class Agent7Notifier:
         Returns:
             True if update successful
         """
+        if not channel or not message_ts:
+            logger.warning("Cannot update Agent 7 preview without channel or message_ts (%s)", case_id)
+            return False
+
         try:
             # Fetch updated case data
             case_ref = self.db.collection('cases').document(case_id)
@@ -290,6 +304,11 @@ class Agent7Notifier:
             analysis_data = case_data.get('analysis', {})
             customer_summary = analysis_data.get('customerSummary', {})
             summary_markdown = customer_summary.get('markdown', '')
+            is_edited = customer_summary.get('isEdited', False)
+
+            if not summary_markdown:
+                logger.warning("No summary markdown available when updating Agent 7 preview (%s)", case_id)
+                return False
 
             # Build updated blocks
             case_metadata = {
@@ -300,7 +319,7 @@ class Agent7Notifier:
                 case_id,
                 summary_markdown,
                 case_metadata,
-                is_edited=True  # Mark as edited
+                is_edited=is_edited
             )
 
             # Update message

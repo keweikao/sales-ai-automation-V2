@@ -75,6 +75,11 @@ class PyannoteDiarizer:
         )
 
         self.pipeline = Pipeline.from_pretrained(model_name, use_auth_token=token)
+        if self.pipeline is None:
+            raise RuntimeError(
+                "Failed to load pyannote.audio pipeline, it returned None. "
+                "This may be due to an invalid Hugging Face token or network issues."
+            )
         self.enable_overlap = enable_overlap
 
     def diarize(

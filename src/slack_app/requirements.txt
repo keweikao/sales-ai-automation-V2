@@ -14,3 +14,4 @@ importlib-metadata==5.0.0
 psutil
 tiktoken
 pandas
+twilio>=9.0.0

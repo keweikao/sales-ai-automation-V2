@@ -5,9 +5,8 @@ Orchestrates parallel execution of Agent 1-5 for analyzing sales call transcript
 then sequentially executes Agent 6-7 for synthesis and customer summary generation.
 
 Architecture:
-  - Agents 1-5: Execute in parallel using asyncio
+  - Agents 1-5, 7: Execute in parallel using asyncio
   - Agent 6: Synthesizes results from Agents 1-5
-  - Agent 7: Generates customer-facing summary
 
 Usage:
     orchestrator = MultiAgentOrchestrator()
@@ -20,7 +19,10 @@ Usage:
 
 from __future__ import annotations
 
+from google.cloud import firestore
+
 import asyncio
+import copy
 import logging
 import time
 from dataclasses import dataclass, field
@@ -31,6 +33,8 @@ from .agents.agent2_sentiment import SentimentAttitudeAgent
 from .agents.agent3_needs import ProductNeedsAgent
 from .agents.agent4_competitor import CompetitorAnalysisAgent
 from .agents.agent5_questionnaire import QuestionnaireAgent
+from .agents.agent6_sales_coach import SalesCoachAgent
+from .agents.agent7_customer_summary import CustomerSummaryAgent
 
 logger = logging.getLogger(__name__)
 
@@ -91,6 +95,7 @@ class MultiAgentOrchestrator:
         enable_agent_retry: bool = True,
         agent_retry_attempts: int = 2,
         model_config: Optional[Dict[str, str]] = None,
+        db_client: Optional[firestore.Client] = None,
     ):
         """
         Initialize the orchestrator with agent instances.
@@ -109,14 +114,103 @@ class MultiAgentOrchestrator:
         self.enable_agent_retry = enable_agent_retry
         self.agent_retry_attempts = agent_retry_attempts
         self.model_config = model_config or {}
+        self.db = db_client
 
         # Initialize agents (will be created on first use to ensure env vars are set)
         self._agents: Optional[Dict[str, Any]] = None
 
+    def _persist_agent6_results(self, case_id: str, agent6_result: AgentResult) -> None:
+        """Persist Agent 6 (structured + raw output) to Firestore."""
+        if not self.db or not agent6_result.success or not agent6_result.data:
+            return
+
+        structured = agent6_result.data.get('structured')
+        raw_output = agent6_result.data.get('rawOutput')
+
+        if not structured and not raw_output:
+            return
+
+        try:
+            case_ref = self.db.collection('cases').document(case_id)
+            analysis_update: Dict[str, Any] = {}
+
+            if structured is not None:
+                analysis_update['structured'] = structured
+            if raw_output is not None:
+                analysis_update['rawOutput'] = raw_output
+
+            agents_section = analysis_update.setdefault('agents', {})
+            agents_section['agent6'] = {
+                'status': 'success',
+                'duration': agent6_result.duration,
+                'retryCount': agent6_result.retry_count,
+                'data': agent6_result.data,
+                'updatedAt': firestore.SERVER_TIMESTAMP,
+            }
+            analysis_update['updatedAt'] = firestore.SERVER_TIMESTAMP
+
+            case_ref.set({'analysis': analysis_update}, merge=True)
+            logger.info("Agent 6 results persisted for case %s", case_id)
+        except Exception as exc:  # pylint: disable=broad-except
+            logger.error(
+                "Failed to persist Agent 6 results for case %s: %s",
+                case_id,
+                exc,
+                exc_info=True,
+            )
+
+    def _persist_agent7_results(self, case_id: str, agent7_result: AgentResult) -> None:
+        """Persist Agent 7 summary + markdown to Firestore."""
+        if not self.db or not agent7_result.success or not agent7_result.data:
+            return
+
+        summary_payload = agent7_result.data.get('customerSummary') or {}
+        markdown = agent7_result.data.get('markdown')
+
+        if not summary_payload and not markdown:
+            return
+
+        summary_doc = copy.deepcopy(summary_payload)
+
+        if markdown:
+            summary_doc['markdown'] = markdown
+            summary_doc.setdefault('originalMarkdown', markdown)
+
+        summary_doc.setdefault('isEdited', False)
+        summary_doc.setdefault('editCount', 0)
+        summary_doc.setdefault('editedBy', None)
+        summary_doc.setdefault('editHistory', [])
+        summary_doc.setdefault('lastEditedAt', firestore.SERVER_TIMESTAMP)
+
+        try:
+            case_ref = self.db.collection('cases').document(case_id)
+            analysis_update = {
+                'customerSummary': summary_doc,
+                'agents': {
+                    'agent7': {
+                        'status': 'success',
+                        'duration': agent7_result.duration,
+                        'retryCount': agent7_result.retry_count,
+                        'data': agent7_result.data,
+                        'updatedAt': firestore.SERVER_TIMESTAMP,
+                    }
+                },
+                'updatedAt': firestore.SERVER_TIMESTAMP,
+            }
+            case_ref.set({'analysis': analysis_update}, merge=True)
+            logger.info("Agent 7 summary persisted for case %s", case_id)
+        except Exception as exc:  # pylint: disable=broad-except
+            logger.error(
+                "Failed to persist Agent 7 summary for case %s: %s",
+                case_id,
+                exc,
+                exc_info=True,
+            )
+
     def _ensure_agents(self) -> Dict[str, Any]:
         """Lazy initialization of agent instances."""
         if self._agents is None:
-            logger.info("Initializing Agent 1-5 instances...")
+            logger.info("Initializing Agent 1-7 instances...")
             self._agents = {
                 "agent1": ParticipantProfileAgent(
                     model_name=self.model_config.get("agent1", self.model_name),
@@ -136,6 +230,14 @@ class MultiAgentOrchestrator:
                 ),
                 "agent5": QuestionnaireAgent(
                     model_name=self.model_config.get("agent5", self.model_name),
+                    temperature=self.temperature
+                ),
+                "agent6": SalesCoachAgent(
+                    model_name=self.model_config.get("agent6", self.model_name),
+                    temperature=self.temperature
+                ),
+                "agent7": CustomerSummaryAgent(
+                    model_name=self.model_config.get("agent7", self.model_name),
                     temperature=self.temperature
                 ),
             }
@@ -391,6 +493,78 @@ class MultiAgentOrchestrator:
             logger.error(f"agent5 failed: {str(e)}", exc_info=True)
             return AgentResult(agent_id="agent5", success=False, error=str(e), duration=duration)
 
+    async def _run_agent_6(
+        self,
+        agent,
+        transcript_segments,
+        agent_context,
+        case_metadata,
+        conversation_metadata,
+    ) -> AgentResult:
+        """Run Agent 6 (Sales Coach) using aggregated context."""
+        start_time = time.time()
+        try:
+            loop = asyncio.get_event_loop()
+            result = await loop.run_in_executor(
+                None,
+                lambda: agent.analyze(
+                    agent_outputs=agent_context,
+                    transcript_segments=transcript_segments,
+                    case_metadata=case_metadata,
+                    conversation_metadata=conversation_metadata,
+                ),
+            )
+            duration = time.time() - start_time
+            logger.info(f"agent6 completed successfully in {duration:.2f}s")
+            return AgentResult(agent_id="agent6", success=True, data=result, duration=duration)
+        except Exception as e:
+            duration = time.time() - start_time
+            logger.error(f"agent6 failed: {str(e)}", exc_info=True)
+            return AgentResult(agent_id="agent6", success=False, error=str(e), duration=duration)
+
+    async def _run_agent_7(
+        self,
+        agent,
+        transcript_segments,
+        case_metadata,
+        conversation_metadata
+    ) -> AgentResult:
+        """Run Agent 7 (Customer Summary) independently."""
+        start_time = time.time()
+        try:
+            loop = asyncio.get_event_loop()
+            result = await loop.run_in_executor(
+                None,
+                lambda: agent.analyze(
+                    transcript_segments=transcript_segments,
+                    case_metadata=case_metadata,
+                    conversation_metadata=conversation_metadata,
+                )
+            )
+            duration = time.time() - start_time
+            logger.info(f"agent7 completed successfully in {duration:.2f}s")
+            return AgentResult(agent_id="agent7", success=True, data=result, duration=duration)
+        except Exception as e:
+            duration = time.time() - start_time
+            logger.error(f"agent7 failed: {str(e)}", exc_info=True)
+            return AgentResult(agent_id="agent7", success=False, error=str(e), duration=duration)
+
+    def _build_agent6_context(self, agent_results: Dict[str, AgentResult]) -> Dict[str, Any]:
+        """Map Agent 1-5 outputs to Agent 6 input keys."""
+        mapping = {
+            "agent1": "agent1_participant",
+            "agent2": "agent2_sentiment",
+            "agent3": "agent3_needs",
+            "agent4": "agent4_competitor",
+            "agent5": "agent5_questionnaire",
+        }
+        context: Dict[str, Any] = {}
+        for src, target in mapping.items():
+            result = agent_results.get(src)
+            if result and result.success and result.data:
+                context[target] = result.data
+        return context
+
     def _build_failed_result(self, case_id: str, agent_results: dict, start_time: float) -> AnalysisResult:
         """Build a failed AnalysisResult when Agent 1 fails."""
         total_duration = time.time() - start_time
@@ -410,13 +584,14 @@ class MultiAgentOrchestrator:
         conversation_metadata: Optional[Dict[str, Any]] = None,
     ) -> AnalysisResult:
         """
-        Execute Agents 1-5 sequentially with dependency passing.
+        Execute Agents 1-7, with parallel execution where possible.
 
         Agent execution order:
         1. Agent 1 (Participant) - uses speaker_statistics
         2. Agent 2 (Sentiment) - uses Agent 1's output as participant_insights
-        3. Agents 3-4 (Needs, Competitor) - use Agent 1 & 2's outputs (parallel)
+        3. Agents 3, 4, 7 (Needs, Competitor, Customer Summary) - run in parallel
         4. Agent 5 (Questionnaire) - uses Agent 1, 2, 3's outputs
+        5. Agent 6 (Sales Coach) - uses transcript + Agent 1-5 outputs
 
         Args:
             case_id: Unique identifier for the case
@@ -460,9 +635,16 @@ class MultiAgentOrchestrator:
         if not result_agent2.success:
             logger.warning("Agent 2 failed - continuing with limited data")
 
-        # --- Phase 3: Agents 3-4 (Needs, Competitor) in parallel ---
-        logger.info("Phase 3: Executing Agents 3-4 (Needs, Competitor) in parallel")
-        result_agent3, result_agent4 = await asyncio.gather(
+        # --- Phase 3: Agents 3, 4, 7 (Needs, Competitor, Summary) in parallel ---
+        logger.info("Phase 3: Executing Agents 3, 4, 7 in parallel")
+        case_metadata = {
+            "caseId": case_id,
+            "customer": {
+                "storeName": (conversation_metadata or {}).get("storeName"),
+                "customerId": (conversation_metadata or {}).get("customerId"),
+            },
+        }
+        result_agent3, result_agent4, result_agent7 = await asyncio.gather(
             self._run_agent_3(
                 agents['agent3'],
                 transcript_segments,
@@ -477,10 +659,18 @@ class MultiAgentOrchestrator:
                 result_agent2.data if result_agent2.success else None,
                 conversation_metadata
             ),
+            self._run_agent_7(
+                agents['agent7'],
+                transcript_segments,
+                case_metadata,
+                conversation_metadata
+            ),
             return_exceptions=False
         )
         agent_results['agent3'] = result_agent3
         agent_results['agent4'] = result_agent4
+        agent_results['agent7'] = result_agent7
+
 
         # --- Phase 4: Agent 5 (Questionnaire) ---
         logger.info("Phase 4: Executing Agent 5 (Questionnaire)")
@@ -494,21 +684,46 @@ class MultiAgentOrchestrator:
         )
         agent_results['agent5'] = result_agent5
 
+        # --- Phase 5: Agent 6 (Sales Coach) ---
+        successful_so_far = [r for r in agent_results.values() if r.success and r.agent_id in ["agent1", "agent2", "agent3", "agent4", "agent5"]]
+        if len(successful_so_far) >= self.min_success_threshold:
+            logger.info("Phase 5: Executing Agent 6 (Sales Coach)")
+            agent6_context = self._build_agent6_context(agent_results)
+            result_agent6 = await self._run_agent_6(
+                agents['agent6'],
+                transcript_segments,
+                agent6_context,
+                case_metadata,
+                conversation_metadata,
+            )
+            agent_results['agent6'] = result_agent6
+        else:
+            logger.warning(
+                "Skipping Agent 6 for case %s due to insufficient upstream success (%d/%d)",
+                case_id,
+                len(successful_so_far),
+                self.min_success_threshold,
+            )
+
         # --- Final Summary ---
         total_duration = time.time() - start_time
         successful_results = [r for r in agent_results.values() if r.success]
         failed_results = [r for r in agent_results.values() if not r.success]
         success_count = len(successful_results)
 
-        success = success_count >= self.min_success_threshold
+        # Success of the main pipeline (1-6) is determined by the threshold
+        main_pipeline_agents = {k: v for k, v in agent_results.items() if k != 'agent7'}
+        main_pipeline_success_count = len([r for r in main_pipeline_agents.values() if r.success and r.agent_id in ["agent1", "agent2", "agent3", "agent4", "agent5"]])
+        
+        success = main_pipeline_success_count >= self.min_success_threshold
         error = None
 
         if not success:
-            failed_agents = [r.agent_id for r in failed_results]
+            failed_main_agents = [r.agent_id for r in main_pipeline_agents.values() if not r.success]
             error = (
-                f"Insufficient data: only {success_count}/{len(agents)} agents succeeded "
+                f"Insufficient data: only {main_pipeline_success_count}/{len(main_pipeline_agents)} main agents succeeded "
                 f"(minimum required: {self.min_success_threshold}). "
-                f"Failed agents: {', '.join(failed_agents)}"
+                f"Failed agents: {', '.join(failed_main_agents)}"
             )
             logger.error(f"Analysis failed for case {case_id}: {error}")
         elif failed_results:
@@ -522,6 +737,16 @@ class MultiAgentOrchestrator:
             logger.info(
                 f"Analysis completed successfully for case {case_id} in {total_duration:.2f}s"
             )
+
+        # --- Firestore Persistence for Agent 6 & 7 ---
+        agent6_result = agent_results.get('agent6')
+        if agent6_result:
+            self._persist_agent6_results(case_id, agent6_result)
+
+        agent7_result = agent_results.get('agent7')
+        if agent7_result:
+            self._persist_agent7_results(case_id, agent7_result)
+
 
         return AnalysisResult(
             case_id=case_id,

@@ -114,6 +114,23 @@ cat > ~/.claude/mcp_config.json <<EOF
         "GCP_PROJECT": "$GCP_PROJECT"
       },
       "disabled": false
+    },
+    "gcp_ai": {
+      "command": "python3",
+      "args": ["$PROJECT_ROOT/tools/gcp_ai/mcp_server.py"],
+      "env": {
+        "GEMINI_API_KEY": "\${GEMINI_API_KEY}"
+      },
+      "disabled": false
+    },
+    "cloud_tasks": {
+      "command": "python3",
+      "args": ["$PROJECT_ROOT/tools/cloud_tasks/mcp_server.py"],
+      "env": {
+        "GOOGLE_APPLICATION_CREDENTIALS": "$GOOGLE_CREDS",
+        "GCP_PROJECT": "$GCP_PROJECT"
+      },
+      "disabled": false
     }
   }
 }

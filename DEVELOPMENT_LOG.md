@@ -1184,6 +1184,124 @@ This file tracks all development sessions to enable seamless continuation across
 
 ---
 
+### Session 32: 2025-11-12 (Agent 7 Slack 預覽與編輯流程實作 - Tasks 6.2/6.3)
+
+**Duration**: ~1.3 hours  
+**AI Model**: GPT-5 Codex (CLI)  
+**User**: Stephen
+
+#### Objectives Completed ✅
+
+- [x] 實作 Task 6.2：監聽 Agent 7 完成事件並在 Slack Thread 推送預覽卡片（含 500 字預覽與控制按鈕）。
+- [x] 實作 Task 6.3：建立摘要編輯/預覽 Modal、儲存 Firestore、更新 Slack 卡片顯示「已編輯」狀態。
+- [x] 新增 `/internal/agent7-notification` webhook 入口與 `_handle_agent7_notification` helper，與 Agent 6 流程一致。
+- [x] 儲存 `notification.agent7MessageTs/agent7ChannelId`，編輯後能自動刷新原訊息。
+- [x] 提供暫時性「確認送出」回覆（提醒功能尚未完成，待 Task 6.5~6.7）。
+
+#### Files Modified
+
+- `src/slack_app/main.py`: 匯入 `Agent7Notifier`/`SummaryEditor`、註冊 Slack actions & view handlers、實作新 webhook/refresh helper。
+- `src/slack_app/notifications/agent7_notifier.py`: 支援 channel-based 發送、記錄 message_ts、根據 Firestore 狀態顯示已編輯標記。
+- `src/slack_app/integration_example.py`: 範例更新為新的 `send_agent7_preview(channel_id=...)` 介面。
+
+#### Tests
+
+- `python3 -m compileall src/slack_app`
+
+#### MCP & Subagent Usage 📊
+
+- **MCP Tools**: 無（僅讀取本地程式碼）
+- **Subagent**: 無
+- **Direct Tools**: `Read`（DEVELOPMENT_LOG.md, spec/task files）, `Edit`（多檔案）、`Bash`（compileall）
+
+#### Known Issues & Risks
+
+1. `confirm_send_summary` 目前僅回覆提示訊息，尚未串接摘要網頁/SMS 流程（待 Task 6.5~6.7）。
+2. 需後續加入整合測試，確保 Firestore 變更能觸發 Slack 卡片刷新與 button handler。
+
+#### Next Session Preparation
+
+- 串接 Task 6.5~6.7（摘要網頁、SMS、確認送出流程）。
+- 依 `specs/001-sales-ai-automation/slack-implementation-tasks.md` 更新 Outstanding Tracker（Task 6.2/6.3 可標示完成）。
+- 規劃自動化測試（例如模擬 Slack action → Firestore update → message refresh）。
+
+---
+
+### Session 33: 2025-11-12 (Agent 7 摘要網頁 & SMS 流程 - Tasks 6.5~6.7)
+
+**Duration**: ~2.2 hours  
+**AI Model**: GPT-5 Codex (CLI)  
+**User**: Stephen
+
+#### Objectives Completed ✅
+
+- [x] 建立 `web-service`（Flask + Jinja）提供 `/summary/<caseId>`、`/s/<code>` 與 `/health`，含 RWD 模板、viewCount 與短網址點擊紀錄。
+- [x] 新增 `SummaryDeliveryService`（短網址 + Twilio + Firestore）並整合 Slack `確認送出` Modal → Cloud Tasks → SMS/Thread 回報。
+- [x] 實作 Task 6.7：確認 Modal（可覆寫電話）＋ `/internal/summary-delivery` 處理器，完成後更新 Firestore `delivery.*`、Thread 回覆狀態。
+- [x] 新增 pytest 覆蓋 short-url / 發送邏輯 (`test_summary_delivery.py`) 與 renderer (`test_summary_renderer.py`)，並更新文件（Integration README、Session Log）記錄新環境變數 (`SUMMARY_BASE_URL`, `SHORT_URL_BASE`, `SUMMARY_DELIVERY_QUEUE`, `TWILIO_*`)。
+
+#### Files Created/Modified
+
+**Created**
+- `web-service/`（Dockerfile、README、requirements、templates/static、`src/main.py`, `src/summary_renderer.py`）
+- `src/slack_app/notifications/summary_delivery.py`
+
+**Modified**
+- `src/slack_app/main.py`: 新增確認送出 Modal、Cloud Task 佇列、`/internal/summary-delivery` handler、Thread 回報。
+- `src/slack_app/requirements.txt`: 加入 `twilio`.
+- `src/slack_app/INTEGRATION_README.md`, `src/slack_app/integration_example.py`, `DEVELOPMENT_LOG.md`.
+
+#### Technical Highlights
+
+- `SummaryRenderer` 轉換 Markdown→HTML，`/summary/<caseId>` 顯示內容、`/s/<code>` 追蹤短網址點擊（更新 `shortUrls` + `delivery`）。
+- Slack `confirm_send_summary` action → Cloud Task (`SUMMARY_DELIVERY_QUEUE`) → `/internal/summary-delivery`，由 `SummaryDeliveryService` 產生短網址、發送 SMS、回寫 `delivery.*` 與 Thread 進度。
+- `SummaryDeliveryService` 若未設定 Twilio 會 fallback 為「skipped」並仍產生短網址；同時紀錄 `summaryPageUrl`、`summaryUrl` 供網頁/簡訊使用。
+- 新增 pytest 覆蓋 short-url 生成／錯誤處理（避免回歸）。
+
+#### MCP & Subagent Usage 📊
+
+- **MCP Tools**: 無
+- **Subagent**: 無
+- **Direct Tools**: `Read`（specs、logs）、`Edit`、`Bash`（compileall）
+
+#### Known Issues & Risks
+
+1. 未設定 Twilio 時會回報 `skipped`，需完成憑證部署後才會真正發送。
+2. GCP 尚需建立 `summary-delivery-queue` 並提供 `SUMMARY_DELIVERY_HANDLER_URL`，否則流程改為同步執行。
+3. 尚未撰寫 Slack Bolt / CI 端到端測試驗證整體流程（下一步要處理）。
+
+#### Next Session Preparation
+
+- 完成 Step 2：新增整合測試（Slack action 模擬 / Cloud Task / Twilio stub）。
+- 視需要補上短網址專用服務或 notification-service 拆分。
+
+---
+
+### Session 34: 2025-11-12 (Cloud Run 環境變數 & CI 測試擴充)
+
+**Duration**: ~1.0 hour  
+**AI Model**: GPT-5 Codex (CLI)  
+**User**: Stephen
+
+#### Objectives Completed ✅
+
+- [x] 建立 Cloud Tasks `summary-delivery-queue`，更新 `cloudbuild.slack.yaml`（加入 `SUMMARY_BASE_URL/SHORT_URL_BASE/QUEUE` substitutions）與 `cloudbuild.summary-web-service.yaml`。
+- [x] 更新文件（Integration README、web-service README）記錄環境變數與佇列指令；`web-service` 部署流程改用新的 Cloud Build。
+- [x] 擴充 CI：`Makefile` 新增 Slack/Web summary pytest 目標，GitHub workflow 安裝對應 requirements；新增 `src/slack_app/tests/test_confirm_send_flow.py`，補強 Cloud Task fallback 測試。
+
+#### Tests
+
+```bash
+pytest src/slack_app/tests/test_summary_delivery.py \
+       src/slack_app/tests/test_confirm_send_flow.py \
+       web-service/tests/test_summary_renderer.py
+```
+
+#### Next Session Preparation
+
+- 實際更新 Cloud Run 環境值（`SUMMARY_BASE_URL`, `SHORT_URL_BASE`, `SUMMARY_DELIVERY_HANDLER_URL`）指向已部署的 web service/slack app URL。
+- 觀察 GitHub Workflow 跑 `make test-all` 的結果，必要時再補 Slack Bolt 端到端測試。
+
 ## 📊 MCP & Subagent Usage Tracking (Added 2025-11-11)
 
 > **目的**: 追蹤每個 Session 的 MCP 和 Subagent 使用情況，以持續優化 Token 使用效率

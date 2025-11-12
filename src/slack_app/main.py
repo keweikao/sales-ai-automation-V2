@@ -13,6 +13,7 @@ from typing import Optional, Tuple
 
 from flask import Flask, request
 from google.cloud import firestore
+from google.cloud import tasks_v2
 from slack_bolt import App
 from slack_bolt.adapter.flask import SlackRequestHandler
 from slack_sdk import WebClient
@@ -29,6 +30,10 @@ from utils.file_pipeline import (
     upload_to_gcs,
 )
 from handlers.agent8_handler import handle_ask_agent8_command
+from notifications.agent6_notifier import Agent6Notifier
+from notifications.agent7_notifier import Agent7Notifier
+from notifications.summary_delivery import DeliveryResult, SummaryDeliveryService
+from interactions.summary_editor import SummaryEditor
 
 # 設定 logging
 logging.basicConfig(
@@ -37,12 +42,17 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# 初始化 Firestore
+# 初始化 Firestore（若未設定專案 ID 則嘗試使用預設設定）
 project_id = os.environ.get("GCP_PROJECT_ID")
-if project_id:
-    db = firestore.Client(project=project_id)
-else:
-    logger.warning("GCP_PROJECT_ID 未設定，Firestore 功能將無法使用")
+db = None
+try:
+    if project_id:
+        db = firestore.Client(project=project_id)
+    else:
+        db = firestore.Client()
+        logger.warning("GCP_PROJECT_ID 未設定，改用預設專案：%s", db.project)
+except Exception as firestore_error:
+    logger.error("初始化 Firestore 失敗：%s", firestore_error)
     db = None
 
 # 初始化 Slack App (HTTP Mode)
@@ -64,8 +74,46 @@ TASK_HANDLER_URL = os.getenv("TRANSCRIPTION_TASK_HANDLER_URL")
 TASK_SERVICE_ACCOUNT = os.getenv("TRANSCRIPTION_TASK_SERVICE_ACCOUNT")
 SLACK_BOT_TOKEN = os.getenv("SLACK_BOT_TOKEN")
 PROGRESS_SHARED_TOKEN = os.getenv("SLACK_PROGRESS_TOKEN") or os.getenv("TRANSCRIPTION_PROGRESS_TOKEN")
+SUMMARY_DELIVERY_QUEUE = os.getenv("SUMMARY_DELIVERY_QUEUE")
+SUMMARY_DELIVERY_LOCATION = os.getenv("SUMMARY_DELIVERY_LOCATION", "asia-east1")
+SUMMARY_DELIVERY_HANDLER_URL = os.getenv("SUMMARY_DELIVERY_HANDLER_URL")
+SUMMARY_INTERNAL_TOKEN = os.getenv("SUMMARY_INTERNAL_TOKEN") or PROGRESS_SHARED_TOKEN
+SUMMARY_BASE_URL = os.getenv("SUMMARY_BASE_URL")
+SHORT_URL_BASE = os.getenv("SHORT_URL_BASE")
 
 slack_client: Optional[WebClient] = WebClient(token=SLACK_BOT_TOKEN) if SLACK_BOT_TOKEN else None
+agent6_notifier: Optional[Agent6Notifier] = None
+agent7_notifier: Optional[Agent7Notifier] = None
+summary_editor: Optional[SummaryEditor] = None
+summary_delivery_service: Optional[SummaryDeliveryService] = None
+if slack_client and db:
+    try:
+        agent6_notifier = Agent6Notifier(slack_client, db)
+        logger.info("Agent 6 notifier initialized successfully")
+    except Exception as notifier_error:  # pylint: disable=broad-except
+        logger.error("Failed to initialize Agent 6 notifier: %s", notifier_error, exc_info=True)
+
+    try:
+        agent7_notifier = Agent7Notifier(slack_client, db)
+        logger.info("Agent 7 notifier initialized successfully")
+    except Exception as notifier_error:  # pylint: disable=broad-except
+        logger.error("Failed to initialize Agent 7 notifier: %s", notifier_error, exc_info=True)
+
+    try:
+        summary_editor = SummaryEditor(slack_client, db)
+        logger.info("Summary editor initialized successfully")
+    except Exception as notifier_error:  # pylint: disable=broad-except
+        logger.error("Failed to initialize summary editor: %s", notifier_error, exc_info=True)
+
+    try:
+        summary_delivery_service = SummaryDeliveryService(
+            db_client=db,
+            summary_base_url=SUMMARY_BASE_URL,
+            short_url_base=SHORT_URL_BASE,
+        )
+        logger.info("Summary delivery service initialized successfully")
+    except Exception as notifier_error:  # pylint: disable=broad-except
+        logger.error("Failed to initialize summary delivery service: %s", notifier_error, exc_info=True)
 
 # ============================================
 # Command Handlers
@@ -108,6 +156,14 @@ def handle_file_shared(client, event, logger):
     處理音檔上傳事件（僅處理 DM），使用 Transaction 防止重複處理。
     """
     try:
+        if not db:
+            logger.error("Firestore 尚未初始化，無法處理 file_shared 事件")
+            client.chat_postMessage(
+                channel=event.get("user_id"),
+                text="⚠️ 系統尚未連線到 Firestore，暫時無法處理音檔。請通知開發團隊。"
+            )
+            return
+
         file_id = event.get("file_id")
         user_id = event.get("user_id")
 
@@ -126,56 +182,8 @@ def handle_file_shared(client, event, logger):
         existing_doc = check_and_create_notified_record(transaction, file_ref, file_id, file_name, user_id)
 
         if existing_doc:
-            status = existing_doc.get('status', 'unknown')
-            case_id = existing_doc.get('caseId')
-
-            if case_id:
-                logger.info(f"File {file_id} already being processed (status: {status}, case: {case_id}), notifying user.")
-
-                status_emoji = {
-                    'notified': '📋',
-                    'processing': '⏳',
-                    'queued': '⏱️',
-                    'transcribing': '🎙️',
-                    'transcribed': '✅',
-                    'analyzing': '🔍',
-                    'completed': '🎉',
-                    'failed': '❌'
-                }.get(status, '📝')
-                status_text = {
-                    'notified': '等待分析',
-                    'processing': '處理中',
-                    'queued': '排隊中',
-                    'transcribing': '轉錄中',
-                    'transcribed': '已轉錄',
-                    'analyzing': '分析中',
-                    'completed': '已完成',
-                    'failed': '失敗'
-                }.get(status, status)
-
-                client.chat_postMessage(
-                    channel=user_id,
-                    text=f"ℹ️ 此音檔已經上傳過\n\n"
-                         f"📁 案件編號：`{case_id}`\n"
-                         f"{status_emoji} 狀態：{status_text}\n\n"
-                         f"如需重新分析，請先刪除此檔案後再上傳。"
-                )
-                return
-
-            # 重新送出提示讓使用者補資料，避免被卡在 notified 狀態
-            logger.info(
-                "File %s already has a notified record without caseId; resending modal instructions.",
-                file_id,
-            )
-
-            # 更新現有 processed_files 紀錄的檔案資訊，確保使用最新檔名/使用者資料
-            merge_payload = {
-                "fileName": file_name,
-                "userId": user_id,
-                "status": status or "notified",
-                "updatedAt": firestore.SERVER_TIMESTAMP,
-            }
-            file_ref.set(merge_payload, merge=True)
+            logger.info(f"Duplicate file_shared event for file_id: {file_id}. Ignoring.")
+            return
         else:
             # 如果 existing_doc 是 None，表示新紀錄已成功建立，可以繼續後續流程
             logger.info(f"New file {file_id} record created atomically.")
@@ -198,6 +206,7 @@ def handle_file_shared(client, event, logger):
 
         client.chat_postMessage(
             channel=user_id,
+            thread_ts=event.get("ts"), # Add this line to make it a thread reply
             text=f"📎 收到音檔：*{file_name}*\n請點擊下方按鈕補充客戶資訊以開始分析。",
             blocks=[
                 {"type": "section", "text": {"type": "mrkdwn", "text": f"📎 收到音檔：*{file_name}*\n\n請點擊下方按鈕補充客戶資訊以開始分析。"}},
@@ -651,7 +660,7 @@ def _process_modal_submission(
         logger.info("File downloaded to: %s", local_path)
         sys.stdout.flush()
 
-        safe_name = file_metadata["name"].replace(" ", "_")
+        safe_name = re.sub(r'\s+', '_', file_metadata["name"])
         destination_blob = f"slack/{case_id}/{safe_name}"
         logger.info("Uploading to GCS: %s", destination_blob)
         sys.stdout.flush()
@@ -719,10 +728,11 @@ def _process_modal_submission(
             f"🎯 我們會在分析完成後自動通知您。"
         )
 
-        logger.info("Sending confirmation message to channel %s", channel_id)
+        logger.info("Sending confirmation message to channel %s, thread %s", channel_id, thread_ts)
         sys.stdout.flush()
         client.chat_postMessage(
             channel=channel_id,
+            thread_ts=thread_ts,
             text=confirmation_text,
         )
         logger.info("Confirmation message sent successfully")
@@ -733,23 +743,14 @@ def _process_modal_submission(
                 client.chat_update(
                     channel=channel_id,
                     ts=message_ts,
-                    text=f"🎧 *{file_metadata['name']}* 已開始分析，案件 `{case_id}`。",
+                    text=f"案件編號：`{case_id}` ⏱️ 轉錄約需 5-10 分鐘，完成後會通知您。",
                     blocks=[
                         {
                             "type": "section",
                             "text": {
                                 "type": "mrkdwn",
-                                "text": f"🎧 *{file_metadata['name']}* 已開始分析。\n案件編號：`{case_id}`",
+                                "text": f"案件編號：`{case_id}` ⏱️ 轉錄約需 5-10 分鐘，完成後會通知您。",
                             },
-                        },
-                        {
-                            "type": "context",
-                            "elements": [
-                                {
-                                    "type": "mrkdwn",
-                                    "text": "⏱️ 轉錄約需 5-10 分鐘，完成後會通知您。",
-                                }
-                            ],
                         },
                     ],
                 )
@@ -815,6 +816,411 @@ def _resolve_notification_target(case_id: str, file_id: Optional[str]) -> Tuple[
             customer_name = customer_name or file_data.get("customerName")
 
     return channel_id, thread_ts, customer_name
+
+
+def _handle_agent6_notification(
+    case_id: str,
+    file_id: Optional[str] = None,
+    channel_override: Optional[str] = None,
+    thread_override: Optional[str] = None,
+) -> Tuple[bool, str]:
+    """
+    Dispatch Agent 6 notification using available context.
+    Returns (success, reason).
+    """
+    if not agent6_notifier:
+        logger.warning("Agent 6 notifier not initialized; cannot send notification for %s", case_id)
+        return False, "notifier_unavailable"
+
+    channel_id, thread_ts, _ = _resolve_notification_target(case_id, file_id)
+    target_channel = channel_override or channel_id
+    target_thread = thread_override or thread_ts
+
+    success = agent6_notifier.send_agent6_notification(
+        case_id=case_id,
+        user_id=target_channel,
+        thread_ts=target_thread,
+    )
+
+    if success:
+        return True, "sent"
+
+    return False, "send_failed"
+
+
+def _handle_agent7_notification(
+    case_id: str,
+    file_id: Optional[str] = None,
+    channel_override: Optional[str] = None,
+    thread_override: Optional[str] = None,
+) -> Tuple[bool, str]:
+    """
+    Dispatch Agent 7 preview notification.
+    """
+    if not agent7_notifier:
+        logger.warning("Agent 7 notifier not initialized; cannot send preview for %s", case_id)
+        return False, "notifier_unavailable"
+
+    channel_id, thread_ts, _ = _resolve_notification_target(case_id, file_id)
+    target_channel = channel_override or channel_id
+    target_thread = thread_override or thread_ts
+
+    if not target_channel:
+        logger.warning("No Slack channel found for Agent 7 notification (%s)", case_id)
+        return False, "channel_not_found"
+
+    success = agent7_notifier.send_agent7_preview(
+        case_id=case_id,
+        channel_id=target_channel,
+        thread_ts=target_thread,
+        is_edited=False,
+    )
+
+    if success:
+        return True, "sent"
+
+    return False, "send_failed"
+
+
+def _refresh_agent7_preview_message(case_id: str) -> None:
+    """
+    Refresh the Agent 7 preview message in Slack after edits.
+    """
+    if not (agent7_notifier and db):
+        logger.debug("Cannot refresh Agent 7 preview (dependencies unavailable)")
+        return
+
+    snapshot = db.collection("cases").document(case_id).get()
+    if not snapshot.exists:
+        logger.warning("Cannot refresh Agent 7 preview: case %s not found", case_id)
+        return
+
+    case_data = snapshot.to_dict() or {}
+    notification = case_data.get("notification") or {}
+    channel_id = notification.get("agent7ChannelId") or notification.get("slackChannelId")
+    message_ts = notification.get("agent7MessageTs")
+
+    if not channel_id or not message_ts:
+        logger.info("Agent 7 preview message context missing for case %s", case_id)
+        return
+
+    updated = agent7_notifier.update_preview_message(case_id, channel_id, message_ts)
+    if updated:
+        logger.info("Agent 7 preview refreshed after edit (case %s)", case_id)
+    else:
+        logger.warning("Failed to refresh Agent 7 preview for case %s", case_id)
+
+
+def _notify_summary_delivery_result(
+    case_id: str,
+    result,
+    channel_id: Optional[str],
+    thread_ts: Optional[str],
+    initiated_by: Optional[str] = None,
+) -> None:
+    """Post a status update back to Slack after summary delivery."""
+    if not channel_id:
+        resolved_channel, resolved_thread, _ = _resolve_notification_target(case_id, None)
+        channel_id = resolved_channel
+        thread_ts = thread_ts or resolved_thread
+
+    if not (slack_client and channel_id):
+        return
+
+    status_map = {
+        "sent": "✅ 已成功發送摘要簡訊給客戶",
+        "failed": "⚠️ 摘要簡訊發送失敗，請稍後再試或聯絡技術支援",
+        "skipped": "ℹ️ 尚未設定簡訊服務，已產生摘要連結供手動分享",
+    }
+    status_line = status_map.get(result.status, "摘要發送狀態：未知")
+    lines = [
+        status_line,
+        f"🔗 摘要連結：{result.summary_url}",
+    ]
+    if result.phone:
+        lines.append(f"📱 目標電話：{result.phone}")
+    if result.error:
+        lines.append(f"🧪 系統訊息：{result.error}")
+    if initiated_by:
+        lines.append(f"👤 操作人：<@{initiated_by}>")
+
+    slack_client.chat_postMessage(
+        channel=channel_id,
+        thread_ts=thread_ts,
+        text="\n".join(lines),
+    )
+
+
+def _enqueue_summary_delivery_task(
+    case_id: str,
+    phone: str,
+    initiated_by: str,
+    channel_id: Optional[str],
+    thread_ts: Optional[str],
+) -> bool:
+    """Enqueue Cloud Task to process summary delivery asynchronously."""
+    if not (SUMMARY_DELIVERY_QUEUE and SUMMARY_DELIVERY_HANDLER_URL and project_id):
+        return False
+
+    try:
+        client = tasks_v2.CloudTasksClient()
+        parent = client.queue_path(project_id, SUMMARY_DELIVERY_LOCATION, SUMMARY_DELIVERY_QUEUE)
+        payload = json.dumps(
+            {
+                "caseId": case_id,
+                "phone": phone,
+                "initiatedBy": initiated_by,
+                "channelId": channel_id,
+                "threadTs": thread_ts,
+            }
+        ).encode("utf-8")
+        headers = {"Content-Type": "application/json"}
+        if SUMMARY_INTERNAL_TOKEN:
+            headers["X-Progress-Token"] = SUMMARY_INTERNAL_TOKEN
+
+        task = {
+            "http_request": {
+                "http_method": tasks_v2.HttpMethod.POST,
+                "url": SUMMARY_DELIVERY_HANDLER_URL,
+                "headers": headers,
+                "body": payload,
+            }
+        }
+
+        client.create_task(request={"parent": parent, "task": task})
+        logger.info("Enqueued summary delivery task for %s", case_id)
+        return True
+    except Exception as exc:  # noqa: broad-except
+        logger.error("Failed to enqueue summary delivery task: %s", exc)
+        return False
+
+
+def _extract_case_id(value: Optional[str], prefix: str) -> Optional[str]:
+    """
+    Extract case id from button value helper.
+    """
+    if not value:
+        return None
+    if value.startswith(prefix):
+        return value[len(prefix):]
+    return value
+
+
+# ============================================
+# Interactive Components (Agent 7)
+# ============================================
+
+
+@app.action("edit_summary")
+def handle_edit_summary_action(ack, body, logger):  # type: ignore[override]
+    """
+    Handle the Agent 7 "Edit summary" button.
+    """
+    ack()
+    if not summary_editor:
+        logger.warning("Summary editor unavailable; cannot open edit modal.")
+        return
+
+    trigger_id = body.get("trigger_id")
+    actions = body.get("actions") or []
+    action_value = actions[0].get("value") if actions else None
+    case_id = _extract_case_id(action_value, "edit_summary_")
+    if not (trigger_id and case_id):
+        logger.warning("Missing trigger or case id in edit_summary action: %s", body)
+        return
+
+    summary_editor.open_edit_modal(trigger_id, case_id)
+
+
+@app.action("preview_summary")
+def handle_preview_summary_action(ack, body, logger):  # type: ignore[override]
+    """
+    Handle the Agent 7 "Preview" button.
+    """
+    ack()
+    if not summary_editor:
+        logger.warning("Summary editor unavailable; cannot open preview modal.")
+        return
+
+    trigger_id = body.get("trigger_id")
+    actions = body.get("actions") or []
+    action_value = actions[0].get("value") if actions else None
+    case_id = _extract_case_id(action_value, "preview_summary_")
+    if not (trigger_id and case_id):
+        logger.warning("Missing trigger or case id in preview_summary action: %s", body)
+        return
+
+    summary_editor.open_preview_modal(trigger_id, case_id)
+
+
+@app.action("confirm_send_summary")
+def handle_confirm_send_summary_action(ack, body, client, logger):  # type: ignore[override]
+    """
+    Open confirmation modal before sending summary + SMS.
+    """
+    ack()
+    if not (summary_delivery_service and db):
+        logger.warning("Summary delivery service unavailable; cannot confirm send.")
+        return
+
+    actions = body.get("actions") or []
+    action_value = actions[0].get("value") if actions else None
+    case_id = _extract_case_id(action_value, "confirm_send_")
+    if not case_id:
+        logger.warning("Missing case id in confirm send action: %s", body)
+        return
+
+    case_doc = db.collection("cases").document(case_id).get()
+    if not case_doc.exists:
+        logger.warning("Case %s not found when confirming summary", case_id)
+        return
+
+    case_data = case_doc.to_dict() or {}
+    phone = case_data.get("customerPhone", "")
+    customer_name = case_data.get("customerName", "客戶")
+    notification = case_data.get("notification") or {}
+    channel_id = (body.get("channel") or {}).get("id") or notification.get("slackChannelId")
+    thread_ts = notification.get("slackThreadTs")
+
+    private_metadata = json.dumps({
+        "case_id": case_id,
+        "channel_id": channel_id,
+        "thread_ts": thread_ts,
+    })
+
+    view = {
+        "type": "modal",
+        "callback_id": "confirm_send_summary_modal",
+        "private_metadata": private_metadata,
+        "title": {"type": "plain_text", "text": "確認送出"},
+        "submit": {"type": "plain_text", "text": "確認送出"},
+        "close": {"type": "plain_text", "text": "取消"},
+        "blocks": [
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": f"請確認是否將「*{customer_name}*」的客戶摘要以簡訊發送給客戶。"
+                }
+            },
+            {
+                "type": "input",
+                "block_id": "phone_block",
+                "label": {"type": "plain_text", "text": "客戶電話 (含國碼)"},
+                "element": {
+                    "type": "plain_text_input",
+                    "action_id": "phone_input",
+                    "initial_value": phone,
+                    "placeholder": {"type": "plain_text", "text": "+886912345678"},
+                },
+                "hint": {"type": "plain_text", "text": "手機格式：+國碼 + 電話號碼"},
+                "optional": False,
+            },
+            {
+                "type": "context",
+                "elements": [
+                    {
+                        "type": "mrkdwn",
+                        "text": "送出後將更新 Firestore 並在此 Thread 通知結果。"
+                    }
+                ]
+            }
+        ],
+    }
+    try:
+        client.views_open(trigger_id=body["trigger_id"], view=view)
+    except SlackApiError as exc:  # type: ignore[name-defined]
+        logger.error("Failed to open confirm modal: %s", exc.response.get("error"))
+
+
+@app.view("edit_summary_modal")
+def handle_edit_summary_submission(ack, body, view, logger):  # type: ignore[override]
+    """
+    Handle summary edit modal submissions.
+    """
+    if not summary_editor:
+        ack({"response_action": "errors", "errors": {"summary_content_block": "系統尚未初始化"}})
+        return
+
+    user_id = (body.get("user") or {}).get("id")
+    case_id = view.get("private_metadata")
+    response = summary_editor.handle_modal_submission(view, user_id)
+    ack(response)
+
+    if response and response.get("response_action") == "errors":
+        return
+
+    if case_id:
+        _refresh_agent7_preview_message(case_id)
+
+
+@app.view("confirm_send_summary_modal")
+def handle_confirm_send_summary_modal(ack, body, view, logger):  # type: ignore[override]
+    """
+    Handle the confirmation modal submission for sending summaries.
+    """
+    if not summary_delivery_service:
+        ack({"response_action": "errors", "errors": {"phone_block": "系統尚未初始化"}})
+        return
+
+    metadata = json.loads(view.get("private_metadata") or "{}")
+    case_id = metadata.get("case_id")
+    phone_value = view.get("state", {}).get("values", {}).get("phone_block", {}).get("phone_input", {}).get("value")
+    if not phone_value:
+        ack({"response_action": "errors", "errors": {"phone_block": "請輸入客戶電話"}})
+        return
+
+    user_id = (body.get("user") or {}).get("id", "unknown")
+
+    channel_id = metadata.get("channel_id")
+    thread_ts = metadata.get("thread_ts")
+
+    ack()
+
+    enqueued = _enqueue_summary_delivery_task(
+        case_id=case_id,
+        phone=phone_value,
+        initiated_by=user_id,
+        channel_id=channel_id,
+        thread_ts=thread_ts,
+    )
+
+    if enqueued:
+        if slack_client and channel_id:
+            slack_client.chat_postMessage(
+                channel=channel_id,
+                thread_ts=thread_ts,
+                text="📤 已建立摘要發送任務，完成後會在此通知結果。"
+            )
+        return
+
+    try:
+        result = summary_delivery_service.send_summary(
+            case_id=case_id,
+            initiated_by=user_id,
+            phone_number=phone_value,
+        )
+    except ValueError as exc:
+        _notify_summary_delivery_result(
+            case_id,
+            DeliveryResult(status="failed", summary_url="", phone=None, error=str(exc)),
+            channel_id,
+            thread_ts,
+            initiated_by=user_id,
+        )
+        return
+    except Exception as exc:  # noqa: broad-except
+        logger.exception("Summary delivery failed for case %s", case_id)
+        _notify_summary_delivery_result(
+            case_id,
+            DeliveryResult(status="failed", summary_url="", phone=phone_value, error="發送失敗"),
+            channel_id,
+            thread_ts,
+            initiated_by=user_id,
+        )
+        return
+
+    _notify_summary_delivery_result(case_id, result, channel_id, thread_ts, initiated_by=user_id)
 
 
 # ============================================
@@ -903,6 +1309,128 @@ def handle_transcription_progress():
         return {"error": "Failed to post Slack message"}, 500
 
     return {"status": "ok"}, 200
+
+
+@flask_app.route("/internal/agent6-notification", methods=["POST"])
+def handle_agent6_notification_request():
+    """
+    Internal endpoint invoked when Agent 6 analysis completes.
+    Triggers the sales coaching Slack card delivery.
+    """
+    if PROGRESS_SHARED_TOKEN:
+        provided_token = request.headers.get("X-Progress-Token")
+        if provided_token != PROGRESS_SHARED_TOKEN:
+            logger.warning("Rejected agent6 notification webhook: invalid token")
+            return {"error": "Unauthorized"}, 403
+
+    if not agent6_notifier:
+        logger.warning("Agent 6 notifier unavailable; skipping notification request")
+        return {"error": "Notifier unavailable"}, 503
+
+    payload = request.get_json(silent=True) or {}
+    case_id = payload.get("caseId")
+    if not case_id:
+        return {"error": "Missing caseId"}, 400
+
+    file_id = payload.get("fileId")
+    channel_override = payload.get("channelId")
+    thread_override = payload.get("threadTs")
+
+    success, reason = _handle_agent6_notification(
+        case_id=case_id,
+        file_id=file_id,
+        channel_override=channel_override,
+        thread_override=thread_override,
+    )
+
+    status_code = 200 if success else 500
+    body = {"status": "ok" if success else "error", "reason": reason}
+    logger.info("Agent 6 notification request for case %s -> %s", case_id, body)
+    return body, status_code
+
+
+@flask_app.route("/internal/agent7-notification", methods=["POST"])
+def handle_agent7_notification_request():
+    """
+    Internal endpoint invoked when Agent 7 analysis completes.
+    Sends the customer-facing preview with edit controls.
+    """
+    if PROGRESS_SHARED_TOKEN:
+        provided_token = request.headers.get("X-Progress-Token")
+        if provided_token != PROGRESS_SHARED_TOKEN:
+            logger.warning("Rejected agent7 notification webhook: invalid token")
+            return {"error": "Unauthorized"}, 403
+
+    if not agent7_notifier:
+        logger.warning("Agent 7 notifier unavailable; skipping notification request")
+        return {"error": "Notifier unavailable"}, 503
+
+    payload = request.get_json(silent=True) or {}
+    case_id = payload.get("caseId")
+    if not case_id:
+        return {"error": "Missing caseId"}, 400
+
+    file_id = payload.get("fileId")
+    channel_override = payload.get("channelId")
+    thread_override = payload.get("threadTs")
+
+    success, reason = _handle_agent7_notification(
+        case_id=case_id,
+        file_id=file_id,
+        channel_override=channel_override,
+        thread_override=thread_override,
+    )
+
+    status_code = 200 if success else 500
+    body = {"status": "ok" if success else "error", "reason": reason}
+    logger.info("Agent 7 notification request for case %s -> %s", case_id, body)
+    return body, status_code
+
+
+@flask_app.route("/internal/summary-delivery", methods=["POST"])
+def handle_summary_delivery_request():
+    """
+    Internal endpoint triggered via Cloud Tasks to send summary + SMS.
+    """
+    if SUMMARY_INTERNAL_TOKEN:
+        provided_token = request.headers.get("X-Progress-Token")
+        if provided_token != SUMMARY_INTERNAL_TOKEN:
+            logger.warning("Rejected summary delivery webhook: invalid token")
+            return {"error": "Unauthorized"}, 403
+
+    if not summary_delivery_service:
+        logger.warning("Summary delivery service unavailable; skipping request")
+        return {"error": "service_unavailable"}, 503
+
+    payload = request.get_json(silent=True) or {}
+    case_id = payload.get("caseId")
+    if not case_id:
+        return {"error": "Missing caseId"}, 400
+
+    phone = payload.get("phone")
+    initiated_by = payload.get("initiatedBy", "system")
+    channel_id = payload.get("channelId")
+    thread_ts = payload.get("threadTs")
+
+    try:
+        result = summary_delivery_service.send_summary(
+            case_id=case_id,
+            initiated_by=initiated_by,
+            phone_number=phone,
+        )
+    except Exception as exc:  # noqa: broad-except
+        logger.exception("Summary delivery task failed for %s", case_id)
+        _notify_summary_delivery_result(
+            case_id,
+            DeliveryResult(status="failed", summary_url="", phone=phone, error=str(exc)),
+            channel_id,
+            thread_ts,
+            initiated_by=initiated_by,
+        )
+        return {"status": "error", "reason": str(exc)}, 500
+
+    _notify_summary_delivery_result(case_id, result, channel_id, thread_ts, initiated_by=initiated_by)
+    return {"status": "ok", "deliveryStatus": result.status}, 200
 
 
 @flask_app.route("/slack/interactions", methods=["POST"])
