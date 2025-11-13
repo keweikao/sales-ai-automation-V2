@@ -373,7 +373,7 @@ This file tracks all development sessions to enable seamless continuation across
 
 - The `/ask-agent8` command should now be fully functional.
 - The next logical step is to perform user testing and gather feedback as outlined in the "Next Steps" section.
-- You can now proceed with the "使用者回饋測試並記錄" task.
+- You can now proceed with the "使用者回饋測試並記錄" task from the Outstanding Work Tracker.
 
 ### Session 21: 2025-11-07 (Slack 錄音流程 UX + 轉錄服務自動化)
 
@@ -582,9 +582,9 @@ This file tracks all development sessions to enable seamless continuation across
 
 **Modified**:
 
-- `src/slack_app/requirements.txt`：新增 `importlib-metadata>=3.6.0`，修復 Gunicorn 啟動時的 `packages_distributions` 衝突。
-- `memory/constitution.md`：新增 VIII. Documentation Hygiene 原則，將 markdownlint 規範納入憲法要求。
-- `docs/agent8-manager-access-guide.md`、`docs/agent8-phase1-deployment.md`、`docs/agent8-permission-management.md`：調整空白行與 code fence 語言標示，消除 markdownlint 錯誤。
+- `src/slack_app/requirements.txt`: 新增 `importlib-metadata>=3.6.0`，修復 Gunicorn 啟動時的 `packages_distributions` 衝突。
+- `memory/constitution.md`: 新增 VIII. Documentation Hygiene 原則，將 markdownlint 規範納入憲法要求。
+- `docs/agent8-manager-access-guide.md`、`docs/agent8-phase1-deployment.md`、`docs/agent8-permission-management.md`: 調整空白行與 code fence 語言標示，消除 markdownlint 錯誤。
 
 #### Key Discussions & Decisions
 
@@ -771,7 +771,7 @@ This file tracks all development sessions to enable seamless continuation across
 
 - Restore the missing `slack-app` environment variables in Cloud Run (or in the deployment YAML) so uploads work end-to-end.
 - Upload a small test audio to confirm diarization now populates `transcription.speakers` and that Agent 1 sees speaker stats.
-- Implement Agent 6/7 Firestore 寫入與 Slack 卡片，並依新版 prompt 完成單元/整合測試 (`make test-agent67` + E2E)。
+- Implement Agent 6/7 Firestore 寫入與 Slack 卡片，並依新版 prompt 完成單元/整合測試 (`make test-agent67` + E2E).
 
 ### Session 25: 2025-11-11 (Agent 7 Independent Implementation and Orchestrator Integration)
 
@@ -841,7 +841,7 @@ This file tracks all development sessions to enable seamless continuation across
 #### Objectives Completed ✅
 
 - [x] Added defensive handling for `google.api_core.exceptions.NotFound` so `transcription-service` returns 404 instead of crashing when Cloud Tasks references a missing GCS blob.
-- [x] Hardened Slack upload flow by normalizing every filename with `re.sub(r'\s+', '_', ...)`, preventing mismatches between the stored object name and the path sent to transcription.
+- [x] Hardened Slack upload flow by normalizing every filename with `re.sub(r'\n+', '_', ...)`, preventing mismatches between the stored object name and the path sent to transcription.
 - [x] Ran `python3 -m py_compile src/slack_app/main.py src/transcription/main.py` to ensure the modified modules load cleanly.
 
 #### Files Created/Modified
@@ -888,7 +888,7 @@ This file tracks all development sessions to enable seamless continuation across
 
 #### Known Issues & Risks
 
-- Existing Cloud Tasks created before the redeploy still reference the old filenames and will continue to 404; the new code only prevents crashes. Requeue or reupload those cases if they should be processed.
+- Existing Cloud Tasks created before the redeploy still reference the old filenames and will continue to 404; the new code only prevents crashes.
 - `cloudbuild.slack.yaml` still hardcodes env vars; updating them in code requires editing the YAML (or switching to `--update-env-vars` scripts) to avoid dropping new configuration in future deploys.
 
 #### Next Session Preparation
@@ -1153,7 +1153,7 @@ This file tracks all development sessions to enable seamless continuation across
 1. **是否需要 LINE API 作為替代方案？**
    - Status: Pending - 若成本敏感，可考慮 LINE（台灣用戶普及率高且免費）
 
-2. **是否需要電話號碼驗證？**
+2. **是否需要電話號號碼驗證？**
    - Status: Pending - 取決於客戶資料品質要求
 
 3. **網頁摘要是否需要密碼保護？**
@@ -1302,26 +1302,6 @@ pytest src/slack_app/tests/test_summary_delivery.py \
        web-service/tests/test_summary_renderer.py
 ```
 
-### Session 34: 2025-11-12 (Cloud Run 環境變數 & CI 測試擴充)
-
-**Duration**: ~1.0 hour  
-**AI Model**: GPT-5 Codex (CLI)  
-**User**: Stephen
-
-#### Objectives Completed ✅
-
-- [x] 建立 Cloud Tasks `summary-delivery-queue`，更新 `cloudbuild.slack.yaml`（加入 `SUMMARY_BASE_URL/SHORT_URL_BASE/QUEUE` substitutions）與 `cloudbuild.summary-web-service.yaml`。
-- [x] 更新文件（Integration README、web-service README）記錄環境變數與佇列指令；`web-service` 部署流程改用新的 Cloud Build。
-- [x] 擴充 CI：`Makefile` 新增 Slack/Web summary pytest 目標，GitHub workflow 安裝對應 requirements；新增 `src/slack_app/tests/test_confirm_send_flow.py`，補強 Cloud Task fallback 測試。
-
-#### Tests
-
-```bash
-pytest src/slack_app/tests/test_summary_delivery.py \
-       src/slack_app/tests/test_confirm_send_flow.py \
-       web-service/tests/test_summary_renderer.py
-```
-
 #### Next Session Preparation
 
 - 實際更新 Cloud Run 環境值（`SUMMARY_BASE_URL`, `SHORT_URL_BASE`, `SUMMARY_DELIVERY_HANDLER_URL`）指向已部署的 web service/slack app URL。
@@ -1334,6 +1314,7 @@ pytest src/slack_app/tests/test_summary_delivery.py \
 **User**: Stephen
 
 #### Objectives Completed ✅
+
 - [x] **Phase 1: Review and Enhance MCP Integration**
   - Reviewed all existing tool directories (`tools/`).
   - Identified `bigquery`, `firestore`, `gcs`, and `slack` as high-priority non-MCP tools.
@@ -1354,7 +1335,9 @@ pytest src/slack_app/tests/test_summary_delivery.py \
   - Fixed `ImportError` in `analysis-service` tests by adding `PYTHONPATH=analysis-service/src` to `Makefile`'s `test-analysis` target.
 
 #### Files Created/Modified
+
 **Created**:
+
 - `tools/bigquery/mcp_server.py` (MCP wrapper for BigQuery)
 - `tools/firestore/mcp_server.py` (MCP wrapper for Firestore)
 - `tools/gcs/mcp_server.py` (MCP wrapper for GCS)
@@ -1365,6 +1348,7 @@ pytest src/slack_app/tests/test_summary_delivery.py \
 - `docs/subagent_alternatives.md` (Document for Subagent alternatives)
 
 **Modified**:
+
 - `src/slack_app/monitoring/token_tracker.py` (Added model tracking)
 - `src/slack_app/mcp_adapter.py` (Integrated model tracking into MCP calls)
 - `Makefile` (Added `PYTHONPATH` for tests, added benchmark targets)
@@ -1373,19 +1357,23 @@ pytest src/slack_app/tests/test_summary_delivery.py \
 - `docs/transcription-service-optimization.md` (Fixed MD031 errors)
 
 #### Key Discussions & Decisions
+
 1. **MCP Wrapping Discrepancy**: Identified that `tools/bigquery`, `tools/firestore`, `tools/gcs`, and `tools/slack` were not fully MCP-wrapped according to project guidelines, leading to the creation of `mcp_server.py` files for them.
 2. **GitHub Actions Consolidation**: Decided to consolidate `lint.yml` into a more comprehensive `ci.yml` to streamline CI/CD and add more robust linting checks.
 3. **Benchmarking Strategy**: Established a plan for benchmarking Agent 5 and Agent 7, including mock runs and real API calls, with a decision to skip further benchmarking for now.
 4. **Subagent Alternatives**: Created a document to guide non-Claude models in achieving Subagent-like functionalities.
 
 #### Technical Highlights
+
 - Successfully implemented MCP wrappers for several GCP and Slack tools, enhancing tool discoverability and adherence to project principles.
 - Improved CI/CD robustness with a consolidated `ci.yml` and expanded linting checks.
 - Resolved Python import issues in CI tests by correctly setting `PYTHONPATH`.
 - Set up initial benchmarking infrastructure for Agent 5 and Agent 7.
 
 #### MCP & Subagent Usage 📊
+
 **MCP Tools Used**:
+
 - `mcp__bigquery.query`: Proposed (not yet used by AI)
 - `mcp__firestore.query`: Proposed (not yet used by AI)
 - `mcp__gcs.upload`: Proposed (not yet used by AI)
@@ -1393,9 +1381,11 @@ pytest src/slack_app/tests/test_summary_delivery.py \
 - `mcp__gcp_ai.generate_content`: Used for Agent 5 benchmark (1 time)
 
 **Subagent Usage**:
+
 - None (as Gemini is not Claude)
 
 **Direct Tools Used**:
+
 - `read_file`: Multiple times (for various files, e.g., `QUICK_START_FOR_AI.md`, `Makefile`, `token_tracker.py`, `mcp_adapter.py`, `DEVELOPMENT_LOG.md`, `memory/constitution.md`, `lint.yml`, `agent5_questionnaire.py`, `run_agent6_agent7.py`)
 - `list_directory`: Multiple times (for `tools/`, `.github/workflows/`)
 - `replace`: Multiple times (for `Makefile`, `token_tracker.py`, `mcp_adapter.py`, `.markdownlint-cli2.jsonc`, `docs/transcription-service-optimization.md`, `DEVELOPMENT_LOG.md`)
@@ -1403,21 +1393,25 @@ pytest src/slack_app/tests/test_summary_delivery.py \
 - `run_shell_command`: Multiple times (for `git status`, `git add`, `git rm`, `git commit`, `git push`, `npx markdownlint-cli2`, `make benchmark-agent5`, `make benchmark-agent7`, `mkdir`)
 
 **Token Efficiency**:
+
 - This session involved significant code exploration, planning, and implementation. The use of direct tools was necessary for these tasks. The MCP wrappers and token tracking enhancements are foundational for future token optimization.
 
 #### Known Issues & Risks
+
 1. **Untracked Files**: Several untracked files were present in the repository during `git status` checks. These were not part of the current task and were ignored.
 2. **Gemini Model Availability**: `gemini-2.5-flash` showed a `404 Publisher Model not found` error with a fallback to `genai SDK`. This indicates potential issues with model availability or configuration that might need further investigation if real API calls are to be consistently used.
 
 #### Open Questions
+
 1. **`memory/constitution.md` and `QUICK_START_FOR_AI.md` updates**: Need to update these documents to reflect the changes made in this session, especially regarding MCP tool usage and the new `ci.yml`.
 
 #### Next Session Preparation
+
 **For Next AI Assistant**:
+
 - Update `memory/constitution.constitution.md` to reflect the new MCP wrappers and `ci.yml`.
 - Update `QUICK_START_FOR_AI.md` to reference `docs/subagent_alternatives.md` and ensure consistency with `ci.yml`.
 - Review and update the "📌 Outstanding Work Tracker" in `DEVELOPMENT_LOG.md` based on the completed tasks.
-
 
 ## 📊 MCP & Subagent Usage Tracking (Added 2025-11-11)
 

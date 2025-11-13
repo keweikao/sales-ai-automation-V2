@@ -832,6 +832,7 @@ sales-ai-automation-V2/
 - 依 `memory/constitution.md` VIII：標題、清單、程式碼區塊前後需留一行空白，並在提交前消除所有 markdownlint 警告。
 - 所有 Markdown 變更未通過 `markdownlint-cli2` 不得提交（已加入自我檢查表）。
 - Note: These Markdown lint checks are now integrated into the `ci.yml` GitHub Actions workflow.
+- Note: These Markdown lint checks are now integrated into the `ci.yml` GitHub Actions workflow.
 
 ### Token Optimization First ⭐ **NEW**
 
