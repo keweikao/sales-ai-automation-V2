@@ -1,7 +1,7 @@
 .PHONY: test-analysis test-agent67 test-slack test-summary-web test-all
 
 test-analysis:
-	pytest analysis-service/tests
+	PYTHONPATH=analysis-service/src pytest analysis-service/tests
 
 test-agent67:
 	pytest analysis-service/tests/test_agent67_contract.py
