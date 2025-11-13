@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run markdownlint-cli2
+        uses: DavidAnson/markdownlint-cli2-action@v19
+        with:
+          globs: '**/*.md'
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install common dependencies for linting
+        run: |
+          python -m pip install --upgrade pip
+          pip install PyYAML # For YAML parsing
+
+      - name: Check Python syntax
+        run: |
+          find . -name "*.py" -print0 | xargs -0 python3 -m py_compile
+
+      - name: Check YAML syntax
+        run: |
+          find . -name "*.yaml" -o -name "*.yml" -print0 | xargs -0 -I {} python -c "import yaml; with open('{}', 'r') as f: yaml.safe_load(f)"
+
+      - name: Check JSON syntax
+        run: |
+          find . -name "*.json" -print0 | xargs -0 -I {} python -c "import json; with open('{}', 'r') as f: json.load(f)"
+
+      - name: Install test dependencies
+        run: |
+          pip install pytest
+          pip install -r analysis-service/requirements.txt
+          pip install -r src/slack_app/requirements.txt
+          pip install -r web-service/requirements.txt
+
+      - name: Run test suite
+        run: make test-all
