@@ -69,6 +69,7 @@
 >> - **MCP Server**：所有 AI 模型皆可使用（Claude, GPT, Gemini, 等）
 >> - **Subagent (Task tool)**：**僅限 Claude 專屬功能**
 >> - 如果您不是 Claude：請使用 MCP Server 或明確告知使用者「Subagent 功能僅 Claude 可用」
+>> - **非 Claude 模型如何實現 Subagent 功能**：請參考 `docs/subagent_alternatives.md` 獲取詳細指南。
 
 ### 第零步：強制 MCP/Subagent 評估（2 分鐘，任何操作前必做）
 
@@ -830,6 +831,7 @@ sales-ai-automation-V2/
   - `npx markdownlint-cli2 "**/*.md" "#node_modules"`（確保零 MD0xx）
 - 依 `memory/constitution.md` VIII：標題、清單、程式碼區塊前後需留一行空白，並在提交前消除所有 markdownlint 警告。
 - 所有 Markdown 變更未通過 `markdownlint-cli2` 不得提交（已加入自我檢查表）。
+- Note: These Markdown lint checks are now integrated into the `ci.yml` GitHub Actions workflow.
 
 ### Token Optimization First ⭐ **NEW**
 

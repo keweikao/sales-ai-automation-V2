@@ -110,7 +110,10 @@
 - MUST surround bullet lists and fenced code blocks with single blank lines, matching `markdownlint` MD031/MD032 requirements.
 - MUST specify a language for every fenced code block (MD040).
 - MUST run `markdownlint` (or an equivalent formatting check) before submitting documentation changes and resolve reported issues.
+- MUST ensure all Python, YAML, and JSON files adhere to their respective syntax rules, as checked by the CI pipeline (`ci.yml`).
 - SHOULD reference existing style guides (`DEVELOPMENT_GUIDELINES.md`, `docs/markdown-style.md` if present) when writing or updating docs.
+
+Note: The `lint.yml` workflow has been replaced by `ci.yml` for comprehensive CI/CD checks.
 
 **Compliance**: Pull requests or commits that introduce lint violations MUST be corrected before work is considered complete. Outstanding Work Tracker entries should reflect any lint fixes performed.
 
@@ -124,7 +127,10 @@
 
 - **MUST** use the `mcp__gcp_ai` tool for all interactions with the Gemini API. Direct calls to the `google.generativeai` library are prohibited.
 - **MUST** use `mcp__gcloud` tools (e.g., `run_deploy`, `run_services_list`) for all Cloud Run operations. Direct execution of `gcloud` shell commands is prohibited.
-- **MUST** use the `mcp__custom_firestore` tool for all Firestore queries. Direct calls to the `google.cloud.firestore` library are prohibited.
+- **MUST** use the `mcp__firestore.query` tool for all Firestore queries. Direct calls to the `google.cloud.firestore` library are prohibited.
+- **MUST** use the `mcp__bigquery.query` tool for all BigQuery operations. Direct calls to the `google.cloud.bigquery` library are prohibited.
+- **MUST** use the `mcp__gcs.upload` tool for all GCS upload operations. Direct calls to the `google.cloud.storage` library are prohibited.
+- **MUST** use the `mcp__slack.send_message` tool for all Slack message sending operations. Direct calls to the `slack_sdk` library are prohibited.
 - **SHOULD** create or enable MCP servers for any other frequently used API or service to maintain system-wide efficiency.
 
 **Compliance**: Any code that directly interacts with these services, bypassing their MCP server, is in violation of this constitution. It must be refactored to use the appropriate MCP tool before being considered complete.
