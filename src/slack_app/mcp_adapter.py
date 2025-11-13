@@ -467,6 +467,7 @@ class MCPAdapter:
         params: Dict[str, Any],
         timeout: int = 30,
         memory_limit_mb: int = 512,
+        model_name: Optional[str] = None # New parameter
     ) -> Dict[str, Any]:
         """
         Execute tool with automatic context optimization and PII protection.
@@ -480,6 +481,7 @@ class MCPAdapter:
             params: Tool parameters
             timeout: Max execution time
             memory_limit_mb: Max memory usage
+            model_name: The AI model initiating the tool call (e.g., "gemini-pro", "claude-opus") # New description
 
         Returns:
             {
@@ -508,7 +510,8 @@ class MCPAdapter:
                 tool_name=tool_name,
                 raw_data_size=result["result"]["total_count"],
                 filtered_data=result["result"]["results"],
-                context_mode=params.get("context_mode", "minimal")
+                context_mode=params.get("context_mode", "minimal"),
+                model_name=model_name # Pass the model name
             )
             result["token_optimization"] = metric
 

@@ -6,7 +6,7 @@ Token usage monitoring for MCP optimization validation.
 
 import tiktoken
 from datetime import datetime
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 
 class TokenUsageTracker:
@@ -21,7 +21,8 @@ class TokenUsageTracker:
         tool_name: str,
         raw_data_size: int,
         filtered_data: Any,
-        context_mode: str
+        context_mode: str,
+        model_name: Optional[str] = None # New parameter
     ) -> Dict[str, Any]:
         """
         Measure token reduction achieved.
@@ -31,6 +32,7 @@ class TokenUsageTracker:
             raw_data_size: Number of raw records returned
             filtered_data: Filtered data passed to model
             context_mode: Context mode used
+            model_name: The AI model used for the interaction (e.g., "gemini-pro", "claude-opus") # New description
 
         Returns:
             Optimization metrics
@@ -55,7 +57,8 @@ class TokenUsageTracker:
             "estimated_raw_tokens": estimated_raw_tokens,
             "filtered_tokens": filtered_tokens,
             "reduction_pct": round(reduction_pct, 2),
-            "target_met": reduction_pct >= 90  # Target: 90%+ reduction
+            "target_met": reduction_pct >= 90,  # Target: 90%+ reduction
+            "model_name": model_name # Store the model name
         }
 
         self.metrics.append(metric)
