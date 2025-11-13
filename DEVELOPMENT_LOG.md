@@ -1243,12 +1243,17 @@ This file tracks all development sessions to enable seamless continuation across
 #### Files Created/Modified
 
 **Created**
+
 - `web-service/`（Dockerfile、README、requirements、templates/static、`src/main.py`, `src/summary_renderer.py`）
+
 - `src/slack_app/notifications/summary_delivery.py`
 
 **Modified**
+
 - `src/slack_app/main.py`: 新增確認送出 Modal、Cloud Task 佇列、`/internal/summary-delivery` handler、Thread 回報。
+
 - `src/slack_app/requirements.txt`: 加入 `twilio`.
+
 - `src/slack_app/INTEGRATION_README.md`, `src/slack_app/integration_example.py`, `DEVELOPMENT_LOG.md`.
 
 #### Technical Highlights

@@ -1,7 +1,9 @@
 {
   "globs": [
     "**/*.md",
-    "!**/.pytest_cache/**/*.md"
+    "!**/.pytest_cache/**/*.md",
+    "!**/node_modules/**",
+    "!**/.claude/**"
   ],
   // https://github.com/DavidAnson/markdownlint/blob/main/doc/Rules.md
   "config": {
