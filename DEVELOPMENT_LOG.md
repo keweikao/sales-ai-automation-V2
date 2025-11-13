@@ -1302,10 +1302,122 @@ pytest src/slack_app/tests/test_summary_delivery.py \
        web-service/tests/test_summary_renderer.py
 ```
 
+### Session 34: 2025-11-12 (Cloud Run 環境變數 & CI 測試擴充)
+
+**Duration**: ~1.0 hour  
+**AI Model**: GPT-5 Codex (CLI)  
+**User**: Stephen
+
+#### Objectives Completed ✅
+
+- [x] 建立 Cloud Tasks `summary-delivery-queue`，更新 `cloudbuild.slack.yaml`（加入 `SUMMARY_BASE_URL/SHORT_URL_BASE/QUEUE` substitutions）與 `cloudbuild.summary-web-service.yaml`。
+- [x] 更新文件（Integration README、web-service README）記錄環境變數與佇列指令；`web-service` 部署流程改用新的 Cloud Build。
+- [x] 擴充 CI：`Makefile` 新增 Slack/Web summary pytest 目標，GitHub workflow 安裝對應 requirements；新增 `src/slack_app/tests/test_confirm_send_flow.py`，補強 Cloud Task fallback 測試。
+
+#### Tests
+
+```bash
+pytest src/slack_app/tests/test_summary_delivery.py \
+       src/slack_app/tests/test_confirm_send_flow.py \
+       web-service/tests/test_summary_renderer.py
+```
+
 #### Next Session Preparation
 
 - 實際更新 Cloud Run 環境值（`SUMMARY_BASE_URL`, `SHORT_URL_BASE`, `SUMMARY_DELIVERY_HANDLER_URL`）指向已部署的 web service/slack app URL。
 - 觀察 GitHub Workflow 跑 `make test-all` 的結果，必要時再補 Slack Bolt 端到端測試。
+
+### Session 35: 2025-11-13 (Enhance Multi-Model Support & CI/CD)
+
+**Duration**: ~X hours (will be filled in by user or estimated later)
+**AI Model**: Gemini
+**User**: Stephen
+
+#### Objectives Completed ✅
+- [x] **Phase 1: Review and Enhance MCP Integration**
+  - Reviewed all existing tool directories (`tools/`).
+  - Identified `bigquery`, `firestore`, `gcs`, and `slack` as high-priority non-MCP tools.
+  - Created `mcp_server.py` files for `tools/bigquery`, `tools/firestore`, `tools/gcs`, and `tools/slack`, effectively wrapping them as MCP tools.
+- [x] **Phase 2: Enhance Cost Monitoring and Performance Comparison**
+  - Extended `src/slack_app/monitoring/token_tracker.py` to include `model_name` tracking.
+  - Integrated `model_name` tracking into `src/slack_app/mcp_adapter.py`'s `execute_tool` method.
+  - Created `analysis-service/src/agents/benchmark_agent5.py` for Agent 5 benchmarking.
+  - Updated `Makefile` with `benchmark-agent5` and `benchmark-agent7` targets.
+  - Ran mock benchmarks for Agent 5 and Agent 7 successfully.
+  - Ran Agent 5 with `gemini-2.5-flash` (real API call) successfully.
+  - User chose to skip further benchmarking for now.
+- [x] **Phase 4: Addressing Subagent Limitations and Shared Context**
+  - Documented Subagent alternatives for non-Claude models in `docs/subagent_alternatives.md`.
+- [x] **CI/CD Enhancements**
+  - Consolidated `lint.yml` into a new `ci.yml` with comprehensive linting (Markdown, Python, YAML, JSON syntax checks).
+  - Deleted `lint.yml`.
+  - Fixed `ImportError` in `analysis-service` tests by adding `PYTHONPATH=analysis-service/src` to `Makefile`'s `test-analysis` target.
+
+#### Files Created/Modified
+**Created**:
+- `tools/bigquery/mcp_server.py` (MCP wrapper for BigQuery)
+- `tools/firestore/mcp_server.py` (MCP wrapper for Firestore)
+- `tools/gcs/mcp_server.py` (MCP wrapper for GCS)
+- `tools/slack/mcp_server.py` (MCP wrapper for Slack)
+- `.github/workflows/ci.yml` (Consolidated CI workflow)
+- `analysis-service/tests/fixtures/agent5/agent5_structured.json` (Mock fixture for Agent 5 benchmark)
+- `analysis-service/src/agents/benchmark_agent5.py` (Script for Agent 5 benchmarking)
+- `docs/subagent_alternatives.md` (Document for Subagent alternatives)
+
+**Modified**:
+- `src/slack_app/monitoring/token_tracker.py` (Added model tracking)
+- `src/slack_app/mcp_adapter.py` (Integrated model tracking into MCP calls)
+- `Makefile` (Added `PYTHONPATH` for tests, added benchmark targets)
+- `DEVELOPMENT_LOG.md` (Added this session log)
+- `.markdownlint-cli2.jsonc` (Excluded `node_modules` and `.claude` from linting)
+- `docs/transcription-service-optimization.md` (Fixed MD031 errors)
+
+#### Key Discussions & Decisions
+1. **MCP Wrapping Discrepancy**: Identified that `tools/bigquery`, `tools/firestore`, `tools/gcs`, and `tools/slack` were not fully MCP-wrapped according to project guidelines, leading to the creation of `mcp_server.py` files for them.
+2. **GitHub Actions Consolidation**: Decided to consolidate `lint.yml` into a more comprehensive `ci.yml` to streamline CI/CD and add more robust linting checks.
+3. **Benchmarking Strategy**: Established a plan for benchmarking Agent 5 and Agent 7, including mock runs and real API calls, with a decision to skip further benchmarking for now.
+4. **Subagent Alternatives**: Created a document to guide non-Claude models in achieving Subagent-like functionalities.
+
+#### Technical Highlights
+- Successfully implemented MCP wrappers for several GCP and Slack tools, enhancing tool discoverability and adherence to project principles.
+- Improved CI/CD robustness with a consolidated `ci.yml` and expanded linting checks.
+- Resolved Python import issues in CI tests by correctly setting `PYTHONPATH`.
+- Set up initial benchmarking infrastructure for Agent 5 and Agent 7.
+
+#### MCP & Subagent Usage 📊
+**MCP Tools Used**:
+- `mcp__bigquery.query`: Proposed (not yet used by AI)
+- `mcp__firestore.query`: Proposed (not yet used by AI)
+- `mcp__gcs.upload`: Proposed (not yet used by AI)
+- `mcp__slack.send_message`: Proposed (not yet used by AI)
+- `mcp__gcp_ai.generate_content`: Used for Agent 5 benchmark (1 time)
+
+**Subagent Usage**:
+- None (as Gemini is not Claude)
+
+**Direct Tools Used**:
+- `read_file`: Multiple times (for various files, e.g., `QUICK_START_FOR_AI.md`, `Makefile`, `token_tracker.py`, `mcp_adapter.py`, `DEVELOPMENT_LOG.md`, `memory/constitution.md`, `lint.yml`, `agent5_questionnaire.py`, `run_agent6_agent7.py`)
+- `list_directory`: Multiple times (for `tools/`, `.github/workflows/`)
+- `replace`: Multiple times (for `Makefile`, `token_tracker.py`, `mcp_adapter.py`, `.markdownlint-cli2.jsonc`, `docs/transcription-service-optimization.md`, `DEVELOPMENT_LOG.md`)
+- `write_file`: Multiple times (for `ci.yml`, `mcp_server.py` files, `benchmark_agent5.py`, `agent5_structured.json`, `subagent_alternatives.md`)
+- `run_shell_command`: Multiple times (for `git status`, `git add`, `git rm`, `git commit`, `git push`, `npx markdownlint-cli2`, `make benchmark-agent5`, `make benchmark-agent7`, `mkdir`)
+
+**Token Efficiency**:
+- This session involved significant code exploration, planning, and implementation. The use of direct tools was necessary for these tasks. The MCP wrappers and token tracking enhancements are foundational for future token optimization.
+
+#### Known Issues & Risks
+1. **Untracked Files**: Several untracked files were present in the repository during `git status` checks. These were not part of the current task and were ignored.
+2. **Gemini Model Availability**: `gemini-2.5-flash` showed a `404 Publisher Model not found` error with a fallback to `genai SDK`. This indicates potential issues with model availability or configuration that might need further investigation if real API calls are to be consistently used.
+
+#### Open Questions
+1. **`memory/constitution.md` and `QUICK_START_FOR_AI.md` updates**: Need to update these documents to reflect the changes made in this session, especially regarding MCP tool usage and the new `ci.yml`.
+
+#### Next Session Preparation
+**For Next AI Assistant**:
+- Update `memory/constitution.constitution.md` to reflect the new MCP wrappers and `ci.yml`.
+- Update `QUICK_START_FOR_AI.md` to reference `docs/subagent_alternatives.md` and ensure consistency with `ci.yml`.
+- Review and update the "📌 Outstanding Work Tracker" in `DEVELOPMENT_LOG.md` based on the completed tasks.
+
 
 ## 📊 MCP & Subagent Usage Tracking (Added 2025-11-11)
 
