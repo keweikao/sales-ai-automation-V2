@@ -32,7 +32,7 @@ def download_slack_file(file_info: dict, token: str) -> Path:
         download_url,
         headers={"Authorization": f"Bearer {token}"},
         stream=True,
-        timeout=60,
+        timeout=300,
     )
     response.raise_for_status()
 
@@ -59,7 +59,7 @@ def upload_to_gcs(
     client = storage_client or storage.Client()
     bucket = client.bucket(bucket_name)
     blob = bucket.blob(destination_blob)
-    blob.upload_from_filename(str(local_path))
+    blob.upload_from_filename(str(local_path), timeout=900)
 
     return f"gs://{bucket_name}/{destination_blob}"
 
