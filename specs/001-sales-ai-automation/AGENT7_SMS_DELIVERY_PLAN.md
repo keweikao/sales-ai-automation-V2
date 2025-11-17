@@ -120,12 +120,13 @@
 
 ### 2. 簡訊服務商
 
-**選型：Twilio（優先）或三竹資訊（備選）**
+**選型：互動資通簡訊API21**
 
 | 服務商 | 優點 | 缺點 | 費用/則 | 選擇 |
 |-------|------|------|--------|------|
-| **Twilio** | 國際支援、Python SDK 完善、Webhook 通知 | 費用較高 | ~$0.05 | ✅ **優先** |
-| **三竹資訊** | 台灣在地、客服支援 | 主要針對台灣 | ~$0.03 | ⭐ 備選 |
+| **互動資通簡訊API21** | 台灣在地、API 規格明確、支援多種簡訊類型 | 需自行實作 HTTP 請求、無現成 SDK | 待確認 | ✅ **優先** |
+| **Twilio** | 國際支援、Python SDK 完善、Webhook 通知 | 費用較高、非台灣在地服務 | ~$0.05 | ❌ 備選 |
+| **三竹資訊** | 台灣在地、客服支援 | 主要針對台灣 | ~$0.03 | ❌ 備選 |
 | AWS SNS | 與 AWS 整合 | 跨雲端管理複雜 | ~$0.04 | ❌ |
 
 ### 3. 短網址方案
@@ -161,7 +162,7 @@ cases/{caseId}
     "webPageUrl": "https://summary-webpage-service/.../...",  // 完整網址
     "shortUrl": "https://ichef.page/abc123",  // 短網址
     "accessToken": "random_secure_token_32_chars",  // 網頁存取 token
-    "smsMessageId": "twilio_message_sid",  // 簡訊服務商訊息 ID
+    "smsBatchId": "every8d_batch_id",  // 簡訊服務商批次 ID
     "smsSentAt": Timestamp,
     "smsDeliveredAt": Timestamp,
     "deliveryStatus": "sent" | "delivered" | "failed" | "bounced",
@@ -595,8 +596,7 @@ sms-service/
 ├── providers/
 │   ├── __init__.py
 │   ├── base.py
-│   ├── twilio_provider.py
-│   └── mitake_provider.py  # 三竹資訊（備選）
+│   └── every8d_provider.py  # 互動資通簡訊API21
 └── cloudbuild.yaml
 
 ```
@@ -608,7 +608,7 @@ sms-service/
 fastapi==0.104.1
 uvicorn[standard]==0.24.0
 google-cloud-firestore==2.13.1
-twilio==8.10.0
+requests>=2.31.0 # For EVERY8D API calls
 python-multipart==0.0.6
 
 ```
@@ -617,7 +617,7 @@ python-multipart==0.0.6
 
 - [ ] 目錄結構建立完成
 
-#### Task 3.2: 實作 Twilio Provider
+#### Task 3.2: 實作 EVERY8D Provider
 
 **檔案**：`sms-service/providers/base.py`
 
@@ -630,8 +630,9 @@ from typing import Optional
 @dataclass
 class SMSResult:
     success: bool
-    message_id: Optional[str] = None
+    batch_id: Optional[str] = None
     error: Optional[str] = None
+    raw_response: Optional[str] = None
 
 class SMSProvider(ABC):
     @abstractmethod
@@ -641,38 +642,109 @@ class SMSProvider(ABC):
 
 ```
 
-**檔案**：`sms-service/providers/twilio_provider.py`
+**檔案**：`sms-service/providers/every8d_provider.py`
 
 ```python
 
-from twilio.rest import Client
+import requests
+import json
+import logging
 from .base import SMSProvider, SMSResult
 
-class TwilioProvider(SMSProvider):
-    def __init__(self, account_sid: str, auth_token: str, from_number: str, webhook_url: str):
-        self.client = Client(account_sid, auth_token)
-        self.from_number = from_number
-        self.webhook_url = webhook_url
+logger = logging.getLogger(__name__)
+
+class Every8dProvider(SMSProvider):
+    def __init__(self, site_url: str, uid: str, pwd: str):
+        self.site_url = site_url.rstrip('/')
+        self.uid = uid
+        self.pwd = pwd
+        self.token = None # Token will be acquired on demand
+
+    def _get_token(self) -> Optional[str]:
+        """取得 EVERY8D 連線憑證"""
+        url = f"{self.site_url}/API21/HTTP/ConnectionHandler.ashx"
+        headers = {"Content-Type": "application/json"}
+        payload = {
+            "HandlerType": 3,
+            "VerifyType": 1,
+            "UID": self.uid,
+            "PWD": self.pwd
+        }
+        try:
+            response = requests.post(url, headers=headers, data=json.dumps(payload), timeout=10)
+            response.raise_for_status()
+            result = response.json()
+            if result.get("Result"):
+                self.token = result.get("Msg")
+                logger.info("Successfully acquired EVERY8D token.")
+                return self.token
+            else:
+                logger.error("Failed to acquire EVERY8D token: %s", result.get("Msg"))
+                return None
+        except requests.exceptions.RequestException as e:
+            logger.error("Request error acquiring EVERY8D token: %s", e)
+            return None
+        except json.JSONDecodeError:
+            logger.error("JSON decode error from EVERY8D token response: %s", response.text)
+            return None
 
     def send_sms(self, to: str, message: str) -> SMSResult:
+        """
+        使用 EVERY8D API 發送一般簡訊 (SendSMS.ashx)。
+        目前僅支援單一收件人。
+        """
+        if not self.token:
+            self._get_token()
+        if not self.token:
+            return SMSResult(success=False, error="Failed to get EVERY8D token.", raw_response="No token")
+
+        url = f"{self.site_url}/API21/HTTP/SendSMS.ashx"
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {self.token}"
+        }
+        payload = {
+            "UID": self.uid,
+            "PWD": self.pwd, # PWD is also required for SendSMS.ashx
+            "MSG": message,
+            "DEST": to,
+            "SB": "iCHEF會議摘要", # Subject for internal tracking
+            "RETRYTIME": 1440, # 24 hours validity
+        }
+
         try:
-            msg = self.client.messages.create(
-                body=message,
-                from_=self.from_number,
-                to=to,
-                status_callback=self.webhook_url
-            )
-            return SMSResult(success=True, message_id=msg.sid)
+            response = requests.post(url, headers=headers, data=json.dumps(payload), timeout=30)
+            response.raise_for_status()
+            result_str = response.text # EVERY8D returns plain text for success/failure
+            
+            # Parse the plain text response
+            # Success example: "9610040.00,2,2,0,c496f706-9b0f-4ff8-9644-9503edbb7064"
+            # Failure example: "-99,發生不明錯誤"
+            parts = result_str.split(',')
+            if len(parts) > 4 and parts[0].replace('.', '', 1).isdigit(): # Check if it looks like a success response
+                batch_id = parts[4].strip()
+                logger.info("EVERY8D SMS sent successfully to %s, Batch ID: %s", to, batch_id)
+                return SMSResult(success=True, batch_id=batch_id, raw_response=result_str)
+            else:
+                error_msg = result_str
+                logger.error("EVERY8D SMS failed to %s: %s", to, error_msg)
+                return SMSResult(success=False, error=error_msg, raw_response=result_str)
+
+        except requests.exceptions.RequestException as e:
+            logger.error("Request error sending EVERY8D SMS to %s: %s", to, e)
+            return SMSResult(success=False, error=str(e), raw_response=str(e))
         except Exception as e:
-            return SMSResult(success=False, error=str(e))
+            logger.error("Unexpected error sending EVERY8D SMS to %s: %s", to, e)
+            return SMSResult(success=False, error=str(e), raw_response=str(e))
 
 ```
 
 **驗收**：
 
-- [ ] Twilio SDK 整合成功
+- [ ] EVERY8D API 整合成功
+- [ ] Token 獲取機制正常
 - [ ] 發送簡訊功能正常
-- [ ] 錯誤處理完善
+- [ ] 錯誤處理完善，並返回 EVERY8D 的批次 ID
 
 #### Task 3.3: 實作 FastAPI 端點
 
@@ -684,17 +756,11 @@ class TwilioProvider(SMSProvider):
    - 從 request body 讀取 case_id
    - 從 Firestore 讀取案件資料
    - 組合簡訊內容
-   - 呼叫 Twilio API 發送
+   - 呼叫 EVERY8D API 發送
    - 更新 Firestore 狀態
    - 返回發送結果
 
-2. **POST /webhook/delivery-status**
-   - 接收 Twilio webhook 回調
-   - 解析投遞狀態
-   - 更新 Firestore
-   - （可選）發送 Slack 通知
-
-3. **GET /health**
+2. **GET /health**
    - 健康檢查
 
 **簡訊內容模板**：
@@ -718,18 +784,17 @@ iCHEF 團隊 敬上"""
 
 - [ ] 簡訊發送成功
 - [ ] Firestore 狀態更新正確
-- [ ] Webhook 接收正常
-- [ ] 投遞狀態追蹤正確
+- [ ] 投遞狀態追蹤正確 (透過 EVERY8D API 查詢)
 
 #### Task 3.4: 環境變數與 Secret 設定
 
 **Secret Manager 設定**：
 
 ```bash
-# 建立 Twilio secrets
-gcloud secrets create twilio-account-sid --data-file=- <<< "AC..."
-gcloud secrets create twilio-auth-token --data-file=- <<< "..."
-gcloud secrets create twilio-from-number --data-file=- <<< "+1..."
+# 建立 EVERY8D secrets
+gcloud secrets create every8d-site-url --data-file=- <<< "https://api.e8d.tw"
+gcloud secrets create every8d-uid --data-file=- <<< "YOUR_EVERY8D_UID"
+gcloud secrets create every8d-pwd --data-file=- <<< "YOUR_EVERY8D_PWD"
 
 ```
 
@@ -737,7 +802,7 @@ gcloud secrets create twilio-from-number --data-file=- <<< "+1..."
 
 ```yaml
 
-- '--set-secrets=TWILIO_ACCOUNT_SID=twilio-account-sid:latest,TWILIO_AUTH_TOKEN=twilio-auth-token:latest,TWILIO_FROM_NUMBER=twilio-from-number:latest'
+- '--set-secrets=EVERY8D_SITE_URL=every8d-site-url:latest,EVERY8D_UID=every8d-uid:latest,EVERY8D_PWD=every8d-pwd:latest'
 
 ```
 
@@ -1052,10 +1117,9 @@ def handle_send_summary_confirmed(ack, body, view, client, db):
 
 ### 環境準備
 
-- [ ] Twilio 帳號申請與設定
-- [ ] 取得 Twilio Account SID, Auth Token, From Number
+- [ ] EVERY8D 帳號申請與設定
+- [ ] 取得 EVERY8D Site URL, UID, PWD
 - [ ] 建立 GCP Secret Manager secrets
-- [ ] 設定 Twilio webhook URL
 - [ ] 準備短網址 domain（或使用現有 domain）
 
 ### GCP 資源建立
@@ -1137,7 +1201,6 @@ def handle_send_summary_confirmed(ack, body, view, client, db):
 - [ ] Access token 長度 32 字元以上
 - [ ] Access token 無法預測
 - [ ] 短網址無法枚舉
-- [ ] Webhook 驗證（Twilio 簽名）
 - [ ] Secrets 管理正確（不外洩）
 
 #### 使用者體驗
@@ -1172,16 +1235,16 @@ def handle_send_summary_confirmed(ack, body, view, client, db):
 | └ 任務執行 | 免費（前 100 萬次） | 500 次 | $0 |
 | **Cloud Storage（如使用）** | | | |
 | └ 儲存 | $0.020/GiB | 0.5 GiB | $0.01 |
-| **Twilio 簡訊費用** | | | |
-| └ 簡訊發送 | $0.05/則 | 250 則 | **$12.50** |
+| **EVERY8D 簡訊費用** | | | |
+| └ 簡訊發送 | 待確認 | 250 則 | **待確認** |
 | **其他** | | | |
 | └ 網路流量 | $0.12/GiB | 1 GiB | $0.12 |
-| **總計** | | | **~$12.67** |
+| **總計** | | | **待確認** |
 
 ### 成本優化建議
 
 1. **簡訊費用優化**（最大成本項）
-   - 評估三竹資訊等台灣在地服務商（可能 $0.03/則，節省 40%）
+   - 評估 EVERY8D 簡訊費用，若有更高性價比的方案可考慮
    - 實作簡訊批次發送（如適用）
    - 提供 Email 替代選項（成本極低）
 
@@ -1197,12 +1260,12 @@ def handle_send_summary_confirmed(ack, body, view, client, db):
 
 ### 成本擴展分析
 
-| 月案件數 | Twilio 簡訊費 | GCP 服務費 | 總費用 |
+| 月案件數 | EVERY8D 簡訊費 | GCP 服務費 | 總費用 |
 |---------|--------------|-----------|--------|
-| 100 | $5 | $0.70 | **$5.70** |
-| 250 | $12.50 | $1.75 | **$14.25** |
-| 500 | $25 | $3.50 | **$28.50** |
-| 1000 | $50 | $7.00 | **$57.00** |
+| 100 | 待確認 | $0.70 | **待確認** |
+| 250 | 待確認 | $1.75 | **待確認** |
+| 500 | 待確認 | $3.50 | **待確認** |
+| 1000 | 待確認 | $7.00 | **待確認** |
 
 **關鍵發現**：簡訊費用佔總成本 85-90%，優化重點應放在簡訊服務商選擇。
 
@@ -1269,23 +1332,7 @@ def generate_unique_short_code(db: firestore.Client, max_attempts: int = 5) -> s
 
 ```
 
-### C. Twilio Webhook 驗證
 
-```python
-
-from twilio.request_validator import RequestValidator
-
-def validate_twilio_webhook(request: Request, auth_token: str) -> bool:
-    """驗證 Twilio webhook 請求"""
-    validator = RequestValidator(auth_token)
-
-    url = str(request.url)
-    signature = request.headers.get('X-Twilio-Signature', '')
-    params = dict(request.form)
-
-    return validator.validate(url, params, signature)
-
-```
 
 ### D. 錯誤代碼定義
 
