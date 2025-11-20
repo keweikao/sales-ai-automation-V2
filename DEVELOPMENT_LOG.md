@@ -1413,6 +1413,156 @@ pytest src/slack_app/tests/test_summary_delivery.py \
 - Update `QUICK_START_FOR_AI.md` to reference `docs/subagent_alternatives.md` and ensure consistency with `ci.yml`.
 - Review and update the "📌 Outstanding Work Tracker" in `DEVELOPMENT_LOG.md` based on the completed tasks.
 
+---
+
+### Session 36: 2025-11-14 (Spec Kit Skeleton 匯出自動化)
+
+**Duration**: ~0.8 hour  
+**AI Model**: GPT-5 Codex (CLI)  
+**User**: Stephen
+
+#### Objectives Completed ✅
+- [x] 建立 `scripts/export_project_skeleton.py`，自動複製核心檔案與服務骨架
+- [x] 撰寫 `docs/project-skeleton-export.md`，說明匯出流程與後續動作
+
+#### Files Created/Modified
+**Created**:
+- `scripts/export_project_skeleton.py`
+- `docs/project-skeleton-export.md`
+
+#### Key Discussions & Decisions
+1. **骨架內容範圍**：採用 allowlist 方式複製 `Makefile`、`pyproject.toml`、`Dockerfile*`、`cloudbuild*.yaml`、`.specify/`、`tools/`、`scripts/`、`templates/`、`.devcontainer/` 等核心資產，搭配少數通用文件（QUICK START、DEVELOPMENT GUIDELINES、TOKEN OPTIMIZATION、constitution、部分 docs）。
+2. **服務與測試清空策略**：僅保留 `analysis-service`/`web-service` 的 Docker 與 requirements，並為 `src/`、`tests/`、`static/`、`templates/` 等目錄建立 `.gitkeep`，避免舊業務邏輯被複製。
+3. **輸出目的地保護**：預設禁止覆寫非空目錄，可用 `--overwrite` 覆蓋空資料夾，以免誤刪現有專案。
+
+#### Technical Highlights
+- Python 腳本使用 `Path` + `shutil.copytree(..., dirs_exist_ok=True)` 處理整個資料夾，並以 `ensure_empty_dirs` 自動產生 `.gitkeep`。
+- 將文件路徑分組（核心檔案、通用 docs、完整目錄、服務骨架、測試骨架），後續若有新增資產只需更新固定清單。
+- 腳本完成後以 `python3 scripts/export_project_skeleton.py /tmp/spec-kit-skeleton-XXXXXX` 實際驗證輸出，並清理暫存目錄，確保流程可重現。
+
+#### Tests
+
+```bash
+python3 scripts/export_project_skeleton.py /tmp/spec-kit-skeleton-4GrLW3
+```
+
+#### MCP & Subagent Usage 📊
+
+- **MCP Tools**: 0（已評估現有 server：gcloud、filesystem、slack、custom_firestore、gcp_ai、cloud_tasks，任務僅涉及本地檔案操作，因此未啟用）
+- **Subagent**: 0（非 Claude 模型）
+- **Direct Tools**: `Read`/`Edit` 多次、`Bash`（ls/cat/python3/git status/mktemp/rm 等）
+
+#### Known Issues & Risks
+1. `CORE_FILES` 與 `DOC_FILES` 為固定清單，日後若新增必要檔案需同步更新腳本，否則匯出骨架會遺漏。
+
+#### Open Questions
+1. 是否需要將 `docs/` 其他通用檔案（如 `local-development.md` 以外的 checklists）納入骨架？待與使用者確認。
+
+#### Next Session Preparation
+
+- 視專案演進調整清單（特別是新增代理或指令時），避免骨架落後主專案。
+- 若要支援 CLI 參數（例如自訂 docs allowlist），可在後續 Session 擴充腳本。
+
+---
+
+### Session 37: 2025-11-14 (analysis-service Cloud Run 部署 & Slack 驗證)
+
+**Duration**: ~0.7 hour  
+**AI Model**: GPT-5 Codex (CLI)  
+**User**: Stephen
+
+#### Objectives Completed ✅
+- [x] 重新部署 `analysis-service` 至 Cloud Run（asia-east1），確認新 revision `analysis-service-00051-g8x` 上線
+- [x] 執行 `analysis-service/test_slack_notification.py` 以 Firestore mock case 驗證 Slack 通知
+
+#### Files Created/Modified
+- 無程式碼修改（作業為部署與整合測試）
+
+#### Key Discussions & Decisions
+1. **MCP 使用評估**：已有 `gcloud` MCP server，但此次僅需一條 `gcloud run deploy` 指令，且需要沿用現有 deployment flags，因此直接使用 CLI，更可控也避免額外接線成本。
+2. **Slack 驗證策略**：優先使用 repo 內 `test_slack_notification.py` 建立 mock case/通知流程，透過 Secret Manager 抓取 `slack-bot-token`，確保內容與正式環境一致。
+
+#### Technical Highlights
+- 使用 `gcloud run deploy analysis-service ...`（需 elevated permission）成功部署，GCP 回傳 Service URL `https://analysis-service-497329205771.asia-east1.run.app`。
+- 第一次執行 Slack 測試時因 macOS 預設 SSL trust chain 缺少證書而失敗，改以 `SSL_CERT_FILE=$(python3 -m certifi)` 指向 certifi CA 後成功完成 Slack DM。
+- `test_slack_notification.py` 自動在 Firestore 建立 `TEST_CASE_SLACK_20251114`，並透過 Slack Bot 對 `stephen.kao@ichef.com.tw` 送出分析完成訊息。
+
+#### Tests & Commands
+- `gcloud run deploy analysis-service --image=asia-east1-docker.pkg.dev/sales-ai-automation-v2/sales-ai-automation-v2/analysis-service:latest --region=asia-east1 --platform=managed`
+- `SSL_CERT_FILE=$(python3 - <<'PY'\nimport certifi\nprint(certifi.where())\nPY`) SLACK_BOT_TOKEN="$(gcloud secrets versions access latest --secret=slack-bot-token)" python3 analysis-service/test_slack_notification.py TEST_CASE_SLACK_20251114 stephen.kao@ichef.com.tw completed`
+
+#### MCP & Subagent Usage 📊
+- **MCP Tools**: 0（評估後直接用 `gcloud` CLI）
+- **Subagent**: 0
+- **Direct Tools**: `gcloud run deploy`, `gcloud secrets versions access`, `python3 test_slack_notification.py`
+
+#### Known Issues & Risks
+1. `test_slack_notification.py` 會在 Firestore 留下 `cases/TEST_CASE_SLACK_20251114`，若不需保留建議後續清理，避免污染實際資料。
+2. SSL 憑證問題若在其他工作站重現，記得設定 `SSL_CERT_FILE` 或使用 `truststore` 套件注入系統憑證。
+
+#### Next Session Preparation
+- 若要避免測試資料堆積，可加上 cleanup 腳本自動刪除 `cases/TEST_CASE_SLACK_*`。
+- 針對 Slack 驗證流程寫入 `docs/agent8-phase1-deployment.md` 或 CI playbook，方便日後重複使用。
+
+---
+
+### Session 38: 2025-11-15 (Agent 7 Slack 同步自動化)
+
+**Duration**: ~1.0 hour  
+**AI Model**: GPT-5 Codex (CLI)  
+**User**: Stephen
+
+#### Objectives Completed ✅
+- [x] 在 `analysis-service/src/main.py` 加入 Agent 7 通知函式與環境變數，確保分析成功後自動呼叫 Slack App
+- [x] 更新 `docs/agent8-phase1-deployment.md` Step 6，列出 `AGENT6/7_NOTIFICATION_*` 必填環境變數
+- [x] 切換 `gcloud` 帳號並重新部署 `analysis-service`（revision `analysis-service-00054-7ct`）
+
+#### Technical Highlights
+- `trigger_agent7_notification()` 與 Agent 6 相同，預設沿用 `SLACK_PROGRESS_TOKEN` 作為驗證 header，讓 Agent 7 摘要在音檔流程完成後自動推送至 Slack Thread。
+- 文件新增表格說明需在 Cloud Run 設定的 webhook URL 及 Token，讓部署人員一次完成 Agent 6/7 自動化。
+- 注意到 `gcloud` 預設帳號換成 `keweikao@gmail.com` 後無法部署，改用 `gcloud config set account stephen.kao@ichef.com.tw` 再執行 `gcloud run deploy` 成功。
+
+#### Tests & Commands
+- `python3 -m compileall analysis-service/src`
+- `gcloud config set account stephen.kao@ichef.com.tw`
+- `gcloud run deploy analysis-service --image=asia-east1-docker.pkg.dev/sales-ai-automation-v2/sales-ai-automation-v2/analysis-service:latest --region=asia-east1 --project=sales-ai-automation-v2 --platform=managed`
+
+#### MCP & Subagent Usage 📊
+- **MCP Tools**: 0
+- **Subagent**: 0
+- **Direct Tools**: `Read`/`Edit`, `python3`, `gcloud run deploy`
+
+#### Known Issues & Risks
+1. 若 Cloud Run 尚未設定 `AGENT7_NOTIFICATION_ENDPOINT` / `AGENT7_NOTIFICATION_TOKEN`，新的 webhook 仍會直接跳過；部署時需同步更新。
+
+#### Next Session Preparation
+- 視需求補上自動化測試，模擬 Agent 7 成功並驗證 Slack webhook 是否被呼叫。
+- 可考慮將 Agent 6/7 webhook 流程抽象成共用 helper，方便未來擴充。
+
+---
+
+### Session 39: 2025-11-15 (Agent 7 驗證依賴安裝問題)
+
+**Duration**: ~0.3 hour  
+**AI Model**: GPT-5 Codex (CLI)  
+**User**: Stephen
+
+#### Objectives Completed ✅
+- [ ] 執行 `analysis-service/src/agents/run_agent6_agent7.py` 模擬測試（因套件安裝失敗而未完成）
+
+#### Technical Highlights
+- 嘗試 `pip3 install google-generativeai` 以滿足 Agent 6/7 mock 測試所需依賴，但環境無法連線至 PyPI（多次 `Failed to establish a new connection: [Errno 8]`），最終顯示「No matching distribution found for google-generativeai」。
+- 由於缺少此套件，`analysis-service/src/agents/run_agent6_agent7.py --agents both --mock-scenario positive` 仍無法執行，導致 Agent 7 Slack webhook 的離線驗證暫時無法進行。
+
+#### Tests & Commands
+- `pip3 install google-generativeai` → 失敗（網路受限）
+
+#### Known Issues & Risks
+1. 現有環境無法安裝 `google-generativeai`，故 Agent 7 相關 mock 測試無法在此執行；需要可連線的環境或離線套件。
+
+#### Next Session Preparation
+- 於具網路權限的環境安裝 `google-generativeai`，或提供 wheel/whl 檔後再執行 `run_agent6_agent7.py`、`make test-agent67` 驗證流程。
+
 ## 📊 MCP & Subagent Usage Tracking (Added 2025-11-11)
 
 > **目的**: 追蹤每個 Session 的 MCP 和 Subagent 使用情況，以持續優化 Token 使用效率

@@ -29,6 +29,30 @@ class SlackNotifier:
         self.client = WebClient(token=slack_token)
         self.db = db
 
+    @staticmethod
+    def _serialize_firestore_data(data: Any) -> Any:
+        """
+        Convert Firestore data with special types to JSON-serializable format.
+
+        Recursively converts DatetimeWithNanoseconds objects to ISO format strings.
+
+        Args:
+            data: Data from Firestore (dict, list, or primitive type)
+
+        Returns:
+            JSON-serializable version of the data
+        """
+        from google.cloud.firestore_v1._helpers import DatetimeWithNanoseconds
+
+        if isinstance(data, DatetimeWithNanoseconds):
+            return data.isoformat()
+        elif isinstance(data, dict):
+            return {k: SlackNotifier._serialize_firestore_data(v) for k, v in data.items()}
+        elif isinstance(data, list):
+            return [SlackNotifier._serialize_firestore_data(item) for item in data]
+        else:
+            return data
+
     def get_user_slack_id(self, uploaded_by: str) -> Optional[str]:
         """
         Get Slack user ID from email or user identifier.
@@ -194,16 +218,7 @@ class SlackNotifier:
                             },
                             "value": f"view_analysis_{case_id}",
                             "action_id": "view_full_analysis"
-                        },
-                        {
-                            "type": "button",
-                            "text": {
-                                "type": "plain_text",
-                                "text": "💬 追問 Agent 8"
-                            },
-                            "value": f"ask_agent8_{case_id}",
-                            "action_id": "ask_agent8"
-                        },
+                        }
                     ]
                 }
             ])
@@ -253,6 +268,10 @@ class SlackNotifier:
                 return False
 
             case_data = case_doc.to_dict()
+
+            # Serialize Firestore data to handle DatetimeWithNanoseconds objects
+            case_data = self._serialize_firestore_data(case_data)
+
             analysis_data = case_data.get('analysis', {})
 
             if not analysis_data:
@@ -354,6 +373,8 @@ class SlackNotifier:
                 case_doc = case_ref.get()
                 if case_doc.exists:
                     case_data = case_doc.to_dict()
+                    # Serialize Firestore data to handle DatetimeWithNanoseconds objects
+                    case_data = self._serialize_firestore_data(case_data)
                     uploaded_by = case_data.get('uploadedBy')
                     if uploaded_by:
                         user_id = self.get_user_slack_id(uploaded_by)

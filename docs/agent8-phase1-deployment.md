@@ -219,6 +219,54 @@ gcloud logging read "resource.type=cloud_run_revision AND resource.labels.servic
   --format json
 ```
 
+---
+
+### Step 6: 驗證 analysis-service Slack 通知
+
+部署完成後，建議執行 analysis-service 提供的整合測試，確保 Firestore → Slack DM 通知流程仍可運作。  
+若要自動推送 Agent 6/7 卡片，請確認在 `analysis-service` 的 Cloud Run 服務上設定下列環境變數（對應 Slack App 的內部 webhook）：
+
+| 變數 | 說明 | 建議值 |
+|------|------|--------|
+| `AGENT6_NOTIFICATION_ENDPOINT` | Slack App `/internal/agent6-notification` URL | `https://slack-app-<project>.run.app/internal/agent6-notification` |
+| `AGENT6_NOTIFICATION_TOKEN` | 進入點驗證 Token（可與 `SLACK_PROGRESS_TOKEN` 共用） | `${SLACK_PROGRESS_TOKEN}` |
+| `AGENT7_NOTIFICATION_ENDPOINT` | Slack App `/internal/agent7-notification` URL | `https://slack-app-<project>.run.app/internal/agent7-notification` |
+| `AGENT7_NOTIFICATION_TOKEN` | 驗證 Token（預設 fallback 到 `SLACK_PROGRESS_TOKEN`） | `${SLACK_PROGRESS_TOKEN}` |
+
+設定完成後，analysis-service 在 Agent 6/7 成功時會自動呼叫 Slack App 並於同一個 Thread 推送卡片、客戶摘要與編輯控制。
+
+#### 6.1 取得憑證與 Token
+
+```bash
+# 1. 從 Secret Manager 取得 Slack Bot Token
+export SLACK_BOT_TOKEN="$(gcloud secrets versions access latest --secret=slack-bot-token)"
+
+# 2. 設定 SSL 信任，避免 macOS 預設憑證不足
+export SSL_CERT_FILE="$(python3 - <<'PY'
+import certifi
+print(certifi.where())
+PY
+)"
+```
+
+#### 6.2 執行測試腳本
+
+```bash
+cd analysis-service
+python3 test_slack_notification.py TEST_CASE_SLACK_001 your.email@example.com completed
+```
+
+- 腳本會在 Firestore `cases` collection 建立 mock 資料並呼叫 Slack API。
+- 結果會顯示在終端機；若成功，Slack DM 會寄給 `your.email@example.com` 對應的使用者。
+
+#### 6.3 清理測試資料（可選）
+
+```bash
+gcloud firestore documents delete cases/TEST_CASE_SLACK_001 --project=sales-ai-automation-v2 --quiet
+```
+
+> ✅ 將此流程寫入交接文件，可以確保每次分析服務部署後都能快速驗證 Slack 通知是否可用。
+
 **關鍵日誌**：
 
 - ✅ `收到 /ask-agent8 命令`

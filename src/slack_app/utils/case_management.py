@@ -77,6 +77,12 @@ def build_initial_case_document(
         "salesRepName": sales_rep.get("name", ""),
         "salesRepEmail": sales_rep.get("email", ""),
         "salesRepSlackId": sales_rep.get("slack_id", ""),
+        "uploadedBy": sales_rep.get("slack_id", ""),
+        "uploadedByName": sales_rep.get("name", ""),
+        "channelId": channel_id,
+        "channelName": None,
+        "threadTs": thread_ts or message_ts,
+        "fileUrl": file_info.get("url_private", ""),
         "unit": unit,
         "notes": notes or "",
         "audio": {

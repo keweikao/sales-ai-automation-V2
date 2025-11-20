@@ -1224,6 +1224,94 @@ def handle_confirm_send_summary_modal(ack, body, view, logger):  # type: ignore[
 
 
 # ============================================
+# Interactive Components (Analysis Results)
+# ============================================
+
+
+@app.action("view_full_analysis")
+def handle_view_full_analysis_action(ack, body, client, logger):  # type: ignore[override]
+    """
+    Handle the "查看完整分析" button from analysis completion notifications.
+    """
+    ack()
+    logger.info("view_full_analysis button clicked: %s", body)
+
+    # TODO: Implement view full analysis functionality
+    # For now, just acknowledge the button click
+    # In the future, this could open a modal with detailed analysis results
+
+    actions = body.get("actions") or []
+    action_value = actions[0].get("value") if actions else None
+    case_id = _extract_case_id(action_value, "view_analysis_")
+
+    if case_id:
+        logger.info(f"User requested full analysis for case {case_id}")
+        # Can send an ephemeral message or open a modal here
+        client.chat_postEphemeral(
+            channel=body["container"]["channel_id"],
+            user=body["user"]["id"],
+            text=f"完整分析功能開發中。案件 ID: {case_id}"
+        )
+
+
+@app.action("view_full_agent6")
+def handle_view_full_agent6_action(ack, body, client, logger):  # type: ignore[override]
+    """
+    Handle the "查看完整分析" button from Agent 6 notifications.
+    """
+    ack()
+    logger.info("view_full_agent6 button clicked: %s", body)
+
+    actions = body.get("actions") or []
+    action_value = actions[0].get("value") if actions else None
+    case_id = _extract_case_id(action_value, "view_full_agent6_")
+
+    if case_id:
+        logger.info(f"User requested full Agent 6 analysis for case {case_id}")
+        client.chat_postEphemeral(
+            channel=body["container"]["channel_id"],
+            user=body["user"]["id"],
+            text=f"完整 Agent 6 分析功能開發中。案件 ID: {case_id}"
+        )
+
+
+@app.action("ask_agent8")
+def handle_ask_agent8_button_action(ack, body, logger):  # type: ignore[override]
+    """
+    Handle the "追問 Agent 8" button from analysis notifications.
+    Note: This is different from the /ask-agent8 slash command.
+    """
+    ack()
+    logger.info("ask_agent8 button clicked: %s", body)
+
+    actions = body.get("actions") or []
+    action_value = actions[0].get("value") if actions else None
+    case_id = _extract_case_id(action_value, "ask_agent8_")
+
+    if case_id:
+        logger.info(f"User wants to ask Agent 8 about case {case_id}")
+        # TODO: Could open a modal for the user to type their question
+        # or redirect to the /ask-agent8 command
+
+
+@app.action("retry_analysis")
+def handle_retry_analysis_action(ack, body, logger):  # type: ignore[override]
+    """
+    Handle the "重新分析" button for failed analyses.
+    """
+    ack()
+    logger.info("retry_analysis button clicked: %s", body)
+
+    actions = body.get("actions") or []
+    action_value = actions[0].get("value") if actions else None
+    case_id = _extract_case_id(action_value, "retry_analysis_")
+
+    if case_id:
+        logger.info(f"User requested retry for case {case_id}")
+        # TODO: Trigger reanalysis for the case
+
+
+# ============================================
 # Flask Routes
 # ============================================
 

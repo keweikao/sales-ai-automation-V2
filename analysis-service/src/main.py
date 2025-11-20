@@ -46,6 +46,8 @@ GEMINI_MODEL_DEFAULT = "gemini-flash-latest"  # Default fallback
 
 AGENT6_NOTIFICATION_ENDPOINT = os.environ.get("AGENT6_NOTIFICATION_ENDPOINT")
 AGENT6_NOTIFICATION_TOKEN = os.environ.get("AGENT6_NOTIFICATION_TOKEN")
+AGENT7_NOTIFICATION_ENDPOINT = os.environ.get("AGENT7_NOTIFICATION_ENDPOINT")
+AGENT7_NOTIFICATION_TOKEN = os.environ.get("AGENT7_NOTIFICATION_TOKEN")
 
 # --- Initialize Clients ---
 try:
@@ -90,15 +92,23 @@ except Exception as e:
 
 try:
     # Slack notifier for analysis completion notifications
-    if db and slack_client:
+    slack_token = os.environ.get("SLACK_BOT_TOKEN")
+    if db and slack_client and slack_token:
         slack_notifier = SlackNotifier(
-            slack_token=os.environ.get("SLACK_BOT_TOKEN"),
+            slack_token=slack_token,
             db=db
         )
         logger.info("Slack Notifier initialized successfully")
     else:
         slack_notifier = None
-        logger.warning("Slack Notifier not initialized (missing dependencies)")
+        missing_deps = []
+        if not db:
+            missing_deps.append("Firestore")
+        if not slack_client:
+            missing_deps.append("slack_client")
+        if not slack_token:
+            missing_deps.append("SLACK_BOT_TOKEN")
+        logger.warning(f"Slack Notifier not initialized (missing: {', '.join(missing_deps)})")
 except Exception as e:
     logger.error(f"Failed to initialize Slack Notifier: {e}", exc_info=True)
     slack_notifier = None
@@ -134,6 +144,38 @@ def trigger_agent6_notification(case_id: str) -> None:
                 )
     except urllib.error.URLError as exc:
         logger.error("Failed to trigger Agent 6 notification for %s: %s", case_id, exc)
+
+
+def trigger_agent7_notification(case_id: str) -> None:
+    """
+    Notify Slack app to send Agent 7 preview via internal endpoint.
+    """
+    if not AGENT7_NOTIFICATION_ENDPOINT:
+        return
+
+    payload = json.dumps({"caseId": case_id}).encode("utf-8")
+    headers = {"Content-Type": "application/json"}
+    token = AGENT7_NOTIFICATION_TOKEN or os.environ.get("SLACK_PROGRESS_TOKEN")
+    if token:
+        headers["X-Progress-Token"] = token
+
+    request_obj = urllib.request.Request(
+        AGENT7_NOTIFICATION_ENDPOINT,
+        data=payload,
+        headers=headers,
+        method="POST",
+    )
+
+    try:
+        with urllib.request.urlopen(request_obj, timeout=10) as response:  # nosec B310
+            if response.status >= 300:
+                logger.warning(
+                    "Agent 7 notification endpoint returned %s for case %s",
+                    response.status,
+                    case_id,
+                )
+    except urllib.error.URLError as exc:
+        logger.error("Failed to trigger Agent 7 notification for %s: %s", case_id, exc)
 
 
 # --- Helper Functions ---
@@ -276,6 +318,22 @@ def save_analysis_to_firestore(case_id: str, analysis_result: Any) -> bool:
             if raw_output:
                 analysis_data['rawOutput'] = raw_output
 
+        # Promote Agent 7 customerSummary to top-level analysis fields
+        agent7_result = analysis_result.agent_results.get('agent7')
+        if agent7_result and agent7_result.success and agent7_result.data:
+            customer_summary = agent7_result.data.get('customerSummary')
+            markdown = agent7_result.data.get('markdown')
+            if customer_summary or markdown:
+                summary_doc = customer_summary.copy() if customer_summary else {}
+                if markdown:
+                    summary_doc['markdown'] = markdown
+                    summary_doc.setdefault('originalMarkdown', markdown)
+                summary_doc.setdefault('isEdited', False)
+                summary_doc.setdefault('editCount', 0)
+                summary_doc.setdefault('editedBy', None)
+                summary_doc.setdefault('editHistory', [])
+                analysis_data['customerSummary'] = summary_doc
+
         # Update Firestore
         case_ref.update({
             'analysis': analysis_data,
@@ -376,6 +434,10 @@ def analyze_transcript():
         agent6_result = analysis_result.agent_results.get("agent6")
         if agent6_result and agent6_result.success:
             trigger_agent6_notification(case_id)
+
+        agent7_result = analysis_result.agent_results.get("agent7")
+        if agent7_result and agent7_result.success:
+            trigger_agent7_notification(case_id)
 
         # Determine response based on analysis result
         if analysis_result.success:

@@ -608,15 +608,45 @@ class MultiAgentOrchestrator:
         agents = self._ensure_agents()
         agent_results = {}
 
-        # --- Phase 1: Agent 1 (Participant Profile) ---
-        logger.info("Phase 1: Executing Agent 1 (Participant)")
-        result_agent1 = await self._run_agent_1(
-            agents['agent1'],
-            transcript_segments,
-            speaker_statistics,
-            conversation_metadata
+        # --- Phase 1: Agents 1, 5, 7 (Participant, Questionnaire, Summary) in parallel ---
+        logger.info("Phase 1: Executing Agents 1, 5, 7 in parallel")
+        
+        # Prepare metadata for Agent 7
+        case_metadata = {
+            "caseId": case_id,
+            "customer": {
+                "storeName": (conversation_metadata or {}).get("storeName"),
+                "customerId": (conversation_metadata or {}).get("customerId"),
+            },
+        }
+
+        result_agent1, result_agent5, result_agent7 = await asyncio.gather(
+            self._run_agent_1(
+                agents['agent1'],
+                transcript_segments,
+                speaker_statistics,
+                conversation_metadata
+            ),
+            self._run_agent_5(
+                agents['agent5'],
+                transcript_segments,
+                None, # participant_insights
+                None, # sentiment_insights
+                None, # product_needs
+                conversation_metadata
+            ),
+            self._run_agent_7(
+                agents['agent7'],
+                transcript_segments,
+                case_metadata,
+                conversation_metadata
+            ),
+            return_exceptions=False
         )
+        
         agent_results['agent1'] = result_agent1
+        agent_results['agent5'] = result_agent5
+        agent_results['agent7'] = result_agent7
 
         if not result_agent1.success:
             logger.error("Agent 1 failed - aborting analysis pipeline")
@@ -635,16 +665,9 @@ class MultiAgentOrchestrator:
         if not result_agent2.success:
             logger.warning("Agent 2 failed - continuing with limited data")
 
-        # --- Phase 3: Agents 3, 4, 7 (Needs, Competitor, Summary) in parallel ---
-        logger.info("Phase 3: Executing Agents 3, 4, 7 in parallel")
-        case_metadata = {
-            "caseId": case_id,
-            "customer": {
-                "storeName": (conversation_metadata or {}).get("storeName"),
-                "customerId": (conversation_metadata or {}).get("customerId"),
-            },
-        }
-        result_agent3, result_agent4, result_agent7 = await asyncio.gather(
+        # --- Phase 3: Agents 3, 4 (Needs, Competitor) in parallel ---
+        logger.info("Phase 3: Executing Agents 3, 4 in parallel")
+        result_agent3, result_agent4 = await asyncio.gather(
             self._run_agent_3(
                 agents['agent3'],
                 transcript_segments,
@@ -659,30 +682,10 @@ class MultiAgentOrchestrator:
                 result_agent2.data if result_agent2.success else None,
                 conversation_metadata
             ),
-            self._run_agent_7(
-                agents['agent7'],
-                transcript_segments,
-                case_metadata,
-                conversation_metadata
-            ),
             return_exceptions=False
         )
         agent_results['agent3'] = result_agent3
         agent_results['agent4'] = result_agent4
-        agent_results['agent7'] = result_agent7
-
-
-        # --- Phase 4: Agent 5 (Questionnaire) ---
-        logger.info("Phase 4: Executing Agent 5 (Questionnaire)")
-        result_agent5 = await self._run_agent_5(
-            agents['agent5'],
-            transcript_segments,
-            result_agent1.data,
-            result_agent2.data if result_agent2.success else None,
-            result_agent3.data if result_agent3.success else None,
-            conversation_metadata
-        )
-        agent_results['agent5'] = result_agent5
 
         # --- Phase 5: Agent 6 (Sales Coach) ---
         successful_so_far = [r for r in agent_results.values() if r.success and r.agent_id in ["agent1", "agent2", "agent3", "agent4", "agent5"]]

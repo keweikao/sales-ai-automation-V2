@@ -180,35 +180,8 @@ class Agent6Notifier:
                 }
             })
 
-        # Action buttons
-        blocks.extend([
-            {"type": "divider"},
-            {
-                "type": "actions",
-                "elements": [
-                    {
-                        "type": "button",
-                        "text": {
-                            "type": "plain_text",
-                            "text": "📄 查看完整分析",
-                            "emoji": True
-                        },
-                        "value": f"view_full_agent6_{case_id}",
-                        "action_id": "view_full_agent6"
-                    },
-                    {
-                        "type": "button",
-                        "text": {
-                            "type": "plain_text",
-                            "text": "💬 詢問 Agent 8",
-                            "emoji": True
-                        },
-                        "value": f"ask_agent8_{case_id}",
-                        "action_id": "ask_agent8"
-                    }
-                ]
-            }
-        ])
+        # Note: Action buttons removed as per user feedback
+        # The notification already displays the full analysis inline
 
         return blocks
 
@@ -272,9 +245,11 @@ class Agent6Notifier:
                 logger.warning(f"Agent 6 not successful for case {case_id}")
                 return False
 
-            agent6_data = agent6_result.get('data', {})
+            # Agent 6 data structure: data.structured contains the analysis results
+            agent6_raw_data = agent6_result.get('data', {})
+            agent6_data = agent6_raw_data.get('structured', {})
             if not agent6_data:
-                logger.error(f"No Agent 6 data for case {case_id}")
+                logger.error(f"No Agent 6 structured data for case {case_id}")
                 return False
 
             if not user_id:
