@@ -42,6 +42,7 @@ class SalesCoachAgent(GeminiJSONAgent):
         transcript_text: Optional[str] = None,
         case_metadata: Optional[Dict[str, Any]] = None,
         conversation_metadata: Optional[Dict[str, Any]] = None,
+        user_preferences: Optional[str] = None,
     ) -> str:
         transcript_block = ""
         if transcript_text:
@@ -73,6 +74,12 @@ class SalesCoachAgent(GeminiJSONAgent):
             transcript_block,
         ]
 
+        if user_preferences:
+            sections.extend([
+                "\n\n=== User Preferences (MUST FOLLOW) ===\n",
+                user_preferences
+            ])
+
         return "".join(sections).strip()
 
     def analyze(
@@ -83,6 +90,7 @@ class SalesCoachAgent(GeminiJSONAgent):
         transcript_text: Optional[str] = None,
         case_metadata: Optional[Dict[str, Any]] = None,
         conversation_metadata: Optional[Dict[str, Any]] = None,
+        user_preferences: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Run prompt and return structured + rawOutput payload."""
         if not transcript_text and not transcript_segments:
@@ -94,6 +102,7 @@ class SalesCoachAgent(GeminiJSONAgent):
             transcript_text=transcript_text,
             case_metadata=case_metadata,
             conversation_metadata=conversation_metadata,
+            user_preferences=user_preferences,
         )
 
         payload = response.data

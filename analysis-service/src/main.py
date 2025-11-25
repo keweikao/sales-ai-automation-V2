@@ -39,10 +39,10 @@ logger = logging.getLogger(__name__)
 flask_app = Flask(__name__)
 
 # --- Model Configuration ---
-# Using Gemini API (non-Vertex AI) with different models based on complexity
-GEMINI_MODEL_FAST = "gemini-2.5-flash"  # For simple tasks (Agent 1, 2, 4)
-GEMINI_MODEL_PRO = "gemini-2.5-pro"     # For complex tasks (Agent 3, 5, 8)
-GEMINI_MODEL_DEFAULT = "gemini-flash-latest"  # Default fallback
+# Using Gemini API (non-Vertex AI) - all agents use gemini-2.5-flash
+GEMINI_MODEL_FAST = "gemini-2.5-flash"  # For all agents
+GEMINI_MODEL_PRO = "gemini-2.5-flash"   # For all agents (using same model)
+GEMINI_MODEL_DEFAULT = "gemini-2.5-flash"  # Default fallback
 
 AGENT6_NOTIFICATION_ENDPOINT = os.environ.get("AGENT6_NOTIFICATION_ENDPOINT")
 AGENT6_NOTIFICATION_TOKEN = os.environ.get("AGENT6_NOTIFICATION_TOKEN")

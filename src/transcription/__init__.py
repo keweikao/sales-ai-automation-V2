@@ -2,18 +2,7 @@
 Optimized Audio Transcription Module
 """
 
-from .pipeline import OptimizedTranscriptionPipeline
-from .vad.processor import VADProcessor
-from .chunking.chunker import AudioChunker
-from .parallel.transcriber import ParallelTranscriber
-from .merging.merger import TranscriptionMerger
-
-__all__ = [
-    "OptimizedTranscriptionPipeline",
-    "VADProcessor",
-    "AudioChunker",
-    "ParallelTranscriber",
-    "TranscriptionMerger"
-]
+# We do NOT import submodules here to prevent eager loading of heavy dependencies (like torch/whisper)
+# when they are not needed (e.g. when using Gemini engine).
 
 __version__ = "1.0.0"

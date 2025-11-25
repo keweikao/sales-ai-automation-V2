@@ -1,4 +1,4 @@
-.PHONY: test-analysis test-agent67 test-slack test-summary-web test-all benchmark-agent5 benchmark-agent7
+.PHONY: test-analysis test-agent67 test-slack test-summary-web test-code-intelligence test-all benchmark-agent5 benchmark-agent7 build-code-index
 
 test-analysis:
 	PYTHONPATH=analysis-service/src pytest analysis-service/tests
@@ -14,7 +14,13 @@ test-slack:
 test-summary-web:
 	pytest web-service/tests
 
-test-all: test-analysis test-agent67 test-slack test-summary-web
+test-code-intelligence:
+	pytest tests/code_intelligence -v
+
+test-all: test-analysis test-agent67 test-slack test-summary-web test-code-intelligence
+
+build-code-index:
+	python3 tools/code_intelligence/cli.py build-index --force
 
 benchmark-agent5:
 	PYTHONPATH=analysis-service/src python3 analysis-service/src/agents/benchmark_agent5.py --mock-scenario positive --output-dir tmp/agent5_benchmark

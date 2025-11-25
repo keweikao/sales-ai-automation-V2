@@ -1332,8 +1332,6 @@ def generate_unique_short_code(db: firestore.Client, max_attempts: int = 5) -> s
 
 ```
 
-
-
 ### D. 錯誤代碼定義
 
 | 錯誤代碼 | 說明 | 處理方式 |

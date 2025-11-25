@@ -1,0 +1,15 @@
+{
+    "mcpServers": {
+        "kit-dev": {
+            "command": "uvx",
+            "args": [
+                "kit-dev-mcp",
+                "--repo-path",
+                "."
+            ],
+            "env": {
+                "KIT_CACHE_DIR": ".kit-mcp/cache"
+            }
+        }
+    }
+}

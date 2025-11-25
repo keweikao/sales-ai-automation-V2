@@ -10,7 +10,9 @@ from flask import Flask, request, jsonify
 from google.cloud import storage, tasks_v2, firestore
 from google.api_core.exceptions import NotFound
 
-from .pipeline import OptimizedTranscriptionPipeline
+from src.transcription.gemini_pipeline import GeminiTranscriptionPipeline
+# OptimizedTranscriptionPipeline will be imported lazily if needed
+
 from .status_tracker import TranscriptionStatusTracker
 
 # --- Initialization ---
@@ -28,46 +30,67 @@ TARGET_CHUNK_DURATION = int(os.environ.get("TARGET_CHUNK_DURATION", "600"))
 OVERLAP_DURATION = float(os.environ.get("OVERLAP_DURATION", "2"))
 VAD_PRESET = os.environ.get("VAD_PRESET", "meeting")
 TRANSCRIPTION_LANGUAGE = os.environ.get("TRANSCRIPTION_LANGUAGE", "zh")
-ENABLE_DIARIZATION = os.environ.get("ENABLE_DIARIZATION", "false").lower() == "true"
+TRANSCRIPTION_ENGINE = os.getenv("TRANSCRIPTION_ENGINE", "whisper")  # 'whisper' or 'gemini'
+ENABLE_DIARIZATION = os.getenv("ENABLE_DIARIZATION", "false").lower() == "true"
 DIARIZATION_MODEL = os.environ.get("DIARIZATION_MODEL", "pyannote/speaker-diarization")
 DIARIZATION_ALLOW_OVERLAP = (
     os.environ.get("DIARIZATION_ALLOW_OVERLAP", "false").lower() == "true"
 )
-HUGGINGFACE_TOKEN = os.environ.get("HUGGINGFACE_TOKEN")
+HUGGINGFACE_TOKEN = os.getenv("HUGGINGFACE_TOKEN")
+GCP_PROJECT_ID = os.getenv("GCP_PROJECT_ID")
 
 # --- Instantiate Pipeline ---
 # We instantiate the pipeline globally to preload the model.
 # This is crucial for reducing response time on Cloud Run.
-logger.info(f"Loading transcription pipeline with model: {MODEL_SIZE}...")
+pipeline = None
+
+def get_pipeline():
+    global pipeline
+    if pipeline is None:
+        if TRANSCRIPTION_ENGINE == "gemini":
+            logger.info("Initializing Gemini Transcription Pipeline (Google AI)...")
+            api_key = os.getenv("GEMINI_API_KEY")
+            if not api_key:
+                raise ValueError("GEMINI_API_KEY is required for Gemini engine")
+            pipeline = GeminiTranscriptionPipeline(api_key=api_key)
+        else:
+            logger.info("Initializing Whisper Transcription Pipeline...")
+            # Lazy import to avoid loading heavy dependencies when using Gemini
+            from src.transcription.pipeline import OptimizedTranscriptionPipeline
+            
+            pipeline = OptimizedTranscriptionPipeline(
+                model_size=MODEL_SIZE,
+                device=DEVICE,
+                compute_type=COMPUTE_TYPE,
+                max_workers=MAX_WORKERS,
+                target_chunk_duration=TARGET_CHUNK_DURATION,
+                overlap_duration=OVERLAP_DURATION,
+                vad_preset=VAD_PRESET,
+                language=TRANSCRIPTION_LANGUAGE,
+                enable_diarization=ENABLE_DIARIZATION,
+                diarization_model=DIARIZATION_MODEL,
+                diarization_auth_token=HUGGINGFACE_TOKEN,
+                diarization_allow_overlap=DIARIZATION_ALLOW_OVERLAP,
+            )
+        logger.info(f"{TRANSCRIPTION_ENGINE.capitalize()} Transcription pipeline loaded successfully.")
+        if TRANSCRIPTION_ENGINE == "whisper":
+            logger.info(
+                "Pipeline configuration: workers=%s, target_chunk=%ss, overlap=%ss, "
+                "diarization=%s (%s, allow_overlap=%s)",
+                MAX_WORKERS,
+                TARGET_CHUNK_DURATION,
+                OVERLAP_DURATION,
+                ENABLE_DIARIZATION,
+                DIARIZATION_MODEL,
+                DIARIZATION_ALLOW_OVERLAP,
+            )
+    return pipeline
+
 try:
-    pipeline = OptimizedTranscriptionPipeline(
-        model_size=MODEL_SIZE,
-        device=DEVICE,
-        compute_type=COMPUTE_TYPE,
-        max_workers=MAX_WORKERS,
-        target_chunk_duration=TARGET_CHUNK_DURATION,
-        overlap_duration=OVERLAP_DURATION,
-        vad_preset=VAD_PRESET,
-        language=TRANSCRIPTION_LANGUAGE,
-        enable_diarization=ENABLE_DIARIZATION,
-        diarization_model=DIARIZATION_MODEL,
-        diarization_auth_token=HUGGINGFACE_TOKEN,
-        diarization_allow_overlap=DIARIZATION_ALLOW_OVERLAP,
-    )
-    logger.info("Transcription pipeline loaded successfully.")
-    logger.info(
-        "Pipeline configuration: workers=%s, target_chunk=%ss, overlap=%ss, "
-        "diarization=%s (%s, allow_overlap=%s)",
-        MAX_WORKERS,
-        TARGET_CHUNK_DURATION,
-        OVERLAP_DURATION,
-        ENABLE_DIARIZATION,
-        DIARIZATION_MODEL,
-        DIARIZATION_ALLOW_OVERLAP,
-    )
+    get_pipeline() # Initialize pipeline on startup
 except Exception as e:
     logger.error(f"Failed to load transcription pipeline: {e}", exc_info=True)
-    pipeline = None
+    pipeline = None # Ensure pipeline is None if initialization fails
 
 # --- GCS Client ---
 storage_client = storage.Client()
@@ -91,7 +114,7 @@ except Exception as e:
     tasks_client = None
 
 # --- Configuration for Analysis Trigger ---
-GCP_PROJECT_ID = os.environ.get("GCP_PROJECT_ID", "sales-ai-automation-v2")
+GCP_PROJECT_ID = os.environ.get("GCP_PROJECT_ID", "sales-ai-automation-v2") # This was already defined above, keeping for now but might be redundant
 ANALYSIS_QUEUE = "analysis-queue"
 ANALYSIS_LOCATION = "asia-east1"
 ANALYSIS_SERVICE_URL = os.environ.get(
@@ -144,7 +167,8 @@ def transcribe_audio():
     Main endpoint to transcribe an audio file from a GCS URI.
     Expects a JSON payload: {"gcs_uri": "gs://your-bucket/your-audio.m4a"}
     """
-    if not pipeline:
+    current_pipeline = get_pipeline()
+    if not current_pipeline:
         return jsonify({"error": "Transcription pipeline is not available."}), 500
 
     # --- 1. Get GCS URI from request ---
@@ -193,16 +217,52 @@ def transcribe_audio():
                 return jsonify({"error": error_message}), 404
             
             local_audio_path = temp_audio_file.name
+            
+        # --- 2.5 Check for existing transcription in GCS (Persistence) ---
+        # Derive JSON path: gs://bucket/path/to/audio.m4a -> gs://bucket/path/to/audio.json
+        json_blob_name = os.path.splitext(blob_name)[0] + ".json"
+        json_blob = bucket.blob(json_blob_name)
+        
+        existing_result = None
+        try:
+            if json_blob.exists():
+                logger.info(f"Found existing transcription at gs://{bucket_name}/{json_blob_name}. Resuming...")
+                json_content = json_blob.download_as_text()
+                existing_result = json.loads(json_content)
+        except Exception as e:
+            logger.warning(f"Failed to check/load existing transcription: {e}")
 
         # --- 3. Process audio file ---
-        emit_progress(step="chunking", detail="切割音檔並準備轉錄")
-        logger.info(f"Starting transcription process for {local_audio_path}")
-        result = pipeline.process_audio(
-            audio_path=local_audio_path,
-            save_transcription=False,
-            progress_callback=progress_callback,
-        )
-        logger.info("Transcription process finished.")
+        if existing_result:
+            result = existing_result
+            emit_progress(step="transcribing", detail="使用已存在的轉錄結果 (Cached)", progress=0.5)
+        else:
+            emit_progress(step="chunking", detail="切割音檔並準備轉錄")
+            logger.info(f"Starting transcription process for {local_audio_path}")
+            
+            # Run transcription
+            if TRANSCRIPTION_ENGINE == "gemini":
+                # Gemini pipeline has a simpler interface
+                result = current_pipeline.transcribe(local_audio_path)
+            else:
+                # Whisper pipeline interface
+                result = current_pipeline.process_audio(
+                    audio_path=local_audio_path,
+                    save_transcription=False,
+                    progress_callback=progress_callback,
+                )
+            logger.info("Transcription process finished.")
+            
+            # Save result to GCS for future use
+            if result and result.get("success", True): # Gemini pipeline might not return 'success' key explicitly, assume success if no error raised
+                 try:
+                     logger.info(f"Saving transcription result to gs://{bucket_name}/{json_blob_name}")
+                     json_blob.upload_from_string(
+                         json.dumps(result, ensure_ascii=False),
+                         content_type="application/json"
+                     )
+                 except Exception as e:
+                     logger.error(f"Failed to save transcription to GCS: {e}")
 
         # --- 4. Save to Firestore and trigger analysis ---
         os.remove(local_audio_path)

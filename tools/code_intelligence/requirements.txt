@@ -1,0 +1,11 @@
+# Cased Kit - Code Intelligence Toolkit
+cased-kit>=0.1.0
+
+# Optional: For dependency visualization
+graphviz>=0.20.0
+
+# For CLI interface
+click>=8.0.0
+
+# For progress bars
+tqdm>=4.65.0

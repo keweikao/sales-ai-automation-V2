@@ -26,7 +26,7 @@ import copy
 import logging
 import time
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Callable, Awaitable
 
 from .agents.agent1_participant import ParticipantProfileAgent
 from .agents.agent2_sentiment import SentimentAttitudeAgent
@@ -39,47 +39,15 @@ from .agents.agent7_customer_summary import CustomerSummaryAgent
 logger = logging.getLogger(__name__)
 
 
-class RetryableError(Exception):
-    """Error that can be retried (e.g., network timeout, rate limit)."""
-    pass
-
-
-class NonRetryableError(Exception):
-    """Error that should not be retried (e.g., invalid format, auth error)."""
-    pass
-
-
-class InsufficientDataError(Exception):
-    """Not enough agents succeeded to proceed with synthesis."""
-    pass
-
-
-@dataclass
-class AgentResult:
-    """Result from a single agent execution."""
-    agent_id: str
-    success: bool
-    data: Optional[Dict[str, Any]] = None
-    error: Optional[str] = None
-    error_type: Optional[str] = None  # 'retryable' or 'non_retryable'
-    duration: float = 0.0
-    retry_count: int = 0
-    raw_output: Optional[str] = None
-
-
-@dataclass
-class AnalysisResult:
-    """Complete analysis result from all agents."""
-    case_id: str
-    success: bool
-    agent_results: Dict[str, AgentResult] = field(default_factory=dict)
-    total_duration: float = 0.0
-    error: Optional[str] = None
-
-    def get_agent_data(self, agent_id: str) -> Optional[Dict[str, Any]]:
-        """Get structured data from a specific agent."""
-        result = self.agent_results.get(agent_id)
-        return result.data if result and result.success else None
+from .models import (
+    AgentResult,
+    AnalysisResult,
+    RetryableError,
+    NonRetryableError,
+    InsufficientDataError
+)
+from .filesystem_memory import FileSystemMemory
+from .user_preference_memory import UserPreferenceMemory
 
 
 class MultiAgentOrchestrator:
@@ -96,6 +64,7 @@ class MultiAgentOrchestrator:
         agent_retry_attempts: int = 2,
         model_config: Optional[Dict[str, str]] = None,
         db_client: Optional[firestore.Client] = None,
+        resume_mode: bool = False,
     ):
         """
         Initialize the orchestrator with agent instances.
@@ -107,6 +76,7 @@ class MultiAgentOrchestrator:
             enable_agent_retry: Whether to retry individual agent failures
             agent_retry_attempts: Number of retry attempts per agent (default: 2)
             model_config: Optional dict mapping agent names to specific model names
+            resume_mode: If True, try to load previous results from filesystem
         """
         self.model_name = model_name
         self.temperature = temperature
@@ -115,6 +85,9 @@ class MultiAgentOrchestrator:
         self.agent_retry_attempts = agent_retry_attempts
         self.model_config = model_config or {}
         self.db = db_client
+        self.resume_mode = resume_mode
+        self.memory = FileSystemMemory() if resume_mode else None
+        self.preference_memory = UserPreferenceMemory()
 
         # Initialize agents (will be created on first use to ensure env vars are set)
         self._agents: Optional[Dict[str, Any]] = None
@@ -298,13 +271,21 @@ class MultiAgentOrchestrator:
         transcript_segments: List[Dict[str, Any]],
         speaker_statistics: Optional[Dict[str, Any]] = None,
         conversation_metadata: Optional[Dict[str, Any]] = None,
+        case_id: Optional[str] = None,
     ) -> AgentResult:
         """
         Execute agent with retry logic for transient failures.
+        Supports filesystem memory resume if enabled.
 
         Returns:
             AgentResult with retry_count populated
         """
+        # Check filesystem memory first if resume mode is on
+        if self.resume_mode and self.memory and case_id:
+            cached_result = self.memory.load_agent_result(case_id, agent_id)
+            if cached_result and cached_result.success:
+                logger.info(f"Resuming {agent_id} from filesystem memory for case {case_id}")
+                return cached_result
         max_attempts = self.agent_retry_attempts + 1 if self.enable_agent_retry else 1
         last_error = None
         error_type = None
@@ -319,6 +300,11 @@ class MultiAgentOrchestrator:
                     conversation_metadata=conversation_metadata,
                 )
                 result.retry_count = attempt
+                
+                # Save to memory if successful and enabled
+                if result.success and self.resume_mode and self.memory and case_id:
+                    self.memory.save_agent_result(case_id, result)
+                
                 return result
 
             except Exception as e:
@@ -349,6 +335,33 @@ class MultiAgentOrchestrator:
             error_type=error_type,
             retry_count=max_attempts - 1,
         )
+
+    async def _run_agent_wrapper(
+        self,
+        case_id: str,
+        agent_id: str,
+        runner_func: Callable[..., Awaitable[AgentResult]],
+        *args,
+        **kwargs
+    ) -> AgentResult:
+        """
+        Wraps agent execution with filesystem memory check and persistence.
+        """
+        # Check filesystem memory first if resume mode is on
+        if self.resume_mode and self.memory:
+            cached_result = self.memory.load_agent_result(case_id, agent_id)
+            if cached_result and cached_result.success:
+                logger.info(f"Resuming {agent_id} from filesystem memory for case {case_id}")
+                return cached_result
+
+        # Run the actual agent runner
+        result = await runner_func(*args, **kwargs)
+
+        # Save to memory if successful and enabled
+        if result.success and self.resume_mode and self.memory:
+            self.memory.save_agent_result(case_id, result)
+
+        return result
 
     async def _run_agent_1(
         self,
@@ -503,6 +516,12 @@ class MultiAgentOrchestrator:
     ) -> AgentResult:
         """Run Agent 6 (Sales Coach) using aggregated context."""
         start_time = time.time()
+        
+        # Retrieve user preferences if salesRepId is available
+        user_preferences = None
+        if case_metadata and "salesRepId" in case_metadata:
+             user_preferences = self.preference_memory.get_preferences(case_metadata["salesRepId"])
+
         try:
             loop = asyncio.get_event_loop()
             result = await loop.run_in_executor(
@@ -512,6 +531,7 @@ class MultiAgentOrchestrator:
                     transcript_segments=transcript_segments,
                     case_metadata=case_metadata,
                     conversation_metadata=conversation_metadata,
+                    user_preferences=user_preferences,
                 ),
             )
             duration = time.time() - start_time
@@ -621,13 +641,15 @@ class MultiAgentOrchestrator:
         }
 
         result_agent1, result_agent5, result_agent7 = await asyncio.gather(
-            self._run_agent_1(
+            self._run_agent_wrapper(
+                case_id, "agent1", self._run_agent_1,
                 agents['agent1'],
                 transcript_segments,
                 speaker_statistics,
                 conversation_metadata
             ),
-            self._run_agent_5(
+            self._run_agent_wrapper(
+                case_id, "agent5", self._run_agent_5,
                 agents['agent5'],
                 transcript_segments,
                 None, # participant_insights
@@ -635,7 +657,8 @@ class MultiAgentOrchestrator:
                 None, # product_needs
                 conversation_metadata
             ),
-            self._run_agent_7(
+            self._run_agent_wrapper(
+                case_id, "agent7", self._run_agent_7,
                 agents['agent7'],
                 transcript_segments,
                 case_metadata,
@@ -654,7 +677,8 @@ class MultiAgentOrchestrator:
 
         # --- Phase 2: Agent 2 (Sentiment) ---
         logger.info("Phase 2: Executing Agent 2 (Sentiment)")
-        result_agent2 = await self._run_agent_2(
+        result_agent2 = await self._run_agent_wrapper(
+            case_id, "agent2", self._run_agent_2,
             agents['agent2'],
             transcript_segments,
             result_agent1.data,
@@ -668,14 +692,16 @@ class MultiAgentOrchestrator:
         # --- Phase 3: Agents 3, 4 (Needs, Competitor) in parallel ---
         logger.info("Phase 3: Executing Agents 3, 4 in parallel")
         result_agent3, result_agent4 = await asyncio.gather(
-            self._run_agent_3(
+            self._run_agent_wrapper(
+                case_id, "agent3", self._run_agent_3,
                 agents['agent3'],
                 transcript_segments,
                 result_agent1.data,
                 result_agent2.data if result_agent2.success else None,
                 conversation_metadata
             ),
-            self._run_agent_4(
+            self._run_agent_wrapper(
+                case_id, "agent4", self._run_agent_4,
                 agents['agent4'],
                 transcript_segments,
                 result_agent1.data,
@@ -692,7 +718,8 @@ class MultiAgentOrchestrator:
         if len(successful_so_far) >= self.min_success_threshold:
             logger.info("Phase 5: Executing Agent 6 (Sales Coach)")
             agent6_context = self._build_agent6_context(agent_results)
-            result_agent6 = await self._run_agent_6(
+            result_agent6 = await self._run_agent_wrapper(
+                case_id, "agent6", self._run_agent_6,
                 agents['agent6'],
                 transcript_segments,
                 agent6_context,
