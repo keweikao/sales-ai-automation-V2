@@ -5,6 +5,7 @@
 ## Slack App (`cloudbuild.slack.yaml`)
 
 來自 Cloud Build 部署參數：
+
 - `SLACK_AUDIO_BUCKET`
 - `TRANSCRIPTION_TASK_QUEUE`
 - `TRANSCRIPTION_TASK_HANDLER_URL`
@@ -18,18 +19,21 @@
 - `SUMMARY_DELIVERY_HANDLER_URL`
 
 Secrets:
+
 - `SLACK_BOT_TOKEN`
 - `SLACK_SIGNING_SECRET`
 
 ## Transcription Service (`cloudbuild.transcription.yaml`)
 
 來自 Cloud Build 部署參數：
+
 - `TRANSCRIPTION_ENGINE`
 - `GEMINI_MODEL`
 - `SLACK_PROGRESS_ENDPOINT`
 - `SLACK_PROGRESS_TOKEN`
 
 Secrets:
+
 - `GEMINI_API_KEY`
 - `HUGGINGFACE_TOKEN`
 

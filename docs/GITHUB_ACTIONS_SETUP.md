@@ -49,6 +49,7 @@ gcloud iam service-accounts keys create gcp-key.json \
    **Secret 值**: 將整個 JSON 金鑰檔案的內容貼上（包含大括號）
 
    例如:
+
    ```json
    {
      "type": "service_account",
@@ -103,12 +104,14 @@ gcloud iam service-accounts keys create gcp-key.json \
 ### 部署失敗：權限錯誤
 
 確認服務帳戶具有以下權限：
+
 - Cloud Run Admin
 - Cloud Build Editor
 - Artifact Registry Writer
 - Service Account User
 
 檢查權限：
+
 ```bash
 gcloud projects get-iam-policy sales-ai-automation-v2 \
   --flatten="bindings[].members" \
@@ -118,6 +121,7 @@ gcloud projects get-iam-policy sales-ai-automation-v2 \
 ### 品質檢查失敗
 
 如果品質檢查失敗，部署不會執行。請：
+
 1. 查看 Actions 日誌中的錯誤訊息
 2. 在本地修復錯誤
 3. 使用 `/deploy` 命令驗證修復
