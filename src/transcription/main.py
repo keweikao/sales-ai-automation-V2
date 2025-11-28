@@ -30,7 +30,7 @@ TARGET_CHUNK_DURATION = int(os.environ.get("TARGET_CHUNK_DURATION", "600"))
 OVERLAP_DURATION = float(os.environ.get("OVERLAP_DURATION", "2"))
 VAD_PRESET = os.environ.get("VAD_PRESET", "meeting")
 TRANSCRIPTION_LANGUAGE = os.environ.get("TRANSCRIPTION_LANGUAGE", "zh")
-TRANSCRIPTION_ENGINE = os.getenv("TRANSCRIPTION_ENGINE", "whisper")  # 'whisper' or 'gemini'
+TRANSCRIPTION_ENGINE = os.getenv("TRANSCRIPTION_ENGINE", "whisper").strip().lower()  # 'whisper' or 'gemini'
 ENABLE_DIARIZATION = os.getenv("ENABLE_DIARIZATION", "false").lower() == "true"
 DIARIZATION_MODEL = os.environ.get("DIARIZATION_MODEL", "pyannote/speaker-diarization")
 DIARIZATION_ALLOW_OVERLAP = (
@@ -47,6 +47,7 @@ pipeline = None
 def get_pipeline():
     global pipeline
     if pipeline is None:
+        logger.info(f"Current TRANSCRIPTION_ENGINE: '{TRANSCRIPTION_ENGINE}'")
         if TRANSCRIPTION_ENGINE == "gemini":
             logger.info("Initializing Gemini Transcription Pipeline (Google AI)...")
             api_key = os.getenv("GEMINI_API_KEY")

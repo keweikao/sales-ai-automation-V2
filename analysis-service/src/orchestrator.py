@@ -44,8 +44,13 @@ from .models import (
     AnalysisResult,
     RetryableError,
     NonRetryableError,
-    InsufficientDataError
+    InsufficientDataError,
 )
+# 新增 Slack 進度通知匯入
+import sys, os
+# Ensure project root is in PYTHONPATH for cross‑package imports
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+from src.transcription.main import notify_slack_progress
 from .filesystem_memory import FileSystemMemory
 from .user_preference_memory import UserPreferenceMemory
 
@@ -776,6 +781,13 @@ class MultiAgentOrchestrator:
         agent7_result = agent_results.get('agent7')
         if agent7_result:
             self._persist_agent7_results(case_id, agent7_result)
+        # Notify Slack that analysis (Agent 6 & 7) is complete
+        try:
+            notify_slack_progress(case_id=case_id, file_id=None, status="analysis_complete")
+            logger.info("Slack analysis completion notification sent for case %s", case_id)
+        except Exception as notify_err:
+            logger.warning("Failed to send Slack analysis completion notification for case %s: %s", case_id, notify_err)
+
 
 
         return AnalysisResult(

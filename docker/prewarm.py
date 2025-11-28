@@ -43,6 +43,11 @@ def _generate_silence(duration_sec: float = 2.0, sample_rate: int = 16000) -> Pa
 
 
 def warmup_whisper():
+    engine = os.getenv("TRANSCRIPTION_ENGINE", "whisper").strip().lower()
+    if engine == "gemini":
+        logger.info("Skipping Whisper warm-up because TRANSCRIPTION_ENGINE is set to 'gemini'.")
+        return
+
     model_size = os.getenv("WHISPER_MODEL_SIZE", "tiny")
     compute_type = os.getenv("WHISPER_COMPUTE_TYPE", "int8")
     device = os.getenv("WHISPER_DEVICE", "cpu")

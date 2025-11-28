@@ -1,0 +1,89 @@
+name: Deploy to GCP
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch: # 允許手動觸發
+
+jobs:
+  # 先執行所有品質檢查（與 CI 相同）
+  quality-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run markdownlint-cli2
+        uses: DavidAnson/markdownlint-cli2-action@v19
+        with:
+          globs: '**/*.md'
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install common dependencies for linting
+        run: |
+          python -m pip install --upgrade pip
+          pip install PyYAML # For YAML parsing
+
+      - name: Check Python syntax
+        run: |
+          find . -name "*.py" -print0 | xargs -0 python3 -m py_compile
+
+      - name: Check YAML syntax
+        run: |
+          find . -name "*.yaml" -o -name "*.yml" -print0 | xargs -0 -I {} python -c "import yaml; with open('{}', 'r') as f: yaml.safe_load(f)"
+
+      - name: Check JSON syntax
+        run: |
+          find . -name "*.json" -print0 | xargs -0 -I {} python -c "import json; with open('{}', 'r') as f: json.load(f)"
+
+      - name: Install test dependencies
+        run: |
+          pip install pytest
+          pip install -r analysis-service/requirements.txt
+          pip install -r src/slack_app/requirements.txt
+          pip install -r web-service/requirements.txt
+
+      - name: Run test suite
+        run: make test-all
+
+  # 部署到 GCP（只在品質檢查通過後執行）
+  deploy:
+    needs: quality-checks
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # 如果使用 Workload Identity Federation
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: sales-ai-automation-v2
+
+      - name: Configure Docker for Artifact Registry
+        run: |
+          gcloud auth configure-docker asia-east1-docker.pkg.dev
+
+      - name: Deploy all services
+        run: |
+          chmod +x scripts/deploy_all.sh
+          ./scripts/deploy_all.sh
+
+      - name: Deployment summary
+        if: success()
+        run: |
+          echo "✅ Deployment completed successfully!"
+          echo "Deployed services:"
+          gcloud run services list --platform managed --region asia-east1 --format="table(SERVICE,REGION,URL,LAST_DEPLOYED)"

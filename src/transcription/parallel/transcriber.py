@@ -10,14 +10,13 @@ import threading
 from typing import Callable, Dict, List, Optional
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from faster_whisper import WhisperModel, utils as fw_utils
+from ..gemini_transcriber import transcribe as gemini_transcribe
 import time
 
 logger = logging.getLogger(__name__)
 
 # Patch tqdm compatibility regression (tqdm>=4.67)
-if not hasattr(fw_utils.disabled_tqdm, "_lock"):
-    fw_utils.disabled_tqdm._lock = threading.Lock()
+# Removed fw_utils tqdm compatibility block (no longer needed)
 
 
 class ParallelTranscriber:
@@ -60,28 +59,9 @@ class ParallelTranscriber:
             f"workers: {max_workers}, VAD enabled: {bool(vad_parameters)}"
         )
 
-    def _create_worker_model(self) -> WhisperModel:
-        """
-        創建工作線程的 Whisper 模型實例
+    # Removed WhisperModel creation – not needed for Gemini transcriber
 
-        Returns:
-            WhisperModel: Whisper 模型實例
-        """
-        logger.debug(f"Loading Whisper model: {self.model_size}")
-
-        return WhisperModel(
-            self.model_size,
-            device=self.device,
-            compute_type=self.compute_type
-        )
-
-    def _get_worker_model(self) -> WhisperModel:
-        """Lazily create a Whisper model per worker thread."""
-        model = getattr(self._thread_local, "model", None)
-        if model is None:
-            model = self._create_worker_model()
-            self._thread_local.model = model
-        return model
+    # Removed worker model getter – Gemini transcriber is stateless
 
     def _extract_audio_chunk(
         self,
@@ -165,36 +145,18 @@ class ParallelTranscriber:
             start_time = time.time()
 
             # 創建模型實例（每個工作線程獨立且重用）
-            model = self._get_worker_model()
-
-            logger.info(f"[Chunk {chunk_id}] Starting transcription...")
-
-            # 執行轉錄
-            segments, info = model.transcribe(
+            # 使用 Gemini 轉錄
+            segments = gemini_transcribe(
                 chunk_path,
                 language=self.language,
-                beam_size=self.beam_size,
-                vad_filter=bool(self.vad_parameters),
-                vad_parameters=self.vad_parameters if self.vad_parameters else None
+                beam_size=self.beam_size
             )
+            info = None  # Gemini wrapper does not provide additional info
 
             # 收集所有 segments
             all_segments = []
-            for segment in segments:
-                all_segments.append({
-                    "start": segment.start,
-                    "end": segment.end,
-                    "text": segment.text,
-                    "words": [
-                        {
-                            "word": word.word,
-                            "start": word.start,
-                            "end": word.end,
-                            "probability": word.probability
-                        }
-                        for word in (segment.words or [])
-                    ] if hasattr(segment, 'words') and segment.words else []
-                })
+            # Gemini returns segments already in the expected dict format
+            all_segments.extend(segments)
 
             processing_time = time.time() - start_time
 
@@ -204,9 +166,9 @@ class ParallelTranscriber:
                 "chunk_path": chunk_path,
                 "success": True,
                 "segments": all_segments,
-                "language": info.language,
-                "language_probability": info.language_probability,
-                "duration": info.duration,
+                "language": None,
+                "language_probability": None,
+                "duration": None,
                 "processing_time": processing_time,
                 "vad_enabled": bool(self.vad_parameters)
             }
