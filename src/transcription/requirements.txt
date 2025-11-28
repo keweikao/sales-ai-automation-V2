@@ -2,9 +2,9 @@
 # Version: 1.0.0
 
 # Core dependencies
-# faster-whisper==1.2.0
-# torch>=2.0.0
-# torchaudio>=2.0.0
+faster-whisper==1.2.0
+torch>=2.0.0
+torchaudio>=2.0.0
 
 # VAD
 # Note: silero-vad will be installed separately or use built-in faster-whisper VAD
@@ -30,7 +30,7 @@ requests>=2.31.0
 pyannote.audio==3.1.1
 speechbrain==1.0.3
 google-cloud-aiplatform>=1.38.0
-google-genai>=0.7.1
+google-generativeai>=0.8.3
 
 # Development
 pytest==7.4.0

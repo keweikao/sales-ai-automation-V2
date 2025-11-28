@@ -16,9 +16,25 @@ from .parallel.transcriber import ParallelTranscriber
 from .merging.merger import TranscriptionMerger
 from .diarization import create_diarizer
 from .quality import calculate_transcription_quality
+from .gemini_pipeline import GeminiTranscriptionPipeline
+import os
 
 logger = logging.getLogger(__name__)
 
+# --- Configuration ---
+MODEL_SIZE = os.environ.get("MODEL_SIZE", "medium")
+DEVICE = os.environ.get("DEVICE", "cpu")
+COMPUTE_TYPE = os.environ.get("COMPUTE_TYPE", "int8")
+MAX_WORKERS = int(os.environ.get("MAX_WORKERS", "3"))
+TARGET_CHUNK_DURATION = int(os.environ.get("TARGET_CHUNK_DURATION", "600"))
+OVERLAP_DURATION = float(os.environ.get("OVERLAP_DURATION", "2"))
+VAD_PRESET = os.environ.get("VAD_PRESET", "meeting")
+TRANSCRIPTION_LANGUAGE = os.environ.get("TRANSCRIPTION_LANGUAGE", "zh")
+TRANSCRIPTION_ENGINE = os.getenv("TRANSCRIPTION_ENGINE", "whisper").strip().lower()
+ENABLE_DIARIZATION = os.getenv("ENABLE_DIARIZATION", "false").lower() == "true"
+DIARIZATION_MODEL = os.environ.get("DIARIZATION_MODEL", "pyannote/speaker-diarization")
+DIARIZATION_ALLOW_OVERLAP = os.environ.get("DIARIZATION_ALLOW_OVERLAP", "false").lower() == "true"
+HUGGINGFACE_TOKEN = os.getenv("HUGGINGFACE_TOKEN")
 
 class OptimizedTranscriptionPipeline:
     """優化的音檔轉錄流程"""
