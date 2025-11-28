@@ -1,6 +1,6 @@
-"MCP Server for Google Firestore Query Tool
+"""MCP Server for Google Firestore Query Tool
 
-Provides a tool to query Firestore collections with context optimization."
+Provides a tool to query Firestore collections with context optimization."""
 import sys
 import json
 from typing import Any
@@ -25,7 +25,7 @@ TOOL_DEFINITION = {
                     },
                     "required": ["field", "op", "value"]
                 },
-                "description": "List of filter dicts with structure: [{"field": str, "op": str, "value": Any}]"
+                "description": "List of filter dicts with structure: [{'field': str, 'op': str, 'value': Any}]"
             },
             "order_by": {"type": "string", "description": "Field name for sorting (optional)"},
             "limit": {"type": "integer", "default": 100, "description": "Maximum number of results to return"},
