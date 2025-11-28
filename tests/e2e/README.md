@@ -4,8 +4,6 @@
 
 ## 測試優先級
 
-
-
 ### P0（必須通過）
 
 - ✅ 完整工作流程測試
@@ -15,6 +13,7 @@
 - ✅ 通知發送與 fallback
 
 ### P1（重要但非阻塞）
+
 - ✅ Slack 事件處理
 - ✅ 錯誤恢復機制
 - ✅ Modal 互動流程
@@ -45,16 +44,19 @@ tests/e2e/
 ## 執行測試
 
 ### 執行所有 E2E 測試
+
 ```bash
 pytest tests/e2e/ -v
 ```
 
 ### 執行 P0 測試
+
 ```bash
 pytest tests/e2e/test_full_workflow.py -v -m p0
 ```
 
 ### 執行 P1 測試
+
 ```bash
 pytest tests/e2e/ -v -m p1
 ```
