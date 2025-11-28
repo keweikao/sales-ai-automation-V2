@@ -7,10 +7,11 @@ Parallel Transcription Module
 import logging
 import subprocess
 import threading
+import os
 from typing import Callable, Dict, List, Optional
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from ..gemini_transcriber import transcribe as gemini_transcribe
+from ..gemini_pipeline import GeminiTranscriptionPipeline
 import time
 
 logger = logging.getLogger(__name__)
@@ -52,6 +53,7 @@ class ParallelTranscriber:
         self.language = language
         self.beam_size = beam_size
         self._thread_local = threading.local()
+        self.gemini_pipeline = GeminiTranscriptionPipeline(api_key=os.environ["GEMINI_API_KEY"])
 
         logger.info(
             f"Parallel Transcriber initialized - "
@@ -146,11 +148,8 @@ class ParallelTranscriber:
 
             # 創建模型實例（每個工作線程獨立且重用）
             # 使用 Gemini 轉錄
-            segments = gemini_transcribe(
-                chunk_path,
-                language=self.language,
-                beam_size=self.beam_size
-            )
+            result = self.gemini_pipeline.transcribe(chunk_path)
+            segments = result["segments"]
             info = None  # Gemini wrapper does not provide additional info
 
             # 收集所有 segments

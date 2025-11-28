@@ -11,8 +11,8 @@ if str(MODULE_ROOT) not in sys.path:
 if str(CURRENT_DIR) not in sys.path:
     sys.path.insert(0, str(CURRENT_DIR))
 
-from agents.agent4_competitor import CompetitorIntelligenceAgent
-from conftest import build_dummy_factory
+from agents.agent4_competitor import CompetitorAnalysisAgent
+from .conftest import build_dummy_factory
 
 
 def test_agent4_competitor_analyze(sample_segments):

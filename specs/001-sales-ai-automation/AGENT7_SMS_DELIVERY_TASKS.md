@@ -60,7 +60,7 @@
 
 ```bash
 # 重新部署 slack-app
-gcloud builds submit --config cloudbuild.slack.yaml
+gcloud builds submit --config deploy/slack/cloudbuild.slack.yaml
 
 ```
 
@@ -234,7 +234,7 @@ gcloud builds submit --config cloudbuild.slack.yaml
 python src/slack_app/main.py
 
 # 部署測試
-gcloud builds submit --config cloudbuild.slack.yaml
+gcloud builds submit --config deploy/slack/cloudbuild.slack.yaml
 
 ```
 
@@ -1145,7 +1145,7 @@ echo '{
 
    ```bash
 
-   gcloud builds submit --config cloudbuild.slack.yaml
+   gcloud builds submit --config deploy/slack/cloudbuild.slack.yaml
 
    ```
 

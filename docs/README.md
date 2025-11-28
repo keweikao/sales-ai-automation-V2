@@ -27,7 +27,8 @@ To build the documentation locally:
 - `index.md` - Main documentation homepage
 - `toc.yml` - Table of contents configuration
 - `installation.md` - Installation guide
-- `quickstart.md` - Quick start guide
+- `quickstart.md` - Quick start guide（一般流程；AI 助理請以根目錄 `QUICK_START_FOR_AI.md` 為唯一權威）
+- `AUTHORITY_SOURCES.md` - 權威文件與閱讀順序總覽
 - `_site/` - Generated documentation output (ignored by git)
 
 ## Deployment

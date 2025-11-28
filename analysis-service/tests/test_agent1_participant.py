@@ -13,7 +13,7 @@ if str(CURRENT_DIR) not in sys.path:
     sys.path.insert(0, str(CURRENT_DIR))
 
 from agents.agent1_participant import ParticipantProfileAgent
-from conftest import build_dummy_factory
+from .conftest import build_dummy_factory
 
 
 def test_agent1_participant_analyze(sample_segments):

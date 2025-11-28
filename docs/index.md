@@ -13,6 +13,7 @@ Spec-Driven Development **flips the script** on traditional software development
 - [Installation Guide](installation.md)
 - [Quick Start Guide](quickstart.md)
 - [Local Development](local-development.md)
+- AI 助理請使用根目錄的 `QUICK_START_FOR_AI.md` 作為唯一權威入口。
 
 ## Core Philosophy
 

@@ -8,6 +8,8 @@ This file tracks all development sessions to enable seamless continuation across
 
 ---
 
+> Deploy 檔名提示：Slack App 部署一律使用 `cloudbuild.slack.yaml`（舊名 `cloudbuild-slack.yaml` 已淘汰；檔案可從根目錄或 `deploy/slack/` symlink 取得）。
+
 ## 📋 Current Status
 
 **Phase**: Agent 8 Phase 1 MVP - Ready for Deployment

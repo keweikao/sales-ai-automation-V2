@@ -10,9 +10,11 @@ from flask import Flask, request, jsonify
 from google.cloud import storage, tasks_v2, firestore
 from google.api_core.exceptions import NotFound
 
-from src.transcription.gemini_pipeline import GeminiTranscriptionPipeline
-# OptimizedTranscriptionPipeline will be imported lazily if needed
-
+from .gemini_pipeline import GeminiTranscriptionPipeline
+from .pipeline import (
+    OptimizedTranscriptionPipeline,
+    get_pipeline,
+)
 from .status_tracker import TranscriptionStatusTracker
 
 # --- Initialization ---
@@ -44,48 +46,7 @@ GCP_PROJECT_ID = os.getenv("GCP_PROJECT_ID")
 # This is crucial for reducing response time on Cloud Run.
 pipeline = None
 
-def get_pipeline():
-    global pipeline
-    if pipeline is None:
-        logger.info(f"Current TRANSCRIPTION_ENGINE: '{TRANSCRIPTION_ENGINE}'")
-        if TRANSCRIPTION_ENGINE == "gemini":
-            logger.info("Initializing Gemini Transcription Pipeline (Google AI)...")
-            api_key = os.getenv("GEMINI_API_KEY")
-            if not api_key:
-                raise ValueError("GEMINI_API_KEY is required for Gemini engine")
-            pipeline = GeminiTranscriptionPipeline(api_key=api_key)
-        else:
-            logger.info("Initializing Whisper Transcription Pipeline...")
-            # Lazy import to avoid loading heavy dependencies when using Gemini
-            from src.transcription.pipeline import OptimizedTranscriptionPipeline
-            
-            pipeline = OptimizedTranscriptionPipeline(
-                model_size=MODEL_SIZE,
-                device=DEVICE,
-                compute_type=COMPUTE_TYPE,
-                max_workers=MAX_WORKERS,
-                target_chunk_duration=TARGET_CHUNK_DURATION,
-                overlap_duration=OVERLAP_DURATION,
-                vad_preset=VAD_PRESET,
-                language=TRANSCRIPTION_LANGUAGE,
-                enable_diarization=ENABLE_DIARIZATION,
-                diarization_model=DIARIZATION_MODEL,
-                diarization_auth_token=HUGGINGFACE_TOKEN,
-                diarization_allow_overlap=DIARIZATION_ALLOW_OVERLAP,
-            )
-        logger.info(f"{TRANSCRIPTION_ENGINE.capitalize()} Transcription pipeline loaded successfully.")
-        if TRANSCRIPTION_ENGINE == "whisper":
-            logger.info(
-                "Pipeline configuration: workers=%s, target_chunk=%ss, overlap=%ss, "
-                "diarization=%s (%s, allow_overlap=%s)",
-                MAX_WORKERS,
-                TARGET_CHUNK_DURATION,
-                OVERLAP_DURATION,
-                ENABLE_DIARIZATION,
-                DIARIZATION_MODEL,
-                DIARIZATION_ALLOW_OVERLAP,
-            )
-    return pipeline
+
 
 try:
     get_pipeline() # Initialize pipeline on startup
@@ -93,8 +54,7 @@ except Exception as e:
     logger.error(f"Failed to load transcription pipeline: {e}", exc_info=True)
     pipeline = None # Ensure pipeline is None if initialization fails
 
-# --- GCS Client ---
-storage_client = storage.Client()
+
 
 # --- Firestore Client ---
 try:
@@ -168,6 +128,7 @@ def transcribe_audio():
     Main endpoint to transcribe an audio file from a GCS URI.
     Expects a JSON payload: {"gcs_uri": "gs://your-bucket/your-audio.m4a"}
     """
+    storage_client = storage.Client()
     current_pipeline = get_pipeline()
     if not current_pipeline:
         return jsonify({"error": "Transcription pipeline is not available."}), 500

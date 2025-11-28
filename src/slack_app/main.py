@@ -188,20 +188,25 @@ def handle_file_shared(client, event, logger):
             # 如果 existing_doc 是 None，表示新紀錄已成功建立，可以繼續後續流程
             logger.info(f"New file {file_id} record created atomically.")
 
-        file_type = file_info.get("filetype", "")
-        shares = file_info.get("shares", {})
-
-        if not shares.get("private"):
-            logger.info(f"Ignoring file {file_id} - not shared in DM")
-            return
-
-        supported_audio_types = ["m4a", "mp3", "wav", "flac", "ogg", "aac"]
-        if file_type.lower() not in supported_audio_types:
+        # 檔案驗證
+        from src.slack_app.utils.file_validator import validate_audio_file, FileValidationError
+        try:
+            validate_audio_file(file_info)
+        except FileValidationError as e:
+            # 發送使用者友善的錯誤訊息
             client.chat_postMessage(
                 channel=user_id,
-                text=f"⚠️ 檔案類型不支援。請上傳音檔（支援格式：{', '.join(supported_audio_types)}）"
+                text=e.user_friendly_message
             )
-            logger.info(f"Ignored non-audio file: {file_id} (type: {file_type})")
+            logger.warning(f"File validation failed for {file_id}: {e.message}")
+            return
+        except Exception as e:
+            # 未預期的錯誤
+            client.chat_postMessage(
+                channel=user_id,
+                text="⚠️ 檔案驗證時發生錯誤，請稍後再試或聯絡技術支援。"
+            )
+            logger.error(f"Unexpected error during file validation for {file_id}: {e}", exc_info=True)
             return
 
         client.chat_postMessage(
@@ -789,15 +794,20 @@ def _process_modal_submission(
                 logger.warning("Failed to remove temp file: %s", local_path)
 
 
-def _resolve_notification_target(case_id: str, file_id: Optional[str]) -> Tuple[Optional[str], Optional[str], Optional[str]]:
+def _resolve_notification_target(case_id: str, file_id: Optional[str]) -> Tuple[Optional[str], Optional[str], Optional[str], Optional[str]]:
     """
     Locate Slack channel/thread for a given case/file to post progress updates.
-    Returns (channel_id, thread_ts, customer_name).
+    Returns (channel_id, thread_ts, customer_name, user_id).
+
+    Fallback strategy:
+    1. Try original thread (channel_id + thread_ts)
+    2. If thread unavailable, try channel without thread
+    3. If channel unavailable, try user DM
     """
     if not db:
-        return None, None, None
+        return None, None, None, None
 
-    channel_id = thread_ts = customer_name = None
+    channel_id = thread_ts = customer_name = user_id = None
 
     case_snapshot = db.collection("cases").document(case_id).get()
     if case_snapshot.exists:
@@ -806,6 +816,7 @@ def _resolve_notification_target(case_id: str, file_id: Optional[str]) -> Tuple[
         notification = case_data.get("notification") or {}
         channel_id = notification.get("slackChannelId")
         thread_ts = notification.get("slackThreadTs") or notification.get("messageTs")
+        user_id = notification.get("slackUserId")  # For DM fallback
 
     if not channel_id and file_id:
         file_snapshot = db.collection("processed_files").document(file_id).get()
@@ -814,8 +825,99 @@ def _resolve_notification_target(case_id: str, file_id: Optional[str]) -> Tuple[
             channel_id = channel_id or file_data.get("channelId")
             thread_ts = thread_ts or file_data.get("threadTs") or file_data.get("messageTs")
             customer_name = customer_name or file_data.get("customerName")
+            user_id = user_id or file_data.get("userId")
 
-    return channel_id, thread_ts, customer_name
+    return channel_id, thread_ts, customer_name, user_id
+
+
+def _send_notification_with_fallback(
+    case_id: str,
+    notifier_func,
+    fallback_prefix: str,
+    **notifier_kwargs
+) -> Tuple[bool, str]:
+    """
+    Send notification with fallback strategy.
+
+    Fallback strategy:
+    1. Try original thread
+    2. If thread deleted/unavailable, try channel without thread
+    3. If channel unavailable, try user DM
+
+    Returns (success, reason)
+    """
+    from slack_sdk.errors import SlackApiError
+
+    try:
+        success = notifier_func(**notifier_kwargs)
+        if success:
+            return True, "sent_to_thread"
+        return False, "send_failed"
+
+    except SlackApiError as e:
+        error_code = e.response.get("error", "")
+        logger.warning(f"Slack API error for {case_id}: {error_code}")
+
+        # Thread is deleted or invalid
+        if error_code in ["thread_not_found", "message_not_found", "channel_not_found"]:
+            logger.info(f"Thread not available for {case_id}, trying fallback strategies")
+
+            # Fallback 1: Try channel without thread
+            if "user_id" in notifier_kwargs or "channel_id" in notifier_kwargs:
+                channel = notifier_kwargs.get("user_id") or notifier_kwargs.get("channel_id")
+                fallback_kwargs = notifier_kwargs.copy()
+                fallback_kwargs["thread_ts"] = None
+
+                try:
+                    success = notifier_func(**fallback_kwargs)
+                    if success:
+                        logger.info(f"{fallback_prefix} notification sent to channel (no thread) for {case_id}")
+                        _log_notification_fallback(case_id, "channel_without_thread", error_code)
+                        return True, "sent_to_channel"
+                except Exception as fallback_error:
+                    logger.warning(f"Fallback to channel failed: {fallback_error}")
+
+            # Fallback 2: Try user DM
+            _, _, _, user_id = _resolve_notification_target(case_id, None)
+            if user_id and user_id != notifier_kwargs.get("user_id"):
+                dm_kwargs = notifier_kwargs.copy()
+                dm_kwargs["user_id"] = user_id
+                dm_kwargs["channel_id"] = user_id
+                dm_kwargs["thread_ts"] = None
+
+                try:
+                    success = notifier_func(**dm_kwargs)
+                    if success:
+                        logger.info(f"{fallback_prefix} notification sent to user DM for {case_id}")
+                        _log_notification_fallback(case_id, "user_dm", error_code)
+                        return True, "sent_to_dm"
+                except Exception as dm_error:
+                    logger.error(f"Fallback to DM failed: {dm_error}")
+
+        return False, f"fallback_failed_{error_code}"
+
+    except Exception as e:
+        logger.error(f"Unexpected error sending notification for {case_id}: {e}", exc_info=True)
+        return False, "unexpected_error"
+
+
+def _log_notification_fallback(case_id: str, fallback_type: str, original_error: str):
+    """
+    Log notification fallback to Firestore for tracking.
+    """
+    if not db:
+        return
+
+    try:
+        db.collection("cases").document(case_id).update({
+            "notification.fallback": {
+                "type": fallback_type,
+                "originalError": original_error,
+                "timestamp": firestore.SERVER_TIMESTAMP,
+            }
+        })
+    except Exception as e:
+        logger.warning(f"Failed to log notification fallback for {case_id}: {e}")
 
 
 def _handle_agent6_notification(
@@ -825,27 +927,27 @@ def _handle_agent6_notification(
     thread_override: Optional[str] = None,
 ) -> Tuple[bool, str]:
     """
-    Dispatch Agent 6 notification using available context.
+    Dispatch Agent 6 notification using available context with fallback support.
     Returns (success, reason).
     """
     if not agent6_notifier:
         logger.warning("Agent 6 notifier not initialized; cannot send notification for %s", case_id)
         return False, "notifier_unavailable"
 
-    channel_id, thread_ts, _ = _resolve_notification_target(case_id, file_id)
+    channel_id, thread_ts, _, user_id = _resolve_notification_target(case_id, file_id)
     target_channel = channel_override or channel_id
     target_thread = thread_override or thread_ts
 
-    success = agent6_notifier.send_agent6_notification(
+    if not target_channel:
+        target_channel = user_id  # Fallback to DM immediately if no channel
+
+    return _send_notification_with_fallback(
         case_id=case_id,
+        notifier_func=agent6_notifier.send_agent6_notification,
+        fallback_prefix="Agent6",
         user_id=target_channel,
         thread_ts=target_thread,
     )
-
-    if success:
-        return True, "sent"
-
-    return False, "send_failed"
 
 
 def _handle_agent7_notification(
@@ -855,31 +957,30 @@ def _handle_agent7_notification(
     thread_override: Optional[str] = None,
 ) -> Tuple[bool, str]:
     """
-    Dispatch Agent 7 preview notification.
+    Dispatch Agent 7 preview notification with fallback support.
     """
     if not agent7_notifier:
         logger.warning("Agent 7 notifier not initialized; cannot send preview for %s", case_id)
         return False, "notifier_unavailable"
 
-    channel_id, thread_ts, _ = _resolve_notification_target(case_id, file_id)
+    channel_id, thread_ts, _, user_id = _resolve_notification_target(case_id, file_id)
     target_channel = channel_override or channel_id
     target_thread = thread_override or thread_ts
 
     if not target_channel:
-        logger.warning("No Slack channel found for Agent 7 notification (%s)", case_id)
-        return False, "channel_not_found"
+        target_channel = user_id  # Fallback to DM immediately if no channel
+        if not target_channel:
+            logger.warning("No Slack channel or user found for Agent 7 notification (%s)", case_id)
+            return False, "channel_not_found"
 
-    success = agent7_notifier.send_agent7_preview(
+    return _send_notification_with_fallback(
         case_id=case_id,
+        notifier_func=agent7_notifier.send_agent7_preview,
+        fallback_prefix="Agent7",
         channel_id=target_channel,
         thread_ts=target_thread,
         is_edited=False,
     )
-
-    if success:
-        return True, "sent"
-
-    return False, "send_failed"
 
 
 def _refresh_agent7_preview_message(case_id: str) -> None:

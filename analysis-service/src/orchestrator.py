@@ -28,18 +28,18 @@ import time
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Callable, Awaitable
 
-from .agents.agent1_participant import ParticipantProfileAgent
-from .agents.agent2_sentiment import SentimentAttitudeAgent
-from .agents.agent3_needs import ProductNeedsAgent
-from .agents.agent4_competitor import CompetitorAnalysisAgent
-from .agents.agent5_questionnaire import QuestionnaireAgent
-from .agents.agent6_sales_coach import SalesCoachAgent
-from .agents.agent7_customer_summary import CustomerSummaryAgent
+from agents.agent1_participant import ParticipantProfileAgent
+from agents.agent2_sentiment import SentimentAttitudeAgent
+from agents.agent3_needs import ProductNeedsAgent
+from agents.agent4_competitor import CompetitorAnalysisAgent
+from agents.agent5_questionnaire import QuestionnaireAgent
+from agents.agent6_sales_coach import SalesCoachAgent
+from agents.agent7_customer_summary import CustomerSummaryAgent
 
 logger = logging.getLogger(__name__)
 
 
-from .models import (
+from models import (
     AgentResult,
     AnalysisResult,
     RetryableError,
@@ -47,12 +47,9 @@ from .models import (
     InsufficientDataError,
 )
 # 新增 Slack 進度通知匯入
-import sys, os
-# Ensure project root is in PYTHONPATH for cross‑package imports
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
-from src.transcription.main import notify_slack_progress
-from .filesystem_memory import FileSystemMemory
-from .user_preference_memory import UserPreferenceMemory
+from transcription.main import notify_slack_progress
+from filesystem_memory import FileSystemMemory
+from user_preference_memory import UserPreferenceMemory
 
 
 class MultiAgentOrchestrator:
@@ -633,9 +630,11 @@ class MultiAgentOrchestrator:
         agents = self._ensure_agents()
         agent_results = {}
 
-        # --- Phase 1: Agents 1, 5, 7 (Participant, Questionnaire, Summary) in parallel ---
+        # --- Phase 1: Agents 1, 5, 7 (Participant, Questionnaire, Customer Summary) in parallel ---
+        # Note: Agent 7 runs early because it's independent - generates customer-facing summary
+        # Agent 6 (Sales Coach) runs later as it needs Agent 1-5 results for internal sales analysis
         logger.info("Phase 1: Executing Agents 1, 5, 7 in parallel")
-        
+
         # Prepare metadata for Agent 7
         case_metadata = {
             "caseId": case_id,
@@ -671,7 +670,7 @@ class MultiAgentOrchestrator:
             ),
             return_exceptions=False
         )
-        
+
         agent_results['agent1'] = result_agent1
         agent_results['agent5'] = result_agent5
         agent_results['agent7'] = result_agent7

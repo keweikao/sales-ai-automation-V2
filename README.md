@@ -15,6 +15,8 @@
     <a href="https://github.github.io/spec-kit/"><img src="https://img.shields.io/badge/docs-GitHub_Pages-blue" alt="Documentation"/></a>
 </p>
 
+> 專案入口：產品/專案摘要請看 `PROJECT_README.md`；AI 助理請看 `QUICK_START_FOR_AI.md`；完整文件請見 `docs/`（DocFX）。
+
 ---
 
 ## Table of Contents

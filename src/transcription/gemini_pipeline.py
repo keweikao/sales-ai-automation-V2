@@ -29,7 +29,7 @@ class GeminiTranscriptionPipeline:
         genai.configure(api_key=api_key)
         
         # Load model
-        self.model_name = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+        self.model_name = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
         self.model = genai.GenerativeModel(self.model_name)
         
         logger.info(f"GeminiTranscriptionPipeline initialized with model: {self.model_name}")

@@ -36,4 +36,4 @@ Deploy via Cloud Build:
 gcloud builds submit --config cloudbuild.summary-web-service.yaml .
 ```
 
-This builds/pushes `summary-web-service` to Artifact Registry and deploys Cloud Run (asia-east1) using service account `497329205771-compute@developer.gserviceaccount.com`. After deployment, copy the public URL (e.g. `https://summary-web-service-xxxx.a.run.app`) and update the Slack app build (`cloudbuild.slack.yaml`) substitutions for `SUMMARY_BASE_URL` / `SHORT_URL_BASE`.
+This builds/pushes `summary-web-service` to Artifact Registry and deploys Cloud Run (asia-east1) using service account `497329205771-compute@developer.gserviceaccount.com`. After deployment, copy the public URL (e.g. `https://summary-web-service-xxxx.a.run.app`) and update the Slack app build (`cloudbuild.slack.yaml`, also available under `deploy/slack/`) substitutions for `SUMMARY_BASE_URL` / `SHORT_URL_BASE`.

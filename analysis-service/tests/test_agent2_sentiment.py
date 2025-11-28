@@ -13,7 +13,7 @@ if str(CURRENT_DIR) not in sys.path:
     sys.path.insert(0, str(CURRENT_DIR))
 
 from agents.agent2_sentiment import SentimentAttitudeAgent
-from conftest import build_dummy_factory
+from .conftest import build_dummy_factory
 
 
 def test_agent2_sentiment_analyze(sample_segments):

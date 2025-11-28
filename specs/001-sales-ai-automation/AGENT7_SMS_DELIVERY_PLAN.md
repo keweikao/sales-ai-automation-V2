@@ -1040,7 +1040,7 @@ def handle_send_summary_confirmed(ack, body, view, client, db):
 
    ```bash
 
-   gcloud builds submit --config cloudbuild.slack.yaml
+   gcloud builds submit --config deploy/slack/cloudbuild.slack.yaml
 
    ```
 

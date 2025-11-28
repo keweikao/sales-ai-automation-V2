@@ -531,3 +531,45 @@ if __name__ == "__main__":
         if len(result["full_text"]) > 500:
             print("...")
         print("="*60)
+
+def get_pipeline():
+    global pipeline
+    if pipeline is None:
+        logger.info(f"Current TRANSCRIPTION_ENGINE: '{TRANSCRIPTION_ENGINE}'")
+        if TRANSCRIPTION_ENGINE == "gemini":
+            logger.info("Initializing Gemini Transcription Pipeline (Google AI)...")
+            api_key = os.getenv("GEMINI_API_KEY")
+            if not api_key:
+                raise ValueError("GEMINI_API_KEY is required for Gemini engine")
+            pipeline = GeminiTranscriptionPipeline(api_key=api_key)
+        else:
+            logger.info("Initializing Whisper Transcription Pipeline...")
+            # Lazy import to avoid loading heavy dependencies when using Gemini
+            
+            pipeline = OptimizedTranscriptionPipeline(
+                model_size=MODEL_SIZE,
+                device=DEVICE,
+                compute_type=COMPUTE_TYPE,
+                max_workers=MAX_WORKERS,
+                target_chunk_duration=TARGET_CHUNK_DURATION,
+                overlap_duration=OVERLAP_DURATION,
+                vad_preset=VAD_PRESET,
+                language=TRANSCRIPTION_LANGUAGE,
+                enable_diarization=ENABLE_DIARIZATION,
+                diarization_model=DIARIZATION_MODEL,
+                diarization_auth_token=HUGGINGFACE_TOKEN,
+                diarization_allow_overlap=DIARIZATION_ALLOW_OVERLAP,
+            )
+        logger.info(f"{TRANSCRIPTION_ENGINE.capitalize()} Transcription pipeline loaded successfully.")
+        if TRANSCRIPTION_ENGINE == "whisper":
+            logger.info(
+                "Pipeline configuration: workers=%s, target_chunk=%ss, overlap=%ss, "
+                "diarization=%s (%s, allow_overlap=%s)",
+                MAX_WORKERS,
+                TARGET_CHUNK_DURATION,
+                OVERLAP_DURATION,
+                ENABLE_DIARIZATION,
+                DIARIZATION_MODEL,
+                DIARIZATION_ALLOW_OVERLAP,
+            )
+    return pipeline

@@ -1,4 +1,6 @@
 from __future__ import annotations
+import sys
+import os
 
 import sys
 from dataclasses import dataclass
@@ -40,3 +42,5 @@ def build_dummy_factory(payload: str, recorded_prompts: List[str]):
         return DummyModel(payload=payload, recorded_prompts=recorded_prompts)
 
     return _factory
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../src')))

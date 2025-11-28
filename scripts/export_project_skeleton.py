@@ -24,7 +24,6 @@ CORE_FILES: Sequence[str] = (
     "Dockerfile.slack",
     "cloudbuild.yaml",
     "cloudbuild.slack.yaml",
-    "cloudbuild-slack.yaml",
     "cloudbuild.summary-web-service.yaml",
     "cloudbuild.transcription.yaml",
     ".markdownlint-cli2.jsonc",

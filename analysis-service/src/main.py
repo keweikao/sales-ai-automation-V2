@@ -431,13 +431,24 @@ def analyze_transcript():
                 logger.error(f"Error sending Slack notification: {e}", exc_info=True)
                 # Don't fail the request
 
+        # Send Agent 6 notification first (sales coach analysis)
         agent6_result = analysis_result.agent_results.get("agent6")
         if agent6_result and agent6_result.success:
-            trigger_agent6_notification(case_id)
+            try:
+                trigger_agent6_notification(case_id)
+                logger.info(f"Agent 6 notification triggered for case {case_id}")
+            except Exception as e:
+                logger.error(f"Failed to trigger Agent 6 notification: {e}", exc_info=True)
 
+        # Send Agent 7 notification second (customer summary)
+        # This ensures sales insights appear before the summary in Slack
         agent7_result = analysis_result.agent_results.get("agent7")
         if agent7_result and agent7_result.success:
-            trigger_agent7_notification(case_id)
+            try:
+                trigger_agent7_notification(case_id)
+                logger.info(f"Agent 7 notification triggered for case {case_id}")
+            except Exception as e:
+                logger.error(f"Failed to trigger Agent 7 notification: {e}", exc_info=True)
 
         # Determine response based on analysis result
         if analysis_result.success:

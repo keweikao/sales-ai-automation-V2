@@ -2,6 +2,14 @@ import unittest
 from unittest.mock import MagicMock, patch
 import json
 import os
+import sys
+from pathlib import Path
+
+CURRENT_DIR = Path(__file__).resolve().parent
+REPO_ROOT = CURRENT_DIR.parent
+SRC_ROOT = REPO_ROOT / "src"
+if str(SRC_ROOT) not in sys.path:
+    sys.path.insert(0, str(SRC_ROOT))
 
 # Set env vars before importing main
 os.environ["TRANSCRIPTION_ENGINE"] = "gemini"
@@ -15,7 +23,7 @@ with patch.dict('sys.modules', {
     'google.cloud.tasks_v2': MagicMock(),
     'src.transcription.gemini_pipeline': MagicMock(),
 }):
-    from src.transcription import main
+    from transcription import main
 
 class TestTranscriptionPersistence(unittest.TestCase):
 

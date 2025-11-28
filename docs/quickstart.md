@@ -1,5 +1,7 @@
 # Quick Start Guide
 
+> 📌 AI 助理請改讀根目錄 `QUICK_START_FOR_AI.md`（唯一權威 Quick Start）；本檔為 DocFX 展示的通用流程。
+
 This guide will help you get started with Spec-Driven Development using Spec Kit.
 
 > NEW: All automation scripts now provide both Bash (`.sh`) and PowerShell (`.ps1`) variants. The `specify` CLI auto-selects based on OS unless you pass `--script sh|ps`.

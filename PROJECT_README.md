@@ -51,6 +51,8 @@ Then read:
 
 ## 🏗️ System Architecture
 
+Service map: [`services/README.md`](./services/README.md)
+
 ### Core Components
 
 - **Transcription Service** (Cloud Run): Faster-Whisper + Speaker Diarization
@@ -111,10 +113,17 @@ Then read:
 ### Development
 
 - [`memory/constitution.md`](./memory/constitution.md) - System principles
+- [`docs/AUTHORITY_SOURCES.md`](./docs/AUTHORITY_SOURCES.md) - Authority map and reading order
 
 ### Testing
 
 - [`specs/001-sales-ai-automation/poc-tests/`](./specs/001-sales-ai-automation/poc-tests/) - POC test scripts
+
+### Deployment / Infra
+
+- [`deploy/README.md`](./deploy/README.md) - Cloud Build/Dockerfile 對應表
+- [`deploy/ENV_VARS.md`](./deploy/ENV_VARS.md) - 服務環境變數名稱對照
+- `deploy/<service>/` - 各服務 Cloud Build 檔案的統一路徑入口（symlink 指向根目錄原檔）
 
 ---
 

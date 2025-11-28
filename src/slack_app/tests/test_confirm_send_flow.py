@@ -144,6 +144,7 @@ def _build_view(phone="+886912345678", channel="D123", thread="111.222"):
 
 
 def test_confirm_send_enqueues_cloud_task(monkeypatch):
+    from slack_app import main as slack_main
     ack = FakeAck()
     logger = FakeLogger()
     fake_slack = FakeSlackClient()
@@ -165,6 +166,7 @@ def test_confirm_send_enqueues_cloud_task(monkeypatch):
 
 
 def test_confirm_send_direct_fallback(monkeypatch):
+    from slack_app import main as slack_main
     ack = FakeAck()
     logger = FakeLogger()
     captured = {}

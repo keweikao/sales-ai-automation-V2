@@ -31,6 +31,7 @@ def setup_service(monkeypatch):
 
 
 def test_internal_summary_delivery_endpoint(monkeypatch, setup_service):
+    from slack_app import main as slack_main
     slack_main.SUMMARY_INTERNAL_TOKEN = "shared-token"
     with slack_main.flask_app.test_client() as client:
         response = client.post(

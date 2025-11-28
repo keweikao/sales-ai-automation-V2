@@ -14,7 +14,7 @@ if str(CURRENT_DIR) not in sys.path:
     sys.path.insert(0, str(CURRENT_DIR))
 
 from agents.agent7_customer_summary import CustomerSummaryAgent
-from conftest import build_dummy_factory
+from .conftest import build_dummy_factory
 
 
 @pytest.fixture
