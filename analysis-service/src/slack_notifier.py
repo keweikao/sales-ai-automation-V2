@@ -64,6 +64,11 @@ class SlackNotifier:
             Slack user ID or None if not found
         """
         try:
+            # Check if uploaded_by is already a Slack ID (starts with U)
+            if uploaded_by.startswith('U') and len(uploaded_by) >= 9:
+                logger.info(f"uploaded_by {uploaded_by} appears to be a Slack ID, using it directly.")
+                return uploaded_by
+
             # Try to find user in Firestore users collection
             users_ref = self.db.collection('users')
             query = users_ref.where('email', '==', uploaded_by).limit(1)
@@ -203,10 +208,78 @@ class SlackNotifier:
                 ]
             })
 
-        # Add action buttons
+        # Add Agent 6 (Sales Coach) content directly
+        agent6_result = agents.get('agent6', {})
+        if agent6_result.get('status') == 'success' and agent6_result.get('data'):
+            data = agent6_result.get('data', {})
+            # Try to get structured data first, then rawOutput
+            structured = data.get('structured', {})
+            
+            # Extract key insights
+            strengths = structured.get('strengths', [])
+            weaknesses = structured.get('weaknesses', [])
+            advice = structured.get('advice', [])
+            
+            # Fallback to raw output if structured is empty but raw exists
+            if not (strengths or weaknesses or advice) and data.get('rawOutput'):
+                # Simple fallback: just show a snippet of raw output
+                blocks.append({
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": f"*👨‍🏫 銷售教練建議:*\n{data.get('rawOutput')[:500]}..."
+                    }
+                })
+            else:
+                # Format structured data
+                coach_text = "*👨‍🏫 銷售教練建議:*\n\n"
+                
+                if strengths:
+                    coach_text += "*💪 優點:*\n" + "\n".join([f"• {s}" for s in strengths]) + "\n\n"
+                
+                if weaknesses:
+                    coach_text += "*📉 待改進:*\n" + "\n".join([f"• {w}" for w in weaknesses]) + "\n\n"
+                    
+                if advice:
+                    coach_text += "*💡 具體建議:*\n" + "\n".join([f"• {a}" for a in advice])
+                
+                blocks.append({
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": coach_text
+                    }
+                })
+            
+            blocks.append({"type": "divider"})
+
+        # Add Agent 7 (Customer Summary) Edit Link
+        # URL: https://summary-web-service-acv3ye2faq-de.a.run.app/summary/{case_id}
+        summary_url = f"https://summary-web-service-acv3ye2faq-de.a.run.app/summary/{case_id}"
+        
+        blocks.append({
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": "📝 *客戶摘要 (Agent 7)*\n請點擊下方按鈕檢視並編輯摘要，確認後再發送給團隊。"
+            },
+            "accessory": {
+                "type": "button",
+                "text": {
+                    "type": "plain_text",
+                    "text": "✏️ 編輯摘要 & 發送",
+                    "emoji": True
+                },
+                "value": "edit_summary",
+                "url": summary_url,
+                "action_id": "edit_summary_link"
+            }
+        })
+        blocks.append({"type": "divider"})
+
+        # Add action buttons (View Full Analysis)
         if success_count > 0:
             blocks.extend([
-                {"type": "divider"},
                 {
                     "type": "actions",
                     "elements": [
@@ -214,7 +287,7 @@ class SlackNotifier:
                             "type": "button",
                             "text": {
                                 "type": "plain_text",
-                                "text": "📊 查看完整分析"
+                                "text": "📊 查看完整分析詳情"
                             },
                             "value": f"view_analysis_{case_id}",
                             "action_id": "view_full_analysis"
@@ -347,6 +420,161 @@ class SlackNotifier:
             return False
         except Exception as e:
             logger.error(f"Error sending notification for {case_id}: {e}", exc_info=True)
+            return False
+
+    def send_agent_reports(
+        self,
+        case_id: str,
+        agent_results: Dict[str, Any],
+    ) -> bool:
+        """
+        Send individual Agent reports to the original Slack thread.
+        
+        Args:
+            case_id: Case ID
+            agent_results: Dictionary of agent results with metadata containing reports
+            
+        Returns:
+            True if all reports sent successfully
+        """
+        try:
+            # Fetch case data to get thread_ts
+            case_ref = self.db.collection('cases').document(case_id)
+            case_doc = case_ref.get()
+
+            if not case_doc.exists:
+                logger.error(f"Case {case_id} not found")
+                return False
+
+            case_data = case_doc.to_dict()
+            case_data = self._serialize_firestore_data(case_data)
+
+            # Get original Slack context
+            original_channel_id = case_data.get('channel_id')
+            original_message_ts = case_data.get('message_ts')
+            original_thread_ts = case_data.get('thread_ts')
+
+            if not original_channel_id or not (original_message_ts or original_thread_ts):
+                logger.warning(f"No original Slack context for case {case_id}, skipping agent reports")
+                return False
+
+            target_channel = original_channel_id
+            target_thread_ts = original_thread_ts or original_message_ts
+
+            # Agent names and emojis
+            agent_info = {
+                'agent1': {'name': 'Agent 1：戰場偵查 (Context & Structure)', 'emoji': '🔍'},
+                'agent2': {'name': 'Agent 2：買家心理畫像 (MEDDIC)', 'emoji': '🧠'},
+                'agent3': {'name': 'Agent 3：銷售教練 (Deal Strategist)', 'emoji': '📈'},
+                'agent4': {'name': 'Agent 4：會議記錄秘書 (Executive Summary)', 'emoji': '📝'},
+            }
+
+            # Send each agent's report to the thread
+            success_count = 0
+            for agent_id in ['agent1', 'agent2', 'agent3', 'agent4']:
+                agent_result = agent_results.get(agent_id)
+                if not agent_result or not agent_result.success:
+                    logger.warning(f"{agent_id} failed or not found, skipping report")
+                    continue
+
+                # Get report from metadata
+                report = agent_result.metadata.get('report') if agent_result.metadata else None
+                if not report:
+                    logger.warning(f"{agent_id} has no report in metadata, skipping")
+                    continue
+
+                # Format the message
+                info = agent_info.get(agent_id, {'name': agent_id, 'emoji': '📊'})
+                
+                # For Agent 4, add action buttons
+                if agent_id == 'agent4':
+                    # Build blocks with buttons for Agent 4
+                    blocks = [
+                        {
+                            "type": "section",
+                            "text": {
+                                "type": "mrkdwn",
+                                "text": f"{info['emoji']} *{info['name']}*\n\n{report}"
+                            }
+                        },
+                        {
+                            "type": "actions",
+                            "elements": [
+                                {
+                                    "type": "button",
+                                    "text": {
+                                        "type": "plain_text",
+                                        "text": "📝 編輯",
+                                        "emoji": True
+                                    },
+                                    "action_id": "edit_summary",
+                                    "value": case_id
+                                },
+                                {
+                                    "type": "button",
+                                    "text": {
+                                        "type": "plain_text",
+                                        "text": "📤 發送給客戶",
+                                        "emoji": True
+                                    },
+                                    "style": "primary",
+                                    "action_id": "send_to_customer",
+                                    "value": case_id,
+                                    "confirm": {
+                                        "title": {
+                                            "type": "plain_text",
+                                            "text": "確認發送"
+                                        },
+                                        "text": {
+                                            "type": "mrkdwn",
+                                            "text": "確定要將會議記錄發送給客戶嗎？\n\n簡訊將包含網頁連結，客戶可以查看完整的會議記錄。"
+                                        },
+                                        "confirm": {
+                                            "type": "plain_text",
+                                            "text": "發送"
+                                        },
+                                        "deny": {
+                                            "type": "plain_text",
+                                            "text": "取消"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    ]
+                    
+                    # Send with blocks
+                    try:
+                        response = self.client.chat_postMessage(
+                            channel=target_channel,
+                            thread_ts=target_thread_ts,
+                            text=f"{info['emoji']} *{info['name']}*\n\n{report}",
+                            blocks=blocks,
+                            mrkdwn=True,
+                        )
+                    except SlackApiError as e:
+                        logger.error(f"Slack API error sending {agent_id} report: {e}")
+                        continue
+                else:
+                    # For other agents, send simple message
+                    message_text = f"{info['emoji']} *{info['name']}*\n\n{report}"
+                    
+                    try:
+                        response = self.client.chat_postMessage(
+                            channel=target_channel,
+                            thread_ts=target_thread_ts,
+                            text=message_text,
+                            mrkdwn=True,
+                        )
+                    except SlackApiError as e:
+                        logger.error(f"Slack API error sending {agent_id} report: {e}")
+                        continue
+
+            logger.info(f"Sent {success_count}/4 agent reports to Slack thread for case {case_id}")
+            return success_count > 0
+
+        except Exception as e:
+            logger.error(f"Error sending agent reports for {case_id}: {e}", exc_info=True)
             return False
 
     def send_error_notification(

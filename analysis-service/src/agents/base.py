@@ -70,18 +70,102 @@ def render_transcript(segments: Iterable[Dict[str, Any]]) -> str:
     return "\n".join(lines).strip()
 
 
-def extract_json_from_response(payload: str) -> Dict[str, Any]:
-    """Locate the first JSON object in the payload and parse it."""
-    start = payload.find("{")
-    end = payload.rfind("}")
-    if start == -1 or end == -1 or end <= start:
-        raise GeminiClientError("未在模型回應中找到 JSON 物件。")
-
-    snippet = payload[start : end + 1]
+def parse_dual_mode_output(output: str) -> tuple[str, Dict[str, Any]]:
+    """
+    Parse dual-mode output into human-readable report and JSON data.
+    
+    Expected format:
+        [Human-readable report in Traditional Chinese]
+        <JSON>
+        {...}
+        </JSON>
+    
+    Returns:
+        tuple: (report_text, json_data)
+    
+    Raises:
+        GeminiClientError: If JSON block is not found or invalid
+    """
+    import re
+    
+    # Extract JSON block wrapped in <JSON>...</JSON> tags
+    json_pattern = r'<JSON>(.*?)</JSON>'
+    json_match = re.search(json_pattern, output, re.DOTALL | re.IGNORECASE)
+    
+    if not json_match:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"No <JSON> block found in output. Preview: {output[:500]!r}")
+        raise GeminiClientError("未在模型回應中找到 <JSON>...</JSON> 標籤。")
+    
+    # Extract and parse JSON
+    json_str = json_match.group(1).strip()
     try:
-        return json.loads(snippet)
-    except json.JSONDecodeError as exc:  # pragma: no cover - defensive path
-        raise GeminiClientError(f"無法解析模型回應：{exc}") from exc
+        json_data = json.loads(json_str, strict=False)
+    except json.JSONDecodeError as exc:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"JSON decode error. JSON string: {json_str[:500]!r}")
+        raise GeminiClientError(f"無法解析 JSON 區塊：{exc}") from exc
+    
+    # Extract report (everything before <JSON> tag)
+    report_text = output[:json_match.start()].strip()
+    
+    return report_text, json_data
+
+
+def extract_json_from_response(payload: str) -> Dict[str, Any]:
+    """
+    Locate and parse JSON from the payload, handling markdown blocks and common errors.
+    
+    This function now supports both legacy format (markdown JSON blocks) and 
+    new dual-mode format (<JSON>...</JSON> tags). It will try dual-mode first.
+    """
+    import re
+    
+    # Try dual-mode format first
+    try:
+        _, json_data = parse_dual_mode_output(payload)
+        return json_data
+    except GeminiClientError:
+        # Fall back to legacy format
+        pass
+    
+    # 1. Try to find markdown JSON block
+    json_block_pattern = r"```(?:json)?\s*(\{.*?\})\s*```"
+    match = re.search(json_block_pattern, payload, re.DOTALL)
+    
+    if match:
+        snippet = match.group(1)
+    else:
+        # 2. Fallback: Locate the first outer-most JSON object
+        start = payload.find("{")
+        end = payload.rfind("}")
+        
+        if start == -1 or end == -1 or end <= start:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Failed to find JSON in response. Payload preview: {payload[:500]!r}")
+            raise GeminiClientError("未在模型回應中找到 JSON 物件。")
+            
+        snippet = payload[start : end + 1]
+
+    # 3. Parse with error handling and sanitization
+    try:
+        # strict=False allows control characters like newlines in strings
+        return json.loads(snippet, strict=False)
+    except json.JSONDecodeError:
+        # 4. Retry with sanitization (escape unescaped newlines inside strings)
+        try:
+            # This is a naive heuristic: replace actual newlines with \n
+            # It might break if the JSON is pretty-printed, so we only do it if normal parse fails
+            sanitized = snippet.replace('\n', '\\n')
+            return json.loads(sanitized, strict=False)
+        except json.JSONDecodeError as exc:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"JSON decode error. Snippet: {snippet[:500]!r}")
+            raise GeminiClientError(f"無法解析模型回應：{exc}") from exc
 
 
 def _build_generation_config(
@@ -149,6 +233,7 @@ class GeminiResponse:
     raw_text: str
     prompt: str
     model_name: str
+    report: Optional[str] = None  # Human-readable report (for dual-mode output)
 
 
 class GeminiJSONAgent:
@@ -189,25 +274,30 @@ class GeminiJSONAgent:
         try:
             response = model.generate_content(prompt)
         except Exception as e:
-            # If Vertex AI fails with 404, try fallback to genai SDK
-            if "404" in str(e) and genai is not None:
-                logger.warning(f"Vertex AI failed with 404, trying genai SDK fallback: {e}")
+            # If Vertex AI fails with 404 (Not Found) or 403 (Permission Denied), try fallback to genai SDK
+            error_str = str(e)
+            if ("404" in error_str or "403" in error_str or "PermissionDenied" in error_str) and genai is not None:
+                logger.warning(f"Vertex AI failed with {error_str}, trying genai SDK fallback...")
                 api_key = os.environ.get("GEMINI_API_KEY")
                 if api_key:
                     genai.configure(api_key=api_key)
                     # Map Vertex AI model names to Gemini API model names
                     model_mapping = {
-                        "gemini-2.5-flash": "gemini-2.5-flash",
-                        "gemini-2.5-pro": "gemini-2.5-pro",
-                        "gemini-flash-latest": "gemini-flash-latest",
+                        "gemini-2.0-flash-exp": "gemini-2.0-flash-exp",
+                        "gemini-1.5-flash": "gemini-1.5-flash",
+                        "gemini-2.5-flash": "gemini-1.5-flash", # Fallback mapping
+                        "gemini-2.5-pro": "gemini-1.5-pro",     # Fallback mapping
                     }
-                    fallback_model = model_mapping.get(self.model_name, "gemini-flash-latest")
+                    # Use the exact model name first, then try mapping, then default
+                    fallback_model = model_mapping.get(self.model_name, self.model_name)
+                    
                     logger.info(f"Using genai SDK with model: {fallback_model}")
                     model = genai.GenerativeModel(fallback_model)
                     self._model = model  # Cache the fallback model
                     response = model.generate_content(prompt)
                     logger.info(f"✅ Successfully used genai SDK with model: {fallback_model}")
                 else:
+                    logger.error("GEMINI_API_KEY not found in environment variables.")
                     raise
             else:
                 raise
@@ -244,10 +334,19 @@ class GeminiJSONAgent:
         """Execute the agent and return parsed JSON alongside metadata."""
         prompt = self.build_prompt(**kwargs)
         raw_output = self._generate(prompt)
-        data = extract_json_from_response(raw_output)
+        
+        # Try to parse as dual-mode output first
+        report_text = None
+        try:
+            report_text, data = parse_dual_mode_output(raw_output)
+        except GeminiClientError:
+            # Fall back to legacy JSON extraction
+            data = extract_json_from_response(raw_output)
+        
         return GeminiResponse(
             data=data,
             raw_text=raw_output,
             prompt=prompt,
             model_name=self.model_name,
+            report=report_text,
         )

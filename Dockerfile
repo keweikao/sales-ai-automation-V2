@@ -20,7 +20,7 @@ RUN pip install --user -r /tmp/transcription-requirements.txt && \
 # Copy application sources
 COPY pyproject.toml /app/pyproject.toml
 COPY src /app/src
-COPY specs /app/specs
+# COPY specs /app/specs
 COPY scripts /app/scripts
 COPY docker /app/docker
 
@@ -28,7 +28,7 @@ COPY docker /app/docker
 RUN pip install --user -e .
 
 # Ensure source tree is importable
-ENV PYTHONPATH=/app/src
+ENV PYTHONPATH=/app
 
 RUN chmod +x /app/docker/entrypoint.sh
 

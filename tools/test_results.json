@@ -1,0 +1,125 @@
+{
+  "agent1_context": {
+    "speakers": [
+      {
+        "id": "Speaker 1",
+        "role": "Sales Rep"
+      },
+      {
+        "id": "Speaker 2",
+        "role": "Customer - Decision Maker"
+      }
+    ],
+    "stages": [
+      {
+        "name": "Opening",
+        "start": "00:01",
+        "end": "02:15"
+      },
+      {
+        "name": "Discovery",
+        "start": "02:16",
+        "end": "02:34"
+      },
+      {
+        "name": "Demo/Pitch",
+        "start": "02:35",
+        "end": "33:49"
+      },
+      {
+        "name": "Objection Handling",
+        "start": "33:50",
+        "end": "47:50"
+      },
+      {
+        "name": "Pricing & Contract",
+        "start": "47:51",
+        "end": "50:24"
+      },
+      {
+        "name": "Demo",
+        "start": "50:25",
+        "end": "54:27"
+      },
+      {
+        "name": "Features Pitch",
+        "start": "54:28",
+        "end": "59:45"
+      },
+      {
+        "name": "Closing/Next Steps",
+        "start": "59:46",
+        "end": "01:18:45"
+      }
+    ],
+    "entities": {
+      "competitors": [
+        "inline",
+        "老警",
+        "烏馬",
+        "輕井澤",
+        "嘟嘟"
+      ],
+      "budget": null,
+      "deadlines": [
+        "next month",
+        "11月底",
+        "12月初"
+      ],
+      "requirements": [
+        "掃碼點餐",
+        "開發票",
+        "會員系統",
+        "掃碼點餐",
+        "iPad",
+        "LinePay",
+        "接口全支付",
+        "信用卡"
+      ]
+    },
+    "summary": "The sales call is between a sales representative (Speaker 1) and a potential customer (Speaker 2) who is opening a hotpot restaurant. Speaker 1 introduces the features of iChef POS system, including order management, payment methods, membership programs, and inventory management. Speaker 2 raises concerns about integration with existing systems and specific operational needs, and discusses pricing and contract terms."
+  },
+  "agent2_buyer": {
+    "profile": {
+      "role": "Customer - Decision Maker",
+      "style": "Pragmatic and detail-oriented. Values simplicity and reliability. Shows concern for cost-effectiveness and efficiency. Expresses a desire for a system that is easy to use and understand."
+    },
+    "meddic": {
+      "pain": "Limited historical inventory data, needs feature parity with existing '嘟嘟' system.",
+      "metrics": "Track daily in-stock material valuation.",
+      "champion": true,
+      "competition": "Has past experience with competitor '嘟嘟' and references their functionalities. Expresses a need for inventory tracking capabilities similar to '嘟嘟'."
+    },
+    "psychology": {
+      "dominantNeed": "Efficiency and Cost-Effectiveness: Seeks a system that is easy to use, improves operational efficiency, and is cost-effective.",
+      "hesitations": [
+        "Initial hesitancy about the complexity of the system.",
+        "Concerns about potential technical issues and the need for reliable support.",
+        "Apprehension about the learning curve for staff."
+      ],
+      "trustScore": 70
+    }
+  },
+  "agent3_seller": {
+    "dealHealth": {
+      "score": 85,
+      "status": "Green"
+    },
+    "forecast": {
+      "category": "Upside",
+      "estimatedCloseDate": "2024-11-30",
+      "reasoning": "Customer is opening a new restaurant in November and needs a POS system.  They are the decision maker and expressed a clear need for the system. The customer has a deadline, but the lack of price negotiation indicates the need to confirm the budget."
+    },
+    "coaching": {
+      "strengths": [
+        "Thorough demo",
+        "Addressing concerns"
+      ],
+      "nextBestAction": "Send over the contract with a clear breakdown of costs and features.  Follow up within 24 hours to discuss any questions and confirm budget and close date."
+    }
+  },
+  "agent4_summary": {
+    "email_subject": "一畝食鍋 iCHEF POS系統會議紀錄",
+    "email_body": "黃先生 您好，\n\n感謝您撥冗與 iCHEF 團隊進行POS系統的諮詢會議，本次會議旨在了解貴公司一畝食鍋對於POS系統的需求，並提供相應的解決方案。\n\n**會議目標:**\n確認一畝食鍋導入iCHEF POS系統的相關細節，以協助餐廳順利營運。\n\n**主要結論:**\n1.  **硬體設備:**\n    *   櫃檯使用iPad搭配iCHEF系統。\n    *   出單機選擇具備防水、防蟲及捲曲功能的9900型號，並透過網路線連接。\n    *   iPad可自備，出單機亦可自行購買符合型號的二手設備。\n2.  **系統功能:**\n    *   使用掃碼點餐功能。\n    *   支援LinePay、街口支付等多元支付方式，信用卡機可串接台新或凱基銀行。\n    *   會員系統可透過優惠券或結帳時詢問方式蒐集顧客電話號碼。\n    *   簡易庫存管理功能，可記錄每日進貨數量，但無法追蹤詳細的進銷存紀錄。\n    *   基本月租費為每月1950元，開通費為990元，最短合約為半年。\n3.  **時程規劃:**\n    *   預計11月底公司設立完成，12月初開始營運。\n    *   試營運前半個月安排iCHEF系統安裝及測試。\n\n**後續行動:**\n\n**iCHEF 待辦事項:**\n1.  提供報價單及合約書。\n2.  提供POS系統設備相關檔案。\n3.  於試營運前一週安排系統安裝及教學。\n4.  協助客戶建立餐廳菜單。\n\n**客戶 待辦事項:**\n1.  提供餐廳菜單。\n2.  確認公司設立完成時間。\n3.  確認欲串接之信用卡銀行。\n4.  確認掃碼點餐之規格需求。\n\n再次感謝您的時間與配合，若有任何疑問，歡迎隨時與我們聯繫。\n\n敬祝 商祺\n\niCHEF 敬上"
+  }
+}

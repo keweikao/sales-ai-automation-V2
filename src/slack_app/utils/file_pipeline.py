@@ -47,6 +47,48 @@ def download_slack_file(file_info: dict, token: str) -> Path:
     return Path(temp_file.name)
 
 
+def convert_audio(input_path: Path) -> Path:
+    """
+    Convert audio file to 16k mono MP3 using ffmpeg.
+    Returns path to the converted file.
+    """
+    import subprocess
+    import logging
+    logger = logging.getLogger(__name__)
+
+    output_path = input_path.with_suffix(".mp3")
+    
+    # ffmpeg command:
+    # -i input_path: Input file
+    # -ac 1: Mono channel
+    # -ar 16000: 16kHz sample rate
+    # -y: Overwrite output file
+    # output_path: Output file
+    cmd = [
+        "ffmpeg",
+        "-i", str(input_path),
+        "-ac", "1",
+        "-ar", "16000",
+        "-y",
+        str(output_path)
+    ]
+    
+    logger.info(f"Converting audio: {' '.join(cmd)}")
+    try:
+        subprocess.run(
+            cmd,
+            check=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE
+        )
+        logger.info(f"Audio converted successfully: {output_path}")
+        return output_path
+    except subprocess.CalledProcessError as e:
+        logger.error(f"FFmpeg conversion failed: {e.stderr.decode()}")
+        raise RuntimeError(f"Audio conversion failed: {e.stderr.decode()}")
+
+
+
 def upload_to_gcs(
     local_path: Path,
     bucket_name: str,

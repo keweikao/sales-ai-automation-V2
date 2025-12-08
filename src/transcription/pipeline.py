@@ -17,6 +17,7 @@ from .merging.merger import TranscriptionMerger
 from .diarization import create_diarizer
 from .quality import calculate_transcription_quality
 from .gemini_pipeline import GeminiTranscriptionPipeline
+from .stt_batch_pipeline import STTBatchTranscriptionPipeline
 import os
 
 logger = logging.getLogger(__name__)
@@ -35,6 +36,10 @@ ENABLE_DIARIZATION = os.getenv("ENABLE_DIARIZATION", "false").lower() == "true"
 DIARIZATION_MODEL = os.environ.get("DIARIZATION_MODEL", "pyannote/speaker-diarization")
 DIARIZATION_ALLOW_OVERLAP = os.environ.get("DIARIZATION_ALLOW_OVERLAP", "false").lower() == "true"
 HUGGINGFACE_TOKEN = os.getenv("HUGGINGFACE_TOKEN")
+
+# Global pipeline instance
+pipeline = None
+
 
 class OptimizedTranscriptionPipeline:
     """優化的音檔轉錄流程"""
@@ -548,44 +553,39 @@ if __name__ == "__main__":
             print("...")
         print("="*60)
 
-def get_pipeline():
+def get_pipeline(engine: str = None, **kwargs):
     global pipeline
+    
+    # If engine is explicitly provided, return a new instance (factory mode)
+    if engine:
+        if engine == "stt_batch":
+            return STTBatchTranscriptionPipeline(**kwargs)
+        elif engine == "gemini":
+            return GeminiTranscriptionPipeline(**kwargs)
+        else:
+            raise ValueError(f"Unknown transcription engine: {engine}")
+
+    # Singleton mode (for main service)
     if pipeline is None:
-        logger.info(f"Current TRANSCRIPTION_ENGINE: '{TRANSCRIPTION_ENGINE}'")
-        if TRANSCRIPTION_ENGINE == "gemini":
-            logger.info("Initializing Gemini Transcription Pipeline (Google AI)...")
+        engine = TRANSCRIPTION_ENGINE
+        logger.info(f"Initializing Global Pipeline. Engine: '{engine}'")
+        
+        if engine == "gemini":
             api_key = os.getenv("GEMINI_API_KEY")
             if not api_key:
                 raise ValueError("GEMINI_API_KEY is required for Gemini engine")
             pipeline = GeminiTranscriptionPipeline(api_key=api_key)
-        else:
-            logger.info("Initializing Whisper Transcription Pipeline...")
-            # Lazy import to avoid loading heavy dependencies when using Gemini
             
-            pipeline = OptimizedTranscriptionPipeline(
-                model_size=MODEL_SIZE,
-                device=DEVICE,
-                compute_type=COMPUTE_TYPE,
-                max_workers=MAX_WORKERS,
-                target_chunk_duration=TARGET_CHUNK_DURATION,
-                overlap_duration=OVERLAP_DURATION,
-                vad_preset=VAD_PRESET,
-                language=TRANSCRIPTION_LANGUAGE,
-                enable_diarization=ENABLE_DIARIZATION,
-                diarization_model=DIARIZATION_MODEL,
-                diarization_auth_token=HUGGINGFACE_TOKEN,
-                diarization_allow_overlap=DIARIZATION_ALLOW_OVERLAP,
-            )
-        logger.info(f"{TRANSCRIPTION_ENGINE.capitalize()} Transcription pipeline loaded successfully.")
-        if TRANSCRIPTION_ENGINE == "whisper":
-            logger.info(
-                "Pipeline configuration: workers=%s, target_chunk=%ss, overlap=%ss, "
-                "diarization=%s (%s, allow_overlap=%s)",
-                MAX_WORKERS,
-                TARGET_CHUNK_DURATION,
-                OVERLAP_DURATION,
-                ENABLE_DIARIZATION,
-                DIARIZATION_MODEL,
-                DIARIZATION_ALLOW_OVERLAP,
-            )
+        elif engine == "stt_batch":
+            project_id = os.getenv("GCP_PROJECT_ID", "sales-ai-automation-v2")
+            location = os.getenv("GCP_LOCATION", "asia-southeast1")
+            pipeline = STTBatchTranscriptionPipeline(project_id=project_id, location=location)
+            
+        else:
+            # Fallback or Error. For now, let's error if not one of the supported ones to avoid confusion
+            # unless we want to keep Whisper? The previous code had Whisper.
+            # Let's assume we only support stt_batch and gemini for this deployment.
+            raise ValueError(f"Unsupported TRANSCRIPTION_ENGINE: {engine}")
+            
     return pipeline
+

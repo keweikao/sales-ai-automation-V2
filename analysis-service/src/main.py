@@ -39,10 +39,10 @@ logger = logging.getLogger(__name__)
 flask_app = Flask(__name__)
 
 # --- Model Configuration ---
-# Using Gemini API (non-Vertex AI) - all agents use gemini-2.5-flash
-GEMINI_MODEL_FAST = "gemini-2.5-flash"  # For all agents
-GEMINI_MODEL_PRO = "gemini-2.5-flash"   # For all agents (using same model)
-GEMINI_MODEL_DEFAULT = "gemini-2.5-flash"  # Default fallback
+# Using Gemini 2.0 Flash for all agents as requested
+GEMINI_MODEL_FAST = "gemini-2.0-flash-exp"
+GEMINI_MODEL_PRO = "gemini-2.0-flash-exp"
+GEMINI_MODEL_DEFAULT = "gemini-2.0-flash-exp"
 
 AGENT6_NOTIFICATION_ENDPOINT = os.environ.get("AGENT6_NOTIFICATION_ENDPOINT")
 AGENT6_NOTIFICATION_TOKEN = os.environ.get("AGENT6_NOTIFICATION_TOKEN")
@@ -59,18 +59,16 @@ except Exception as e:
     db = None
 
 try:
-    # Multi-Agent Orchestrator for Agent 1-5
-    # Pass model configuration dict for different agents
+    # Multi-Agent Orchestrator for Agent 1-4 (3+1 Architecture)
     orchestrator = MultiAgentOrchestrator(
-        model_name=GEMINI_MODEL_DEFAULT,  # Default model
+        model_name=GEMINI_MODEL_DEFAULT,
         model_config={
-            "agent1": GEMINI_MODEL_FAST,  # Participant - fast
-            "agent2": GEMINI_MODEL_FAST,  # Sentiment - fast
-            "agent3": GEMINI_MODEL_PRO,   # Needs - complex
-            "agent4": GEMINI_MODEL_FAST,  # Competitor - fast
-            "agent5": GEMINI_MODEL_PRO,   # Features - complex
+            "agent1": GEMINI_MODEL_FAST,  # Context
+            "agent2": GEMINI_MODEL_PRO,   # Buyer (Complex)
+            "agent3": GEMINI_MODEL_PRO,   # Seller (Complex)
+            "agent4": GEMINI_MODEL_FAST,  # Summary
         },
-        min_success_threshold=3,  # Require at least 3/5 agents to succeed
+        min_success_threshold=3,  # Require at least 3/4 agents
         enable_agent_retry=True,
         agent_retry_attempts=2,
         db_client=db,
@@ -114,68 +112,7 @@ except Exception as e:
     slack_notifier = None
 
 
-def trigger_agent6_notification(case_id: str) -> None:
-    """
-    Notify Slack app to send Agent 6 card via internal endpoint.
-    """
-    if not AGENT6_NOTIFICATION_ENDPOINT:
-        return
 
-    payload = json.dumps({"caseId": case_id}).encode("utf-8")
-    headers = {"Content-Type": "application/json"}
-    token = AGENT6_NOTIFICATION_TOKEN or os.environ.get("SLACK_PROGRESS_TOKEN")
-    if token:
-        headers["X-Progress-Token"] = token
-
-    request_obj = urllib.request.Request(
-        AGENT6_NOTIFICATION_ENDPOINT,
-        data=payload,
-        headers=headers,
-        method="POST",
-    )
-
-    try:
-        with urllib.request.urlopen(request_obj, timeout=10) as response:  # nosec B310
-            if response.status >= 300:
-                logger.warning(
-                    "Agent 6 notification endpoint returned %s for case %s",
-                    response.status,
-                    case_id,
-                )
-    except urllib.error.URLError as exc:
-        logger.error("Failed to trigger Agent 6 notification for %s: %s", case_id, exc)
-
-
-def trigger_agent7_notification(case_id: str) -> None:
-    """
-    Notify Slack app to send Agent 7 preview via internal endpoint.
-    """
-    if not AGENT7_NOTIFICATION_ENDPOINT:
-        return
-
-    payload = json.dumps({"caseId": case_id}).encode("utf-8")
-    headers = {"Content-Type": "application/json"}
-    token = AGENT7_NOTIFICATION_TOKEN or os.environ.get("SLACK_PROGRESS_TOKEN")
-    if token:
-        headers["X-Progress-Token"] = token
-
-    request_obj = urllib.request.Request(
-        AGENT7_NOTIFICATION_ENDPOINT,
-        data=payload,
-        headers=headers,
-        method="POST",
-    )
-
-    try:
-        with urllib.request.urlopen(request_obj, timeout=10) as response:  # nosec B310
-            if response.status >= 300:
-                logger.warning(
-                    "Agent 7 notification endpoint returned %s for case %s",
-                    response.status,
-                    case_id,
-                )
-    except urllib.error.URLError as exc:
-        logger.error("Failed to trigger Agent 7 notification for %s: %s", case_id, exc)
 
 
 # --- Helper Functions ---
@@ -420,7 +357,7 @@ def analyze_transcript():
             # Continue anyway, don't fail the request
 
         # Send Slack notification (async, don't fail if this fails)
-        if slack_notifier and analysis_result.success:
+        if slack_notifier:
             try:
                 notification_sent = slack_notifier.send_analysis_notification(case_id)
                 if notification_sent:
@@ -431,24 +368,8 @@ def analyze_transcript():
                 logger.error(f"Error sending Slack notification: {e}", exc_info=True)
                 # Don't fail the request
 
-        # Send Agent 6 notification first (sales coach analysis)
-        agent6_result = analysis_result.agent_results.get("agent6")
-        if agent6_result and agent6_result.success:
-            try:
-                trigger_agent6_notification(case_id)
-                logger.info(f"Agent 6 notification triggered for case {case_id}")
-            except Exception as e:
-                logger.error(f"Failed to trigger Agent 6 notification: {e}", exc_info=True)
-
-        # Send Agent 7 notification second (customer summary)
-        # This ensures sales insights appear before the summary in Slack
-        agent7_result = analysis_result.agent_results.get("agent7")
-        if agent7_result and agent7_result.success:
-            try:
-                trigger_agent7_notification(case_id)
-                logger.info(f"Agent 7 notification triggered for case {case_id}")
-            except Exception as e:
-                logger.error(f"Failed to trigger Agent 7 notification: {e}", exc_info=True)
+        # Agent 6 & 7 notifications are now handled directly in slack_notifier.py
+        # Removed redundant trigger_agent6_notification and trigger_agent7_notification calls
 
         # Determine response based on analysis result
         if analysis_result.success:

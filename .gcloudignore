@@ -1,0 +1,16 @@
+.git
+.gitignore
+node_modules/
+__pycache__/
+*.pyc
+.DS_Store
+.venv/
+venv/
+env/
+test-data/
+.gemini/
+specs/
+q/
+q.zip
+*.zip
+*.tar.gz

@@ -3,7 +3,7 @@ import os
 import logging
 from typing import Any, Dict, Optional
 from dataclasses import asdict
-from models import AgentResult
+from .models import AgentResult
 
 logger = logging.getLogger(__name__)
 

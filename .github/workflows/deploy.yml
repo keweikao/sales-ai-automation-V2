@@ -46,6 +46,7 @@ jobs:
           pip install -r analysis-service/requirements.txt
           pip install -r src/slack_app/requirements.txt
           pip install -r web-service/requirements.txt
+          pip install -r sms-service/requirements.txt
 
       - name: Run test suite
         run: make test-all

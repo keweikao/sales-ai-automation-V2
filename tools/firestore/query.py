@@ -74,7 +74,24 @@ def query(
     raw_results = list(query_ref.limit(limit * 2).stream())
 
     # Convert to dicts
-    raw_data = [doc.to_dict() for doc in raw_results]
+    # Convert to dicts and include ID
+    raw_data = []
+    for doc in raw_results:
+        d = doc.to_dict()
+        d["id"] = doc.id
+        raw_data.append(d)
+
+    # Helper to serialize datetime
+    def serialize_datetime(obj):
+        if hasattr(obj, "isoformat"):
+            return obj.isoformat()
+        if isinstance(obj, dict):
+            return {k: serialize_datetime(v) for k, v in obj.items()}
+        if isinstance(obj, list):
+            return [serialize_datetime(v) for v in obj]
+        return obj
+
+    raw_data = serialize_datetime(raw_data)
 
     # =====================================
     # STAGE 2: FIELD FILTERING (in environment)

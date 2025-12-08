@@ -21,7 +21,7 @@ echo "🧠 Deploying Analysis Service..."
 echo "   - Applying Orchestrator Optimizations (Parallel Agent 1, 5, 7)"
 echo "   - Preserving existing environment variables"
 echo "--------------------------------------------------------"
-gcloud builds submit --config deploy/analysis/cloudbuild.analysis.deploy.yaml .
+# gcloud builds submit --config deploy/analysis/cloudbuild.analysis.deploy.yaml .
 
 # 3. Deploy Slack App
 echo ""
@@ -37,7 +37,15 @@ echo "--------------------------------------------------------"
 echo "🌐 Deploying Web Service..."
 echo "   - Using deploy/web/cloudbuild.summary-web-service.yaml"
 echo "--------------------------------------------------------"
-gcloud builds submit --config deploy/web/cloudbuild.summary-web-service.yaml .
+# gcloud builds submit --config deploy/web/cloudbuild.summary-web-service.yaml .
+
+# 5. Deploy SMS Service
+echo ""
+echo "--------------------------------------------------------"
+echo "📱 Deploying SMS Service..."
+echo "   - Using deploy/sms/cloudbuild.sms.yaml"
+echo "--------------------------------------------------------"
+# gcloud builds submit --config deploy/sms/cloudbuild.sms.yaml .
 
 echo ""
 echo "========================================================"

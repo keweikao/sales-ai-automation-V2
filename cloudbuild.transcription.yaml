@@ -2,8 +2,9 @@ steps:
   - name: 'gcr.io/cloud-builders/docker'
     args:
       - 'build'
+      - '--no-cache'
       - '-t'
-      - 'asia-east1-docker.pkg.dev/sales-ai-automation-v2/sales-ai-automation-v2/transcription-service:latest'
+      - 'asia-east1-docker.pkg.dev/sales-ai-automation-v2/sales-ai-automation-v2/transcription-service:v1-iterative-fix'
       - '-f'
       - 'src/transcription/Dockerfile'
       - '.'
@@ -11,7 +12,7 @@ steps:
   - name: 'gcr.io/cloud-builders/docker'
     args:
       - 'push'
-      - 'asia-east1-docker.pkg.dev/sales-ai-automation-v2/sales-ai-automation-v2/transcription-service:latest'
+      - 'asia-east1-docker.pkg.dev/sales-ai-automation-v2/sales-ai-automation-v2/transcription-service:v1-iterative-fix'
 
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: gcloud
@@ -20,17 +21,17 @@ steps:
       - 'run'
       - 'deploy'
       - 'transcription-service'
-      - '--image=asia-east1-docker.pkg.dev/sales-ai-automation-v2/sales-ai-automation-v2/transcription-service:latest'
+      - '--image=asia-east1-docker.pkg.dev/sales-ai-automation-v2/sales-ai-automation-v2/transcription-service:v1-iterative-fix'
       - '--region=asia-east1'
       - '--platform=managed'
       - '--allow-unauthenticated'
       - '--memory=2Gi'
       - '--cpu=1'
       - '--timeout=3600'
-      - '--set-env-vars=TRANSCRIPTION_ENGINE=gemini,GEMINI_MODEL=gemini-2.5-flash,SLACK_PROGRESS_ENDPOINT=https://slack-app-acv3ye2faq-de.a.run.app/internal/transcription-progress,SLACK_PROGRESS_TOKEN=3d4ebd6a1cfe8ac77a60e8a69cc4a52a57ad482e940e52d4eb2c17c6c45801d3'
+      - '--set-env-vars=TRANSCRIPTION_ENGINE=stt_batch,GEMINI_MODEL=gemini-2.5-flash,SLACK_PROGRESS_ENDPOINT=https://slack-app-acv3ye2faq-de.a.run.app/internal/transcription-progress,SLACK_PROGRESS_TOKEN=3d4ebd6a1cfe8ac77a60e8a69cc4a52a57ad482e940e52d4eb2c17c6c45801d3'
       - '--set-secrets=GEMINI_API_KEY=gemini-api-key:latest,HUGGINGFACE_TOKEN=huggingface-token:latest'
 
 images:
-  - 'asia-east1-docker.pkg.dev/sales-ai-automation-v2/sales-ai-automation-v2/transcription-service:latest'
+  - 'asia-east1-docker.pkg.dev/sales-ai-automation-v2/sales-ai-automation-v2/transcription-service:v1-iterative-fix'
 
 timeout: 3600s

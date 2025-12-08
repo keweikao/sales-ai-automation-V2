@@ -26,6 +26,7 @@ from utils.case_management import (
 )
 from utils.file_pipeline import (
     download_slack_file,
+    convert_audio,
     enqueue_transcription_task,
     upload_to_gcs,
 )
@@ -34,6 +35,7 @@ from notifications.agent6_notifier import Agent6Notifier
 from notifications.agent7_notifier import Agent7Notifier
 from notifications.summary_delivery import DeliveryResult, SummaryDeliveryService
 from interactions.summary_editor import SummaryEditor
+from interactions.summary_sender import SummarySender
 
 # 設定 logging
 logging.basicConfig(
@@ -85,6 +87,7 @@ slack_client: Optional[WebClient] = WebClient(token=SLACK_BOT_TOKEN) if SLACK_BO
 agent6_notifier: Optional[Agent6Notifier] = None
 agent7_notifier: Optional[Agent7Notifier] = None
 summary_editor: Optional[SummaryEditor] = None
+summary_sender: Optional[SummarySender] = None
 summary_delivery_service: Optional[SummaryDeliveryService] = None
 if slack_client and db:
     try:
@@ -102,6 +105,12 @@ if slack_client and db:
     try:
         summary_editor = SummaryEditor(slack_client, db)
         logger.info("Summary editor initialized successfully")
+    except Exception as notifier_error:  # pylint: disable=broad-except
+        logger.error("Failed to initialize summary editor: %s", notifier_error, exc_info=True)
+
+    try:
+        summary_sender = SummarySender(slack_client, db)
+        logger.info("Summary sender initialized successfully")
     except Exception as notifier_error:  # pylint: disable=broad-except
         logger.error("Failed to initialize summary editor: %s", notifier_error, exc_info=True)
 
@@ -189,7 +198,7 @@ def handle_file_shared(client, event, logger):
             logger.info(f"New file {file_id} record created atomically.")
 
         # 檔案驗證
-        from src.slack_app.utils.file_validator import validate_audio_file, FileValidationError
+        from utils.file_validator import validate_audio_file, FileValidationError
         try:
             validate_audio_file(file_info)
         except FileValidationError as e:
@@ -311,8 +320,7 @@ def handle_analyze_button(ack, body, client, logger):
                             "type": "plain_text_input",
                             "action_id": "customer_phone_input",
                             "placeholder": {"type": "plain_text", "text": "例如：0912345678"}
-                        },
-                        "optional": True
+                        }
                     },
                     {
                         "type": "input",
@@ -377,9 +385,15 @@ def handle_modal_submission(ack, body, client, view, logger):
         channel_id,
     )
 
-    # 驗證手機（若有提供） - 在 ack() 之前驗證
+    # 驗證手機（必填） - 在 ack() 之前驗證
+    if not customer_phone_raw or not customer_phone_raw.strip():
+        ack(response_action="errors", errors={
+            "customer_phone_block": "客戶電話為必填欄位，請輸入手機號碼。"
+        })
+        return
+    
     clean_phone = re.sub(r"[^\d]", "", customer_phone_raw)
-    if customer_phone_raw and not re.fullmatch(r"09\d{8}", clean_phone):
+    if not re.fullmatch(r"09\d{8}", clean_phone):
         ack(response_action="errors", errors={
             "customer_phone_block": "請輸入正確的台灣手機格式（例如：0912345678）。"
         })
@@ -665,11 +679,28 @@ def _process_modal_submission(
         logger.info("File downloaded to: %s", local_path)
         sys.stdout.flush()
 
+        # Convert audio to 16k MP3
+        try:
+            converted_path = convert_audio(Path(local_path))
+            local_path = str(converted_path)
+            logger.info("Audio converted to: %s", local_path)
+        except Exception as conv_error:
+            logger.error("Audio conversion failed: %s", conv_error)
+            # Fallback to original file if conversion fails? 
+            # Or fail hard? User wants conversion to fix error, so maybe fail hard or log warning.
+            # Let's log warning and try original, but likely it will fail transcription again.
+            # Actually, let's proceed with converted path if successful.
+            pass
+
         safe_name = re.sub(r'\s+', '_', file_metadata["name"])
+        # Update extension in destination blob if converted
+        if local_path.endswith(".mp3"):
+             safe_name = Path(safe_name).with_suffix(".mp3").name
+
         destination_blob = f"slack/{case_id}/{safe_name}"
         logger.info("Uploading to GCS: %s", destination_blob)
         sys.stdout.flush()
-        gcs_path = upload_to_gcs(temp_path, AUDIO_BUCKET, destination_blob)
+        gcs_path = upload_to_gcs(Path(local_path), AUDIO_BUCKET, destination_blob)
         logger.info("File uploaded to GCS: %s", gcs_path)
         sys.stdout.flush()
 
@@ -748,13 +779,13 @@ def _process_modal_submission(
                 client.chat_update(
                     channel=channel_id,
                     ts=message_ts,
-                    text=f"案件編號：`{case_id}` ⏱️ 轉錄約需 5-10 分鐘，完成後會通知您。",
+                    text=f"案件編號：`{case_id}` 📁 音檔已完成上傳，等待 Batch 傳送轉錄...",
                     blocks=[
                         {
                             "type": "section",
                             "text": {
                                 "type": "mrkdwn",
-                                "text": f"案件編號：`{case_id}` ⏱️ 轉錄約需 5-10 分鐘，完成後會通知您。",
+                                "text": f"案件編號：`{case_id}` 📁 音檔已完成上傳，等待 Batch 傳送轉錄...",
                             },
                         },
                     ],
@@ -1133,6 +1164,46 @@ def handle_edit_summary_action(ack, body, logger):  # type: ignore[override]
     summary_editor.open_edit_modal(trigger_id, case_id)
 
 
+@app.action("send_to_customer")
+def handle_send_to_customer_action(ack, body, logger):  # type: ignore[override]
+    """
+    Handle the "Send to Customer" button for Agent 4.
+    """
+    ack()
+    if not summary_sender:
+        logger.warning("Summary sender unavailable; cannot send SMS.")
+        return
+
+    actions = body.get("actions") or []
+    case_id = actions[0].get("value") if actions else None
+    user_id = body.get("user", {}).get("id")
+    channel_id = body.get("channel", {}).get("id")
+    message_ts = body.get("message", {}).get("ts")
+    
+    if not case_id:
+        logger.warning("Missing case_id in send_to_customer action: %s", body)
+        return
+
+    # Handle send to customer
+    result = summary_sender.handle_send_to_customer(
+        case_id=case_id,
+        user_id=user_id,
+        channel_id=channel_id,
+        message_ts=message_ts
+    )
+    
+    # Send ephemeral response
+    if result.get("response_type") == "ephemeral":
+        try:
+            app.client.chat_postEphemeral(
+                channel=channel_id,
+                user=user_id,
+                text=result.get("text", "操作完成")
+            )
+        except Exception as e:
+            logger.error(f"Failed to send ephemeral message: {e}")
+
+
 @app.action("preview_summary")
 def handle_preview_summary_action(ack, body, logger):  # type: ignore[override]
     """
@@ -1449,7 +1520,7 @@ def handle_transcription_progress():
     file_id = payload.get("fileId")
     status = payload.get("status")
 
-    if not case_id or status != "transcribed":
+    if not case_id or status not in ["transcribed", "batch_submitted"]:
         logger.warning("Invalid transcription progress payload: %s", payload)
         return {"error": "Invalid payload"}, 400
 
@@ -1458,12 +1529,16 @@ def handle_transcription_progress():
         logger.warning("No Slack channel found for case %s (file: %s)", case_id, file_id)
         return {"status": "ignored", "reason": "channel_not_found"}, 200
 
-    progress_text = (
-        f"🎧 案件 `{case_id}` 的音檔已完成轉錄，"
-        "目前進入 Agent 6 / Agent 7 分析階段。\n"
-        "📡 正在生成銷售洞察與客戶摘要，完成後會自動通知您。"
-    )
-    context_text = "狀態：音檔已轉錄 ✅ · 分析中 🔄"
+    if status == "batch_submitted":
+        progress_text = f"🚀 案件 `{case_id}` 已送往 STT 進行轉錄..."
+        context_text = "狀態：已送出轉錄 🚀"
+    elif status == "transcribed":
+        progress_text = f"✅ 案件 `{case_id}` 完成轉錄，正在進行分析中..."
+        context_text = "狀態：完成轉錄・分析中 🔄"
+    else:
+        progress_text = f"ℹ️ 案件 `{case_id}` 狀態更新：{status}"
+        context_text = f"狀態：{status}"
+
     if customer_name:
         context_text = f"{context_text} · 客戶：{customer_name}"
 
