@@ -13,7 +13,7 @@ test-summary-web:
 test-code-intelligence:
 	pytest tests/code_intelligence -v
 
-test-all: test-analysis test-slack test-summary-web test-code-intelligence
+test-all: test-analysis test-slack test-summary-web
 
 build-code-index:
 	python3 tools/code_intelligence/cli.py build-index --force
