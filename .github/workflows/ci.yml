@@ -32,12 +32,10 @@ jobs:
           find . -name "*.py" -print0 | xargs -0 python3 -m py_compile
 
       - name: Check YAML syntax
-        run: |
-          find . -name "*.yaml" -o -name "*.yml" | while read f; do python -c "import yaml; yaml.safe_load(open('$f'))"; done
+        run: python scripts/check_syntax.py yaml
 
       - name: Check JSON syntax
-        run: |
-          find . -name "*.json" | while read f; do python -c "import json; json.load(open('$f'))"; done
+        run: python scripts/check_syntax.py json
 
       - name: Install test dependencies
         run: |
