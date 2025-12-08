@@ -24,7 +24,7 @@ class STTBatchTranscriptionPipeline(TranscriptionPipeline):
                 api_endpoint=f"{location}-speech.googleapis.com"
             )
         )
-        self.recognizer_id = "sales-ai-recognizer" # Persistent recognizer ID
+        self.recognizer_id = "sales-ai-recognizer-v2" # Persistent recognizer ID
         self.recognizer_path = f"projects/{project_id}/locations/{location}/recognizers/{self.recognizer_id}"
 
     def _ensure_recognizer(self):
