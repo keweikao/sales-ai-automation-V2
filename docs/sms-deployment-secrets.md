@@ -117,12 +117,14 @@ gcloud secrets get-iam-policy every8d-password
 ## ⚠️ 安全最佳實踐
 
 ### ✅ 推薦做法（使用 Secret Manager）
+
 - 敏感資訊儲存在 Secret Manager
 - 自動版本控制
 - 細粒度的存取控制
 - 審計日誌記錄
 
 ### ❌ 不推薦做法（直接使用環境變數）
+
 ```bash
 # 不要這樣做！
 gcloud run deploy sms-service \
@@ -153,6 +155,7 @@ gcloud run services describe sms-service \
 ## 💰 成本說明
 
 Secret Manager 定價：
+
 - **前 6 個 secrets**: 免費
 - **每個額外 secret**: $0.06/月
 - **每 10,000 次存取**: $0.03

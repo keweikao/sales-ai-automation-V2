@@ -42,7 +42,7 @@ class STTBatchTranscriptionPipeline(TranscriptionPipeline):
                     default_recognition_config=cloud_speech.RecognitionConfig(
                         auto_decoding_config=cloud_speech.AutoDetectDecodingConfig(),
                         language_codes=["cmn-Hant-TW", "en-US"], # Support Mixed
-                        model="latest_long", # Optimized for long audio
+                        model="chirp_3", # Latest multilingual model with cmn-Hant-TW support
                         features=cloud_speech.RecognitionFeatures(
                             enable_word_time_offsets=True,
                             enable_automatic_punctuation=True,

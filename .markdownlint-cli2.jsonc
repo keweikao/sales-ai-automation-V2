@@ -3,7 +3,9 @@
     "**/*.md",
     "!**/.pytest_cache/**/*.md",
     "!**/node_modules/**",
-    "!**/.claude/**"
+    "!**/.claude/**",
+    "!**/agents/prompts/**",
+    "!services/**"
   ],
   // https://github.com/DavidAnson/markdownlint/blob/main/doc/Rules.md
   "config": {

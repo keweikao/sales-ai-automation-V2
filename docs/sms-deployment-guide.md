@@ -32,7 +32,7 @@ SUMMARY_BASE_URL=https://web-service-497329205771.asia-east1.run.app
 ### 步驟 1: 部署 SMS 服務到 Cloud Run
 
 > **⚠️ 重要**: 建議使用 **Secret Manager** 儲存敏感資訊（帳號密碼）
-> 
+>
 > 詳細步驟請參考: [`sms-deployment-secrets.md`](sms-deployment-secrets.md)
 
 #### 方法 A: 使用 Secret Manager（推薦）✅
@@ -173,6 +173,7 @@ python test_sms_service.py \
 ## ✅ 驗收清單
 
 ### 功能驗證
+
 - [ ] Slack 上傳時電話為必填
 - [ ] Agent 4 完成後顯示編輯和發送按鈕
 - [ ] 編輯功能正常運作
@@ -182,12 +183,14 @@ python test_sms_service.py \
 - [ ] Firestore 正確記錄發送狀態
 
 ### 錯誤處理
+
 - [ ] 無效電話號碼會顯示錯誤
 - [ ] 重複發送會顯示警告
 - [ ] SMS 發送失敗有適當錯誤訊息
 - [ ] 餘額不足時有明確提示
 
 ### 監控
+
 - [ ] Cloud Logging 記錄 SMS 發送
 - [ ] Firestore delivery 欄位正確更新
 - [ ] 可以追蹤 SMS 成本
@@ -222,11 +225,13 @@ gcloud logging read "resource.type=cloud_run_revision AND resource.labels.servic
 ### 問題 1: SMS 發送失敗
 
 **檢查項目**:
+
 1. EVERY8D 帳號密碼是否正確
 2. 帳號餘額是否充足
 3. 手機號碼格式是否正確 (09xxxxxxxx)
 
 **解決方法**:
+
 ```bash
 # 檢查環境變數
 gcloud run services describe sms-service --region asia-east1 --format yaml | grep env
@@ -238,11 +243,13 @@ gcloud logging read "resource.type=cloud_run_revision AND resource.labels.servic
 ### 問題 2: 按鈕無反應
 
 **檢查項目**:
+
 1. Slack App 是否已重新部署
 2. summary_sender 是否正確初始化
 3. SMS_SERVICE_URL 是否設定
 
 **解決方法**:
+
 ```bash
 # 查看 Slack App 日誌
 gcloud logging read "resource.type=cloud_run_revision AND resource.labels.service_name=slack-app AND textPayload:summary_sender" --limit 10
@@ -251,6 +258,7 @@ gcloud logging read "resource.type=cloud_run_revision AND resource.labels.servic
 ### 問題 3: 網頁無法訪問
 
 **檢查項目**:
+
 1. web-service 是否正常運行
 2. Firestore customerSummary 是否存在
 3. URL 格式是否正確
