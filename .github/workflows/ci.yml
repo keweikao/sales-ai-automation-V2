@@ -33,11 +33,11 @@ jobs:
 
       - name: Check YAML syntax
         run: |
-          find . -name "*.yaml" -o -name "*.yml" -print0 | xargs -0 -I {} python -c "import yaml; with open('{}', 'r') as f: yaml.safe_load(f)"
+          find . -name "*.yaml" -o -name "*.yml" | while read f; do python -c "import yaml; yaml.safe_load(open('$f'))"; done
 
       - name: Check JSON syntax
         run: |
-          find . -name "*.json" -print0 | xargs -0 -I {} python -c "import json; with open('{}', 'r') as f: json.load(f)"
+          find . -name "*.json" | while read f; do python -c "import json; json.load(open('$f'))"; done
 
       - name: Install test dependencies
         run: |
