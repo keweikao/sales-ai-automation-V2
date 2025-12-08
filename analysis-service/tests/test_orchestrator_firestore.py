@@ -47,61 +47,59 @@ class FakeFirestore:
         return FakeCollectionRef(self.doc_ref)
 
 
-def test_persist_agent6_results_writes_structured_and_metadata():
+def test_persist_agent3_results_writes_seller_data():
     fake_db = FakeFirestore()
     orchestrator = MultiAgentOrchestrator(db_client=fake_db)
     result = AgentResult(
-        agent_id="agent6",
+        agent_id="agent3",
         success=True,
         data={
-            "structured": {"salesStage": "需要證明型", "dealHealth": {"score": 82}},
-            "rawOutput": "## 30秒快速掃描",
+            "salesCoach": {
+                "strengths": ["Clear value prop"],
+                "improvements": ["Ask more questions"]
+            }
         },
         duration=12.5,
         retry_count=1,
     )
 
-    orchestrator._persist_agent6_results("CASE-AGT6", result)
+    orchestrator._persist_agent3_results("CASE-AGT3", result)
 
     assert fake_db.doc_ref.set_calls, "Expected Firestore set to be invoked"
     payload = fake_db.doc_ref.set_calls[0]["data"]["analysis"]
-    assert payload["structured"]["salesStage"] == "需要證明型"
-    assert payload["rawOutput"] == "## 30秒快速掃描"
-    agent6_meta = payload["agents"]["agent6"]
-    assert agent6_meta["status"] == "success"
-    assert agent6_meta["retryCount"] == 1
-    assert agent6_meta["data"]["structured"]["dealHealth"]["score"] == 82
+    
+    agent3_meta = payload["agents"]["agent3"]
+    assert agent3_meta["status"] == "success"
+    assert agent3_meta["retryCount"] == 1
+    assert agent3_meta["data"]["salesCoach"]["strengths"][0] == "Clear value prop"
 
 
-def test_persist_agent7_results_shapes_customer_summary():
+def test_persist_agent4_results_writes_summary_data():
     fake_db = FakeFirestore()
     orchestrator = MultiAgentOrchestrator(db_client=fake_db)
     result = AgentResult(
-        agent_id="agent7",
+        agent_id="agent4",
         success=True,
         data={
-            "customerSummary": {
-                "summary": "張總確認導入掃碼點餐。",
-                "keyDecisions": [{"title": "導入掃碼", "speakerId": "Speaker 2"}],
-            },
-            "markdown": "## 摘要\n- 張總確認導入掃碼點餐。",
+            "subject": "Meeting Summary",
+            "summary": "Discussed pricing.",
+            "actionItems": ["Send quote"]
         },
         duration=8.2,
         retry_count=0,
     )
 
-    orchestrator._persist_agent7_results("CASE-AGT7", result)
+    orchestrator._persist_agent4_results("CASE-AGT4", result)
 
     assert fake_db.doc_ref.set_calls, "Expected Firestore set to be invoked"
     payload = fake_db.doc_ref.set_calls[0]["data"]["analysis"]
 
+    # Check top-level customerSummary
     summary = payload["customerSummary"]
-    assert summary["summary"] == "張總確認導入掃碼點餐。"
-    assert summary["markdown"].startswith("## 摘要")
-    assert summary["originalMarkdown"].startswith("## 摘要")
-    assert summary["isEdited"] is False
-    assert summary["editCount"] == 0
+    assert summary["subject"] == "Meeting Summary"
+    assert summary["summary"] == "Discussed pricing."
 
-    agent7_meta = payload["agents"]["agent7"]
-    assert agent7_meta["status"] == "success"
-    assert agent7_meta["data"]["customerSummary"]["keyDecisions"][0]["title"] == "導入掃碼"
+    # Check agent metadata
+    agent4_meta = payload["agents"]["agent4"]
+    assert agent4_meta["status"] == "success"
+    assert agent4_meta["data"]["subject"] == "Meeting Summary"
