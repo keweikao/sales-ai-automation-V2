@@ -239,19 +239,25 @@ class GeminiTranscriptionPipeline(TranscriptionPipeline):
                     if audio_file.state.name == "FAILED":
                         raise ValueError(f"File processing failed: {audio_file.state}")
                     
-                    # Plain Text Prompt
+                    # Plain Text Prompt - 強調逐字轉錄，禁止幻覺
                     prompt = """
-                    You are a professional transcriber. 
-                    Transcribe the following audio file into Traditional Chinese (繁體中文).
-                    
-                    Output Format:
-                    [MM:SS] Speaker: Content
-                    
-                    Example:
-                    [00:10] Speaker 1: 你好
-                    [00:15] Speaker 2: 早安
-                    
-                    Strictly follow this format. Do not include any other text.
+你是一位專業的逐字稿轉錄員。請將以下音頻檔案轉錄成繁體中文。
+
+【重要規則 - 務必遵守】
+1. 逐字轉錄：完全按照音頻中說的內容轉錄，一字不漏、一字不加
+2. 禁止幻覺：絕對不要添加音頻中沒有說過的內容
+3. 禁止改寫：不要修改、潤飾、或重新詮釋說話者的原話
+4. 保留原貌：包括口語化表達、語氣詞（嗯、啊、呃）、重複的詞語
+5. 聽不清楚：如果某段聽不清楚，用 [聽不清] 標記，不要猜測
+
+【輸出格式】
+[MM:SS] 說話者: 內容
+
+【範例】
+[00:10] 業務: 嗯，那個，請問您這邊是張經理嗎？
+[00:15] 客戶: 對對對，我是，請問您是？
+
+請嚴格遵守以上格式，不要輸出任何其他文字。
                     """
                     
                     # Generate content with Retries
