@@ -193,7 +193,9 @@ class GeminiTranscriptionPipeline(TranscriptionPipeline):
         except subprocess.CalledProcessError as e:
             # If copy fails (e.g. inaccurate seek), try re-encoding
             logger.warning(f"Fast copy failed for chunk {chunk_id}, trying re-encoding: {e}")
-            cmd[4] = "aac" # Re-encode to aac
+            # cmd is: ["ffmpeg", "-y", "-i", path, "-ss", start, "-t", duration, "-c", "copy", output]
+            # index:   0         1     2     3     4      5      6     7         8     9       10
+            cmd[9] = "aac" # Re-encode to aac
             subprocess.run(cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             return str(output_path)
 
