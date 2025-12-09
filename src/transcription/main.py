@@ -177,14 +177,16 @@ def transcribe_audio():
 @flask_app.route("/trigger-batch", methods=["POST"])
 def trigger_batch():
     """
-    Triggered by Cloud Scheduler.
-    Collects 'queued_for_batch' cases and submits them to STT Batch API.
+    Triggered by Cloud Scheduler or manually.
+    For stt_batch engine: Collects 'queued_for_batch' cases and submits them to STT Batch API.
+    For gemini engine: Processes cases one by one using Gemini API.
     """
     if not db:
         return jsonify({"error": "Firestore not initialized"}), 500
-        
-    pipeline = get_pipeline(engine="stt_batch", project_id=GCP_PROJECT_ID, location=GCP_LOCATION)
     
+    engine = os.getenv("TRANSCRIPTION_ENGINE", "stt_batch").strip().lower()
+    logger.info(f"Trigger batch called with engine: {engine}")
+        
     # 1. Query queued cases
     docs = db.collection("cases").where("status", "==", "queued_for_batch").stream()
     
@@ -202,34 +204,121 @@ def trigger_batch():
         
     logger.info(f"Found {len(queued_cases)} cases to process.")
     
-    try:
-        # 2. Submit Batch
-        op_name = pipeline.submit_batch(audio_uris)
+    # --- Gemini Engine: Process one by one ---
+    if engine == "gemini":
+        from google.cloud import storage as gcs_storage
+        import tempfile
         
-        # 3. Update Firestore with Operation Name
-        batch_ref = db.collection("transcription_batches").document()
-        batch_ref.set({
-            "operationName": op_name,
-            "caseIds": [d.id for d in queued_cases],
-            "status": "submitted",
-            "createdAt": firestore.SERVER_TIMESTAMP
-        })
+        gemini_pipeline = get_pipeline()  # Will use global singleton
+        storage_client = gcs_storage.Client()
+        processed_count = 0
         
         for doc in queued_cases:
-            doc.reference.update({
-                "status": "batch_submitted",
-                "batchId": batch_ref.id,
-                "operationName": op_name,
-                "updatedAt": firestore.SERVER_TIMESTAMP
-            })
-            # Notify Slack
-            notify_slack_progress(case_id=doc.id, file_id=None, status="batch_submitted")
+            case_id = doc.id
+            data = doc.to_dict()
+            gcs_uri = data.get("gcsUri")
             
-        return jsonify({"message": f"Batch submitted: {op_name}", "count": len(queued_cases)}), 200
+            logger.info(f"Processing case {case_id} with Gemini...")
+            
+            try:
+                # Update status to processing
+                doc.reference.update({
+                    "status": "transcribing",
+                    "updatedAt": firestore.SERVER_TIMESTAMP
+                })
+                notify_slack_progress(case_id=case_id, file_id=None, status="transcribing")
+                
+                # Download audio from GCS
+                bucket_name = gcs_uri.replace("gs://", "").split("/")[0]
+                blob_path = "/".join(gcs_uri.replace("gs://", "").split("/")[1:])
+                
+                bucket = storage_client.bucket(bucket_name)
+                blob = bucket.blob(blob_path)
+                
+                # Create temp file with correct extension
+                file_ext = blob_path.split(".")[-1] if "." in blob_path else "mp3"
+                with tempfile.NamedTemporaryFile(suffix=f".{file_ext}", delete=False) as tmp_file:
+                    blob.download_to_filename(tmp_file.name)
+                    local_path = tmp_file.name
+                
+                logger.info(f"Downloaded audio to {local_path}")
+                
+                # Transcribe with Gemini
+                result = gemini_pipeline.transcribe(local_path)
+                
+                # Cleanup temp file
+                os.remove(local_path)
+                
+                if result.get("success"):
+                    # Save to Firestore
+                    transcription_data = {
+                        "text": result.get("full_text", ""),
+                        "segments": result.get("segments", []),
+                        "speakers": result.get("speakers", []),
+                    }
+                    
+                    doc.reference.update({
+                        "transcription": transcription_data,
+                        "status": "transcribed",
+                        "updatedAt": firestore.SERVER_TIMESTAMP
+                    })
+                    
+                    # Trigger Analysis
+                    _trigger_analysis(case_id)
+                    notify_slack_progress(case_id=case_id, file_id=None, status="transcribed")
+                    processed_count += 1
+                    logger.info(f"Case {case_id} transcribed successfully.")
+                else:
+                    error_msg = result.get("error", "Unknown error")
+                    doc.reference.update({
+                        "status": "transcription_failed",
+                        "error": error_msg,
+                        "updatedAt": firestore.SERVER_TIMESTAMP
+                    })
+                    logger.error(f"Case {case_id} transcription failed: {error_msg}")
+                    
+            except Exception as e:
+                logger.error(f"Error processing case {case_id}: {e}", exc_info=True)
+                doc.reference.update({
+                    "status": "transcription_failed",
+                    "error": str(e),
+                    "updatedAt": firestore.SERVER_TIMESTAMP
+                })
         
-    except Exception as e:
-        logger.error(f"Batch submission failed: {e}", exc_info=True)
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"message": f"Gemini transcription complete", "count": processed_count}), 200
+    
+    # --- STT Batch Engine: Submit to Batch API ---
+    else:
+        pipeline = get_pipeline(engine="stt_batch", project_id=GCP_PROJECT_ID, location=GCP_LOCATION)
+        
+        try:
+            # 2. Submit Batch
+            op_name = pipeline.submit_batch(audio_uris)
+            
+            # 3. Update Firestore with Operation Name
+            batch_ref = db.collection("transcription_batches").document()
+            batch_ref.set({
+                "operationName": op_name,
+                "caseIds": [d.id for d in queued_cases],
+                "status": "submitted",
+                "createdAt": firestore.SERVER_TIMESTAMP
+            })
+            
+            for doc in queued_cases:
+                doc.reference.update({
+                    "status": "batch_submitted",
+                    "batchId": batch_ref.id,
+                    "operationName": op_name,
+                    "updatedAt": firestore.SERVER_TIMESTAMP
+                })
+                # Notify Slack
+                notify_slack_progress(case_id=doc.id, file_id=None, status="batch_submitted")
+                
+            return jsonify({"message": f"Batch submitted: {op_name}", "count": len(queued_cases)}), 200
+            
+        except Exception as e:
+            logger.error(f"Batch submission failed: {e}", exc_info=True)
+            return jsonify({"error": str(e)}), 500
 
 
 @flask_app.route("/check-results", methods=["POST"])
