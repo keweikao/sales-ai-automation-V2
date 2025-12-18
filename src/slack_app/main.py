@@ -31,7 +31,7 @@ from utils.file_pipeline import (
     enqueue_transcription_task,
     upload_to_gcs,
 )
-from handlers.agent8_handler import handle_ask_agent8_command
+
 from notifications.agent6_notifier import Agent6Notifier
 from notifications.agent7_notifier import Agent7Notifier
 from notifications.summary_delivery import DeliveryResult, SummaryDeliveryService
@@ -129,10 +129,6 @@ if slack_client and db:
 # Command Handlers
 # ============================================
 
-@app.command("/ask-agent8")
-def ask_agent8_command(ack, command, client, logger):
-    """處理 /ask-agent8 命令"""
-    handle_ask_agent8_command(ack, command, client, logger, db)
 
 
 # ============================================
