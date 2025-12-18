@@ -28,8 +28,8 @@ from google.cloud import firestore
 from .orchestrator import MultiAgentOrchestrator, InsufficientDataError
 from .slack_notifier import SlackNotifier
 from .metrics import metrics, send_slack_alert
-from services.stats_service import StatsService
-from services.report_service import ReportService
+from .services.stats_service import StatsService
+from .services.report_service import ReportService
 
 # --- Initialization ---
 logging.basicConfig(
