@@ -4,7 +4,7 @@ from typing import Dict, Any, List, Optional
 from google.cloud import firestore
 from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
-from services.stats_service import StatsService
+from .stats_service import StatsService
 
 logger = logging.getLogger(__name__)
 
