@@ -70,11 +70,13 @@ gcloud alpha monitoring channels create \
 ## 管理通知人員
 
 ### 新增人員
+
 1. Console > Monitoring > Alerting > Edit Notification Channels
 2. Email 區塊 > Add New
 3. 輸入新的 email 地址
 
 ### 移除人員
+
 1. 在同一頁面找到要移除的 email
 2. 點擊刪除圖示
 

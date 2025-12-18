@@ -94,6 +94,7 @@ def refine(
 ## 預期行為
 
 ### Scenario A: 品質差需要修正
+
 1. Agent 2 第一次說「無痛點」
 2. 系統偵測到 `hesitations` 為空
 3. 自動觸發 Refine，附帶修正指示
@@ -101,6 +102,7 @@ def refine(
 5. Agent 3 根據「太貴」給出價格談判建議
 
 ### Scenario B: 無競品提及
+
 1. 系統掃描 transcript，無競品關鍵字
 2. 跳過 Agent 4 (Competitor)
 3. 直接執行 Agent 3
