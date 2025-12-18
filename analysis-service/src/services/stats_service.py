@@ -57,12 +57,12 @@ class StatsService:
 
         # Run Transaction
         transaction = self.db.transaction()
-        self._update_stats_transaction(transaction, stats_ref, user_id, user_name, progress_score, case_id, is_high_priority, is_risk)
+        StatsService._update_stats_transaction(transaction, stats_ref, user_id, user_name, progress_score, case_id, is_high_priority, is_risk)
         logger.info(f"Updated daily stats for {date_str} with case {case_id}")
 
+    @staticmethod
     @firestore.transactional
     def _update_stats_transaction(
-        self, 
         transaction: firestore.Transaction, 
         stats_ref: firestore.DocumentReference, 
         user_id: str, 

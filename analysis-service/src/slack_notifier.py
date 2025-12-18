@@ -539,7 +539,7 @@ class SlackNotifier:
         """Format Agent 1 (Context/戰場偵查) report with V2 structure."""
         sections = []
         
-        # Authority Status - 權威驗證
+        # Authority Status - 權威驗證 -> 決策者確認
         authority = data.get('authority_status', '')
         if authority:
             authority_emoji = {
@@ -548,14 +548,14 @@ class SlackNotifier:
                 'Employee': '🔹',
                 'Unknown': '❓',
             }.get(authority, '❓')
-            sections.append(f"👤 *權威驗證*: {authority_emoji} {authority}")
+            sections.append(f"👤 *決策者確認*: {authority_emoji} {authority}")
         
-        # Urgency - 急迫性評估
+        # Urgency - 急迫性評估 -> 導入急迫度
         urgency = data.get('urgency', {})
         if urgency:
             level = urgency.get('level', 'Unknown')
             level_emoji = {'High': '🔴', 'Medium': '🟡', 'Low': '🟢'}.get(level, '⚪')
-            urgency_text = f"⏰ *急迫性*: {level_emoji} {level}"
+            urgency_text = f"⏰ *導入急迫度*: {level_emoji} {level}"
             
             deadline = urgency.get('deadline_date')
             if deadline:
@@ -567,10 +567,10 @@ class SlackNotifier:
             
             sections.append(urgency_text)
         
-        # Constraints - 硬性限制
+        # Constraints - 硬性限制 -> 導入障礙
         constraints = data.get('constraints', [])
         if constraints:
-            constraint_text = "🚧 *硬性限制*:\n"
+            constraint_text = "🚧 *導入障礙*:\n"
             for c in constraints:
                 constraint_text += f"    • {c}\n"
             sections.append(constraint_text.strip())
@@ -591,7 +591,7 @@ class SlackNotifier:
         """Format Agent 2 (Buyer 買家分析) report with V2 structure."""
         lines = []
         
-        # Buyer Type - 買家類型
+        # Buyer Type - 買家類型 -> 客戶類型
         buyer_type = data.get('buyer_type', {})
         if buyer_type:
             type_name = buyer_type.get('type', '') if isinstance(buyer_type, dict) else str(buyer_type)
@@ -600,7 +600,7 @@ class SlackNotifier:
                 'Calculated': '🧮',
                 'Skeptical': '🤔',
             }.get(type_name, '👤')
-            lines.append(f"*{type_emoji} 買家類型*: {type_name}")
+            lines.append(f"*{type_emoji} 客戶類型*: {type_name}")
         
         # Trust Score - 信任度
         trust_score = data.get('trust_score', '')
@@ -608,15 +608,15 @@ class SlackNotifier:
             trust_emoji = {'High': '🟢', 'Medium': '🟡', 'Low': '🔴'}.get(trust_score, '⚪')
             lines.append(f"*🤝 信任度*: {trust_emoji} {trust_score}")
         
-        # Primary Blocker - 主要阻礙
+        # Primary Blocker - 主要阻礙 -> 未成交原因
         primary_blocker = data.get('primary_blocker', '')
         if primary_blocker:
-            lines.append(f"*🚧 主要阻礙*:\n{primary_blocker}")
+            lines.append(f"*🚧 未成交原因*:\n{primary_blocker}")
         
-        # Hesitations - 猶豫點
+        # Hesitations - 猶豫點 -> 轉換顧慮
         hesitations = data.get('hesitations', [])
         if hesitations:
-            hesitation_text = "*❓ 猶豫點*:\n"
+            hesitation_text = "*❓ 轉換顧慮*:\n"
             for h in hesitations[:3]:  # 最多顯示 3 個
                 if isinstance(h, dict):
                     topic = h.get('topic', '')
@@ -646,10 +646,10 @@ class SlackNotifier:
             meddic_lines = []
             if meddic.get('identified_pain'):
                 pain = meddic['identified_pain'][:100] + '...' if len(meddic['identified_pain']) > 100 else meddic['identified_pain']
-                meddic_lines.append(f"*Pain*: {pain}")
+                meddic_lines.append(f"*痛點*: {pain}")
             if meddic.get('decision_criteria'):
                 criteria = meddic['decision_criteria'][:100] + '...' if len(meddic['decision_criteria']) > 100 else meddic['decision_criteria']
-                meddic_lines.append(f"*Decision Criteria*: {criteria}")
+                meddic_lines.append(f"*決策標準*: {criteria}")
             
             if meddic_lines:
                 lines.append(f"*📈 MEDDIC*:\n" + "\n".join([f"    {l}" for l in meddic_lines]))
@@ -660,13 +660,13 @@ class SlackNotifier:
         """Format Agent 3 (Seller/Coach 逼單教練) report with V2 structure."""
         lines = []
         
-        # Closing Score - 逼單評分
+        # Closing Score - 逼單評分 -> 成交推進力
         closing_score = data.get('closing_score', 0)
         if closing_score:
             score_emoji = "🟢" if closing_score >= 70 else "🟡" if closing_score >= 50 else "🔴"
-            lines.append(f"*{score_emoji} 逼單評分*: {closing_score}/100")
+            lines.append(f"*{score_emoji} 成交推進力*: {closing_score}/100")
         
-        # Strategy Mode - 策略模式
+        # Strategy Mode - 策略模式 -> 建議策略
         strategy_mode = data.get('strategy_mode', '')
         if strategy_mode:
             mode_zh = {
@@ -674,9 +674,9 @@ class SlackNotifier:
                 'MicroCommit': '🔸 微承諾推進',
                 'PullBack': '🔄 暫停後退',
             }.get(strategy_mode, strategy_mode)
-            lines.append(f"*📋 策略模式*: {mode_zh}")
+            lines.append(f"*📋 建議策略*: {mode_zh}")
         
-        # Recommended CE - 建議 CE
+        # Recommended CE - 建議 CE -> 下一步行動
         recommended_ce = data.get('recommended_ce', '')
         if recommended_ce:
             ce_zh = {
@@ -684,19 +684,19 @@ class SlackNotifier:
                 'CE2': 'CE2 - 索取菜單資料',
                 'CE3': 'CE3 - 同意提供報價',
             }.get(recommended_ce, recommended_ce)
-            lines.append(f"*🎯 建議下一步*: {ce_zh}")
+            lines.append(f"*🎯 下一步行動*: {ce_zh}")
         
         # Safety Alert - 安全警示
         safety_alert = data.get('safety_alert')
         if safety_alert:
             lines.append("*⚠️ 安全警示*: 客戶可能有抵觸情緒，建議放緩節奏")
         
-        # Pitch Diagnosis - 簡報診斷
+        # Pitch Diagnosis - 簡報診斷 -> 銷售技巧診斷
         pitch_diagnosis = data.get('pitch_diagnosis', {})
         if pitch_diagnosis:
             pain_addressed = pitch_diagnosis.get('pain_addressed', False)
             pain_emoji = "✅" if pain_addressed else "❌"
-            lines.append(f"*💡 痛點覆蓋*: {pain_emoji}")
+            lines.append(f"*💡 銷售技巧診斷 (痛點覆蓋)*: {pain_emoji}")
             
             improvements = pitch_diagnosis.get('improvement_areas', [])
             if improvements:
