@@ -27,6 +27,7 @@ class AgentResult:
     duration: float = 0.0
     retry_count: int = 0
     raw_output: Optional[str] = None
+    metadata: Optional[Dict[str, Any]] = None  # Additional metadata like reports
 
 
 @dataclass

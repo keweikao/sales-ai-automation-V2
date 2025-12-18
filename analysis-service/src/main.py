@@ -1,14 +1,14 @@
 """
 Analysis Service - Multi-Agent Orchestration for Sales AI Automation
 
-This service provides two main endpoints:
-1. /analyze - Execute Agent 1-5 analysis on transcribed sales calls
-2. /ask-agent8 - Conversational AI queries (Agent 8)
+This service provides the main /analyze endpoint:
+- /analyze - Execute Agent 1-4 analysis on transcribed sales calls
 
 Architecture:
-- Agent 1-5: Parallel analysis of sales call transcripts
-- Agent 6-7: Sequential synthesis and summary (Phase 4)
-- Agent 8: Conversational Q&A interface
+- Agent 1: Context extraction
+- Agent 2: Buyer analysis  
+- Agent 3: Seller coaching
+- Agent 4: Summary generation
 """
 
 import json
@@ -26,8 +26,8 @@ from slack_sdk.errors import SlackApiError
 from google.cloud import firestore
 
 from .orchestrator import MultiAgentOrchestrator, InsufficientDataError
-from .agents.conversational_agent8 import ConversationalAgent8
 from .slack_notifier import SlackNotifier
+from .metrics import metrics, send_slack_alert
 
 # --- Initialization ---
 logging.basicConfig(
@@ -39,10 +39,13 @@ logger = logging.getLogger(__name__)
 flask_app = Flask(__name__)
 
 # --- Model Configuration ---
-# Using Gemini 2.0 Flash for all agents as requested
-GEMINI_MODEL_FAST = "gemini-2.0-flash-exp"
-GEMINI_MODEL_PRO = "gemini-2.0-flash-exp"
-GEMINI_MODEL_DEFAULT = "gemini-2.0-flash-exp"
+# Read from environment variables with sensible defaults
+# Using stable Gemini 2.5 models for production reliability
+# - FAST: 2.5 Flash for simple/quick tasks (context extraction, summary)
+# - PRO: 2.5 Pro for complex reasoning (buyer analysis, seller coaching)
+GEMINI_MODEL_FAST = os.environ.get("GEMINI_MODEL_FAST", "gemini-2.5-flash")
+GEMINI_MODEL_PRO = os.environ.get("GEMINI_MODEL_PRO", "gemini-2.5-pro-preview-06-05")
+GEMINI_MODEL_DEFAULT = os.environ.get("GEMINI_MODEL_DEFAULT", "gemini-2.5-flash")
 
 AGENT6_NOTIFICATION_ENDPOINT = os.environ.get("AGENT6_NOTIFICATION_ENDPOINT")
 AGENT6_NOTIFICATION_TOKEN = os.environ.get("AGENT6_NOTIFICATION_TOKEN")
@@ -79,13 +82,11 @@ except Exception as e:
     orchestrator = None
 
 try:
-    # Agent 8 for conversational queries - uses pro model for complex reasoning
-    agent8 = ConversationalAgent8(model_name=GEMINI_MODEL_PRO)
+    # Slack client for notifications
     slack_client = WebClient(token=os.environ.get("SLACK_BOT_TOKEN"))
-    logger.info("ConversationalAgent8 and SlackClient initialized successfully")
+    logger.info("SlackClient initialized successfully")
 except Exception as e:
-    logger.error(f"Failed to initialize Agent 8: {e}", exc_info=True)
-    agent8 = None
+    logger.error(f"Failed to initialize SlackClient: {e}", exc_info=True)
     slack_client = None
 
 try:
@@ -166,10 +167,16 @@ def get_transcript_from_firestore(case_id: str) -> Optional[Dict[str, Any]]:
         speakers = transcription.get('speakers', [])
         speaker_stats = {}
         for speaker in speakers:
-            speaker_id = speaker.get('speakerId', 'Unknown')
-            speaking_time = speaker.get('speakingTime', 0)
-            percentage = speaker.get('percentage', 0)
-            speaker_stats[speaker_id] = percentage
+            # Handle both string format (Gemini) and object format (STT Batch)
+            if isinstance(speaker, str):
+                speaker_id = speaker
+                speaker_stats[speaker_id] = 0  # No percentage available
+            elif isinstance(speaker, dict):
+                speaker_id = speaker.get('speakerId', 'Unknown')
+                percentage = speaker.get('percentage', 0)
+                speaker_stats[speaker_id] = percentage
+            else:
+                continue
 
         # Get metadata
         metadata = {
@@ -255,7 +262,7 @@ def save_analysis_to_firestore(case_id: str, analysis_result: Any) -> bool:
             if raw_output:
                 analysis_data['rawOutput'] = raw_output
 
-        # Promote Agent 7 customerSummary to top-level analysis fields
+        # Promote Agent 7 customerSummary to top-level analysis fields (legacy)
         agent7_result = analysis_result.agent_results.get('agent7')
         if agent7_result and agent7_result.success and agent7_result.data:
             customer_summary = agent7_result.data.get('customerSummary')
@@ -270,6 +277,31 @@ def save_analysis_to_firestore(case_id: str, analysis_result: Any) -> bool:
                 summary_doc.setdefault('editedBy', None)
                 summary_doc.setdefault('editHistory', [])
                 analysis_data['customerSummary'] = summary_doc
+
+        # V2 Architecture: Promote Agent 4 (Summary) to customerSummary
+        agent4_result = analysis_result.agent_results.get('agent4')
+        if agent4_result and agent4_result.success and agent4_result.data:
+            agent4_data = agent4_result.data
+            email_subject = agent4_data.get('email_subject', '')
+            email_body = agent4_data.get('email_body', '')
+            action_items = agent4_data.get('action_items', {})
+            
+            if email_body:
+                # Create markdown from email_subject and email_body
+                markdown = f"# {email_subject}\n\n{email_body}" if email_subject else email_body
+                
+                analysis_data['customerSummary'] = {
+                    'markdown': markdown,
+                    'originalMarkdown': markdown,
+                    'subject': email_subject,
+                    'emailBody': email_body,
+                    'actionItems': action_items,
+                    'metadata': agent4_data.get('metadata', {}),
+                    'isEdited': False,
+                    'editCount': 0,
+                    'editedBy': None,
+                    'editHistory': [],
+                }
 
         # Update Firestore
         case_ref.update({
@@ -419,63 +451,6 @@ def analyze_transcript():
         }), 500
 
 
-@flask_app.route("/ask-agent8", methods=["POST"])
-def ask_agent8_task_handler():
-    """
-    Handles an asynchronous task from Cloud Tasks to ask Agent 8 a question.
-
-    This is the conversational AI interface for managers to query sales data.
-    """
-    if not agent8 or not slack_client:
-        logger.error("Agent 8 service is not properly configured")
-        return jsonify({"status": "error", "message": "Service not initialized"}), 500
-
-    data = request.get_json()
-    if not data or "question" not in data or "user_id" not in data or "slack_context" not in data:
-        logger.error(f"Invalid task payload: {data}")
-        return jsonify({"status": "error", "message": "Invalid payload"}), 400
-
-    question = data["question"]
-    user_id = data["user_id"]
-    slack_context = data["slack_context"]
-    channel_id = slack_context.get("channel_id")
-    thread_ts = slack_context.get("thread_ts")
-
-    logger.info(f"Processing Agent 8 query for user={user_id}, question='{question}'")
-
-    try:
-        result = agent8.generate_answer(question, user_id)
-
-        if result.get("success"):
-            answer_text = f"💬 *問題*：{question}\n\n🤖 *Agent 8 回答*：\n{result.get('answer', '無法取得回答。')}"
-            slack_client.chat_postMessage(channel=channel_id, thread_ts=thread_ts, text=answer_text)
-            logger.info(f"Successfully sent Agent 8 response to thread {thread_ts}")
-        else:
-            error_msg = result.get("error", "分析服務回傳未知錯誤。")
-            slack_client.chat_postMessage(
-                channel=channel_id,
-                thread_ts=thread_ts,
-                text=f"❌ 分析失敗：{error_msg}"
-            )
-            logger.error(f"Agent 8 returned an error: {error_msg}")
-
-        return jsonify({"status": "success"}), 200
-
-    except Exception as e:
-        logger.error(f"Error during Agent 8 execution: {e}", exc_info=True)
-        try:
-            slack_client.chat_postMessage(
-                channel=channel_id,
-                thread_ts=thread_ts,
-                text=f"❌ 執行分析時發生未預期的系統錯誤。"
-            )
-        except Exception as slack_err:
-            logger.error(f"Unable to send error message to Slack: {slack_err}")
-
-        # Return 500 to allow Cloud Tasks to potentially retry
-        return jsonify({"status": "error", "message": str(e)}), 500
-
-
 @flask_app.route("/health", methods=["GET"])
 def health_check():
     """Health check endpoint for Cloud Run startup probe."""
@@ -485,13 +460,47 @@ def health_check():
         "services": {
             "firestore": db is not None,
             "orchestrator": orchestrator is not None,
-            "agent8": agent8 is not None,
             "slack": slack_client is not None,
             "slack_notifier": slack_notifier is not None,
         }
     }
 
     return jsonify(health_status), 200
+
+
+@flask_app.route("/metrics", methods=["GET"])
+def get_metrics():
+    """Get current metrics summary for monitoring dashboard."""
+    summary = metrics.get_summary()
+    return jsonify(summary), 200
+
+
+@flask_app.route("/metrics/slack", methods=["POST"])
+def send_metrics_to_slack():
+    """Send metrics summary to Slack (for scheduled reports)."""
+    webhook_url = os.environ.get("SLACK_METRICS_WEBHOOK")
+    if not webhook_url:
+        return jsonify({"status": "error", "message": "SLACK_METRICS_WEBHOOK not configured"}), 500
+    
+    message = metrics.format_slack_message()
+    success = send_slack_alert(webhook_url, message)
+    
+    return jsonify({"status": "success" if success else "error"}), 200 if success else 500
+
+
+@flask_app.route("/metrics/check-alerts", methods=["POST"])
+def check_and_send_alerts():
+    """Check alert conditions and send to Slack if triggered."""
+    webhook_url = os.environ.get("SLACK_ALERTS_WEBHOOK")
+    if not webhook_url:
+        return jsonify({"status": "error", "message": "SLACK_ALERTS_WEBHOOK not configured"}), 500
+    
+    alert_message = metrics.should_alert()
+    if alert_message:
+        success = send_slack_alert(webhook_url, f"⚠️ *監控告警*\n\n{alert_message}")
+        return jsonify({"status": "alert_sent", "success": success}), 200
+    
+    return jsonify({"status": "no_alerts"}), 200
 
 
 @flask_app.route("/test-notification", methods=["POST"])

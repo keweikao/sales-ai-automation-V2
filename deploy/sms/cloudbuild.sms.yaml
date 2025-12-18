@@ -26,7 +26,7 @@ steps:
       - '--region=asia-east1'
       - '--platform=managed'
       - '--allow-unauthenticated'
-      - '--set-env-vars=GCP_PROJECT_ID=sales-ai-automation-v2,SUMMARY_BASE_URL=${_SUMMARY_BASE_URL}'
+      - '--set-env-vars=GCP_PROJECT_ID=sales-ai-automation-v2,SUMMARY_BASE_URL=${_SUMMARY_BASE_URL},EVERY8D_API_URL=https://api.e8d.tw/API21/HTTP/SendSMS.ashx'
       - '--set-secrets=EVERY8D_USERNAME=every8d-username:latest,EVERY8D_PASSWORD=every8d-password:latest,SMS_INTERNAL_TOKEN=sms-internal-token:latest'
 
 images:

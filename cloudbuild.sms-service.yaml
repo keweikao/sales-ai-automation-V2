@@ -1,0 +1,32 @@
+steps:
+  # Build the container image
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', 'asia-east1-docker.pkg.dev/$PROJECT_ID/sales-ai-automation-v2/sms-service:latest', '-f', 'sms-service/Dockerfile', '.']
+  
+  # Push the container image to Artifact Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'asia-east1-docker.pkg.dev/$PROJECT_ID/sales-ai-automation-v2/sms-service:latest']
+  
+  # Deploy container image to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - 'sms-service'
+      - '--image'
+      - 'asia-east1-docker.pkg.dev/$PROJECT_ID/sales-ai-automation-v2/sms-service:latest'
+      - '--region'
+      - 'asia-east1'
+      - '--platform'
+      - 'managed'
+      - '--allow-unauthenticated'
+      - '--memory'
+      - '256Mi'
+      - '--timeout'
+      - '60s'
+
+images:
+  - 'asia-east1-docker.pkg.dev/$PROJECT_ID/sales-ai-automation-v2/sms-service:latest'
+
+timeout: '1200s'

@@ -40,8 +40,8 @@ class GeminiTranscriptionPipeline(TranscriptionPipeline):
         # Configure Google AI
         genai.configure(api_key=api_key)
         
-        # Load model
-        self.model_name = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
+        # Load model - Using stable Gemini 2.5 Flash for reliable transcription
+        self.model_name = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
         self.model = genai.GenerativeModel(self.model_name)
         
         # Initialize chunker (10 min chunks, 2s overlap)

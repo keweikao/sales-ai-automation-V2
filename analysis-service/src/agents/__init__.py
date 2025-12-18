@@ -1,20 +1,24 @@
 """
-Agent 8 - 對話式業務主管助理
+Analysis Agents Module
 
-提供自然語言問答界面，讓業務主管可以隨時查詢團隊數據和業務洞察
+Contains the core agents for sales call analysis:
+- Agent 1: Context Analyzer
+- Agent 2: Buyer Analyzer
+- Agent 3: Seller Coach
+- Agent 4: Summary Generator
 """
 
-from .question_parser import QuestionParser, QuestionParams, QuestionType
-from .data_fetcher import DataFetcher, QueryResult
-from .conversation_manager import ConversationManager
-from .conversational_agent8 import ConversationalAgent8
+from .agent1_context import ContextAgent
+from .agent2_buyer import BuyerAgent
+from .agent3_seller import SellerAgent
+from .agent4_summary import SummaryAgent
+from .base import GeminiJSONAgent, GeminiResponse
 
 __all__ = [
-    "QuestionParser",
-    "QuestionParams",
-    "QuestionType",
-    "DataFetcher",
-    "QueryResult",
-    "ConversationManager",
-    "ConversationalAgent8"
+    "ContextAgent",
+    "BuyerAgent",
+    "SellerAgent",
+    "SummaryAgent",
+    "GeminiJSONAgent",
+    "GeminiResponse",
 ]

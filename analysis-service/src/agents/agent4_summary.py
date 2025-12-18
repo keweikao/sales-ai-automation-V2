@@ -10,7 +10,10 @@ PROMPT_PATH = Path(__file__).resolve().parent / "prompts" / "agent4-summary.md"
 
 
 class SummaryAgent(GeminiJSONAgent):
-    """Agent 4 - The Recap (Customer Summary)."""
+    """Agent 4 - The Recap (Customer Summary).
+    
+    Only uses transcript for analysis, no dependency on other agents.
+    """
 
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(prompt_path=PROMPT_PATH, **kwargs)
@@ -20,14 +23,13 @@ class SummaryAgent(GeminiJSONAgent):
         self,
         *,
         transcript_segments: Iterable[Dict[str, Any]],
-        context_insights: Dict[str, Any],
+        context_insights: Optional[Dict[str, Any]] = None,  # Made optional, not used
     ) -> str:
         transcript_block = render_transcript(transcript_segments)
-        context_block = json.dumps(context_insights, ensure_ascii=False, indent=2)
 
+        # Only use transcript, ignore context_insights
         return (
             self.prompt_template
-            + f"\n\n=== Context (Agent 1) ===\n{context_block}"
             + f"\n\n=== Transcript ===\n{transcript_block}"
         )
 
@@ -35,10 +37,13 @@ class SummaryAgent(GeminiJSONAgent):
         self,
         *,
         transcript_segments: Iterable[Dict[str, Any]],
-        context_insights: Dict[str, Any],
+        context_insights: Optional[Dict[str, Any]] = None,  # Made optional
     ):
-        """Returns GeminiResponse with both data and report."""
+        """Returns GeminiResponse with both data and report.
+        
+        Only uses transcript_segments for analysis.
+        """
         return self.invoke(
             transcript_segments=transcript_segments,
-            context_insights=context_insights,
+            context_insights=context_insights,  # Passed but not used in build_prompt
         )

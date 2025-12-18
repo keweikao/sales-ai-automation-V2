@@ -22,8 +22,10 @@ steps:
     '--memory', '512Mi',
     '--concurrency', '5',
     '--allow-unauthenticated',
-    '--set-env-vars=PYTHONPATH=/app,GCP_PROJECT_ID=sales-ai-automation-v2'
+    '--set-env-vars=PYTHONPATH=/app,GCP_PROJECT_ID=sales-ai-automation-v2,SLACK_AUDIO_BUCKET=sales-ai-audio-bucket,TRANSCRIPTION_TASK_QUEUE=transcription-queue,TRANSCRIPTION_TASK_HANDLER_URL=https://transcription-service-497329205771.asia-east1.run.app/transcribe,TRANSCRIPTION_TASK_SERVICE_ACCOUNT=497329205771-compute@developer.gserviceaccount.com,SUMMARY_BASE_URL=https://summary-web-service-497329205771.asia-east1.run.app,SHORT_URL_BASE=https://summary-web-service-497329205771.asia-east1.run.app/s,SMS_SERVICE_URL=https://sms-service-497329205771.asia-east1.run.app',
+    '--set-secrets=SLACK_BOT_TOKEN=slack-bot-token:latest,SLACK_SIGNING_SECRET=slack-signing-secret:latest,SMS_INTERNAL_TOKEN=sms-internal-token:latest'
   ]
 
 images:
 - 'asia-east1-docker.pkg.dev/sales-ai-automation-v2/sales-ai-automation-v2/slack-app:latest'
+

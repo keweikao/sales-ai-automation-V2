@@ -38,7 +38,7 @@ TARGET_CHUNK_DURATION = int(os.environ.get("TARGET_CHUNK_DURATION", "600"))
 OVERLAP_DURATION = float(os.environ.get("OVERLAP_DURATION", "2"))
 VAD_PRESET = os.environ.get("VAD_PRESET", "meeting")
 TRANSCRIPTION_LANGUAGE = os.environ.get("TRANSCRIPTION_LANGUAGE", "zh")
-TRANSCRIPTION_ENGINE = os.getenv("TRANSCRIPTION_ENGINE", "whisper").strip().lower()  # 'whisper' or 'gemini'
+TRANSCRIPTION_ENGINE = "gemini"  # Hardcoded to use Gemini API only (STT Batch API removed)
 ENABLE_DIARIZATION = os.getenv("ENABLE_DIARIZATION", "false").lower() == "true"
 DIARIZATION_MODEL = os.environ.get("DIARIZATION_MODEL", "pyannote/speaker-diarization")
 DIARIZATION_ALLOW_OVERLAP = (
@@ -62,8 +62,8 @@ except Exception as e:
 
 # --- Firestore Client ---
 try:
-    db = firestore.Client()
-    logger.info("Firestore client initialized successfully")
+    db = firestore.Client(project=GCP_PROJECT_ID)
+    logger.info(f"Firestore client initialized successfully for project: {GCP_PROJECT_ID}")
 except Exception as e:
     logger.error(f"Failed to initialize Firestore: {e}", exc_info=True)
     db = None
@@ -128,10 +128,17 @@ def notify_slack_progress(*, case_id: Optional[str], file_id: Optional[str], sta
 @flask_app.route("/transcribe", methods=["POST"])
 def transcribe_audio():
     """
-    Endpoint to queue an audio file for batch transcription.
+    Endpoint to transcribe an audio file using Gemini API.
+    
+    This endpoint now executes transcription DIRECTLY instead of queuing for batch.
+    The response is synchronous - it will wait until transcription completes.
+    
+    Note: Cloud Tasks should set a long timeout (e.g. 30 minutes) for this endpoint.
     """
-    storage_client = storage.Client()
-    logger.info("Received transcription request (Batch Mode)")
+    from google.cloud import storage as gcs_storage
+    import tempfile
+    
+    logger.info("Received transcription request (Direct Gemini Mode)")
     
     data = request.get_json()
     if not data:
@@ -145,33 +152,125 @@ def transcribe_audio():
     file_id = data.get("fileId")
     
     if not case_id:
-         return jsonify({"error": "Missing 'caseId'"}), 400
+        return jsonify({"error": "Missing 'caseId'"}), 400
 
-    # 1. Download/Verify file exists (Optional, but good for validation)
-    # For batch mode, we just ensure it's in GCS.
+    logger.info(f"Processing case {case_id} with Gemini Direct Mode...")
     
-    # 2. Update Firestore status to 'queued'
+    # 1. Update Firestore status to 'transcribing'
     if db:
         try:
             case_ref = db.collection('cases').document(case_id)
             case_ref.set({
-                "status": "queued_for_batch",
+                "status": "transcribing",
                 "gcsUri": gcs_uri,
                 "updatedAt": firestore.SERVER_TIMESTAMP,
             }, merge=True)
             if file_id:
                 db.collection("processed_files").document(file_id).set({
-                    "status": "queued_for_batch",
+                    "status": "transcribing",
                     "updatedAt": firestore.SERVER_TIMESTAMP
                 }, merge=True)
             
-            status_tracker.update(case_id=case_id, file_id=file_id, step="queued", detail="已加入轉錄排程")
+            status_tracker.update(case_id=case_id, file_id=file_id, step="transcribing", detail="開始轉錄...")
+            notify_slack_progress(case_id=case_id, file_id=file_id, status="transcribing")
             
         except Exception as e:
-            logger.error(f"Failed to update Firestore: {e}")
-            return jsonify({"error": "Database update failed"}), 500
+            logger.error(f"Failed to update Firestore status: {e}")
+            # Continue anyway - transcription is more important
 
-    return jsonify({"status": "queued", "message": "File queued for batch transcription"}), 202
+    # 2. Download audio from GCS
+    try:
+        storage_client = gcs_storage.Client()
+        bucket_name = gcs_uri.replace("gs://", "").split("/")[0]
+        blob_path = "/".join(gcs_uri.replace("gs://", "").split("/")[1:])
+        
+        bucket = storage_client.bucket(bucket_name)
+        blob = bucket.blob(blob_path)
+        
+        # Create temp file with correct extension
+        file_ext = blob_path.split(".")[-1] if "." in blob_path else "mp3"
+        with tempfile.NamedTemporaryFile(suffix=f".{file_ext}", delete=False) as tmp_file:
+            blob.download_to_filename(tmp_file.name)
+            local_path = tmp_file.name
+        
+        logger.info(f"Downloaded audio to {local_path}")
+        
+    except Exception as e:
+        error_msg = f"Failed to download audio: {e}"
+        logger.error(error_msg, exc_info=True)
+        if db:
+            db.collection('cases').document(case_id).update({
+                "status": "transcription_failed",
+                "error": error_msg,
+                "updatedAt": firestore.SERVER_TIMESTAMP
+            })
+        return jsonify({"error": error_msg}), 500
+
+    # 3. Transcribe with Gemini
+    try:
+        gemini_pipeline = get_pipeline()  # Uses global singleton
+        result = gemini_pipeline.transcribe(local_path)
+        
+        # Cleanup temp file
+        os.remove(local_path)
+        
+        if result.get("success"):
+            # Save to Firestore
+            transcription_data = {
+                "text": result.get("full_text", ""),
+                "segments": result.get("segments", []),
+                "speakers": result.get("speakers", []),
+            }
+            
+            if db:
+                db.collection('cases').document(case_id).update({
+                    "transcription": transcription_data,
+                    "status": "transcribed",
+                    "updatedAt": firestore.SERVER_TIMESTAMP
+                })
+                if file_id:
+                    db.collection("processed_files").document(file_id).update({
+                        "status": "transcribed",
+                        "updatedAt": firestore.SERVER_TIMESTAMP
+                    })
+            
+            # Trigger Analysis
+            _trigger_analysis(case_id)
+            notify_slack_progress(case_id=case_id, file_id=file_id, status="transcribed")
+            
+            logger.info(f"Case {case_id} transcribed successfully!")
+            return jsonify({
+                "status": "success",
+                "message": "Transcription completed",
+                "caseId": case_id,
+                "segmentCount": len(transcription_data.get("segments", [])),
+            }), 200
+        else:
+            error_msg = result.get("error", "Unknown transcription error")
+            logger.error(f"Transcription failed: {error_msg}")
+            if db:
+                db.collection('cases').document(case_id).update({
+                    "status": "transcription_failed",
+                    "error": error_msg,
+                    "updatedAt": firestore.SERVER_TIMESTAMP
+                })
+            return jsonify({"error": error_msg, "caseId": case_id}), 500
+            
+    except Exception as e:
+        error_msg = f"Transcription exception: {e}"
+        logger.error(error_msg, exc_info=True)
+        # Cleanup temp file if exists
+        try:
+            os.remove(local_path)
+        except:
+            pass
+        if db:
+            db.collection('cases').document(case_id).update({
+                "status": "transcription_failed",
+                "error": error_msg,
+                "updatedAt": firestore.SERVER_TIMESTAMP
+            })
+        return jsonify({"error": error_msg, "caseId": case_id}), 500
 
 
 @flask_app.route("/trigger-batch", methods=["POST"])

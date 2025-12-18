@@ -98,10 +98,66 @@ class SummaryRenderer:
     def build_context(self, case_id: str) -> SummaryContext:
         """Return the template context for a case."""
         case_data = self._fetch_case(case_id)
+        
+        # Try customerSummary first, then fall back to agents.agent4.data
         customer_summary = (
             case_data.get("analysis", {}).get("customerSummary") or {}
         )
+        
+        # Fallback to agent4 data if customerSummary is empty
+        if not customer_summary or not customer_summary.get("markdown"):
+            agent4_data = (
+                case_data.get("analysis", {})
+                .get("agents", {})
+                .get("agent4", {})
+                .get("data", {})
+            )
+            if agent4_data:
+                customer_summary = agent4_data
+        
         markdown_content = customer_summary.get("markdown")
+        
+        # Fallback: Generate markdown from other available fields
+        if not markdown_content:
+            # Try to build markdown from SMS and other fields
+            sms_text = customer_summary.get("sms_text", "")
+            pain_points = customer_summary.get("pain_points", [])
+            solutions = customer_summary.get("solutions", [])
+            action_items = customer_summary.get("action_items", {})
+            
+            if sms_text or pain_points or solutions:
+                customer_name = case_data.get("customerName", "客戶")
+                markdown_parts = [f"# {customer_name} x iCHEF 會議記錄\n"]
+                
+                if sms_text:
+                    markdown_parts.append(f"## 📱 跟進訊息\n\n{sms_text}\n")
+                
+                if pain_points:
+                    markdown_parts.append("## 🔍 客戶痛點\n")
+                    for point in pain_points:
+                        markdown_parts.append(f"- {point}\n")
+                
+                if solutions:
+                    markdown_parts.append("\n## 💡 iCHEF 解決方案\n")
+                    for sol in solutions:
+                        markdown_parts.append(f"- {sol}\n")
+                
+                if action_items:
+                    ichef_items = action_items.get("ichef", [])
+                    customer_items = action_items.get("customer", [])
+                    if ichef_items or customer_items:
+                        markdown_parts.append("\n## 📋 待辦事項\n")
+                        if ichef_items:
+                            markdown_parts.append("\n**iCHEF**\n")
+                            for item in ichef_items:
+                                markdown_parts.append(f"- {item}\n")
+                        if customer_items:
+                            markdown_parts.append(f"\n**{customer_name}**\n")
+                            for item in customer_items:
+                                markdown_parts.append(f"- {item}\n")
+                
+                markdown_content = "\n".join(markdown_parts)
+        
         if not markdown_content:
             raise SummaryUnavailableError(
                 f"Case {case_id} does not have customerSummary.markdown"

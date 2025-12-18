@@ -167,8 +167,12 @@ def enqueue_transcription_task(
             "audience": handler_url,
         }
 
-    task = {"http_request": http_request}
-    logger.info("Creating task in queue: %s", parent)
+    task = {
+        "http_request": http_request,
+        # Set dispatch deadline to 30 minutes for long audio transcription
+        "dispatch_deadline": {"seconds": 1800},  # 30 minutes
+    }
+    logger.info("Creating task in queue: %s (timeout: 30 min)", parent)
     sys.stdout.flush()
 
     try:

@@ -1,184 +1,164 @@
 # Sales AI Automation V2.0
 
-## A scalable, cost-optimized sales AI automation system for iCHEF
+## iCHEF 銷售 AI 自動化系統
 
-Automates sales call analysis using self-hosted Whisper transcription, multi-agent AI analysis (Gemini), and delivers interactive experiences via Slack.
-
----
-
-## 🚀 Quick Start
-
-### For AI Assistants Continuing Development
-
-👉 **START HERE**: Read [`QUICK_START_FOR_AI.md`](./QUICK_START_FOR_AI.md) (5-minute read)
-
-⚠️ **MANDATORY**: Read [`DEVELOPMENT_GUIDELINES.md`](./DEVELOPMENT_GUIDELINES.md) - Recording rules
-
-Then read:
-
-1. [`DEVELOPMENT_LOG.md`](./DEVELOPMENT_LOG.md) - Full session history
-2. [`memory/constitution.md`](./memory/constitution.md) - System principles
-3. [`specs/001-sales-ai-automation/spec.md`](./specs/001-sales-ai-automation/spec.md) - Feature specification
-
-### For Developers
-
-1. Clone repository
-2. Read [`specs/001-sales-ai-automation/`](./specs/001-sales-ai-automation/) for complete specs
-3. Follow [`specs/001-sales-ai-automation/research.md`](./specs/001-sales-ai-automation/research.md) for POC validation
+使用 Gemini 3 Flash 進行銷售通話轉錄與多 Agent AI 分析，透過 Slack 提供互動式體驗。
 
 ---
 
-## 📋 Project Status
+## 📊 系統概覽
 
-**Current Phase**: Phase 0 - POC Validation (Ready to Execute)
-**Last Updated**: 2025-01-29
-
-### Completed ✅
-
-- [x] Feature Specification (8 User Stories, 22 features)
-- [x] Technical Implementation Plan (4 microservices, 6-agent architecture)
-- [x] POC Validation Plan (6 critical tests)
-- [x] Test Script Structure (3 example scripts)
-- [x] User Decision Confirmation (all 5 decisions finalized)
-
-### Next Steps 🎯
-
-- [ ] Execute 6 POC validations (3-4 days, 3-person team)
-- [ ] Phase 1: Detailed Design (data models, API contracts)
-- [ ] Phase 2: Implementation (Sprint 1-7, 12-14 weeks)
+| 項目 | 說明 |
+|------|------|
+| **核心模型** | Gemini 3 Flash Preview |
+| **轉錄引擎** | Gemini Audio API |
+| **雲端平台** | Google Cloud Platform |
+| **使用介面** | Slack |
 
 ---
 
-## 🏗️ System Architecture
+## 🏗️ 系統架構
 
-Service map: [`services/README.md`](./services/README.md)
+```
+┌─────────────┐    ┌──────────────────┐    ┌─────────────────┐
+│  Slack App  │───▶│  Transcription   │───▶│    Analysis     │
+│ (Cloud Run) │    │    Service       │    │    Service      │
+└─────────────┘    │  (Cloud Run)     │    │  (Cloud Run)    │
+       │           └──────────────────┘    └─────────────────┘
+       │                    │                       │
+       ▼                    ▼                       ▼
+┌─────────────┐    ┌──────────────────┐    ┌─────────────────┐
+│ SMS Service │    │   Cloud Storage  │    │    Firestore    │
+│ (Cloud Run) │    │  (Audio Files)   │    │   (Cases DB)    │
+└─────────────┘    └──────────────────┘    └─────────────────┘
+       │
+       ▼
+┌─────────────┐
+│ Web Service │
+│ (Summary)   │
+└─────────────┘
+```
 
-### Core Components
+### 微服務列表
 
-- **Transcription Service** (Cloud Run): Faster-Whisper + Speaker Diarization
-- **Analysis Service** (Cloud Run): 6 specialized Gemini agents
-- **Slack Service** (Cloud Run): Interactive Block Kit interface
-- **Orchestration Service** (Cloud Run): Workflow coordination
-
-### Multi-Agent AI Architecture
-
-1. **Agent 1**: Participant Profile Analyzer
-2. **Agent 2**: Sentiment & Attitude Analyzer
-3. **Agent 3**: Product Needs Extractor
-4. **Agent 4**: Competitor Intelligence Analyzer
-5. **Agent 5**: Discovery Questionnaire Analyzer 🆕
-6. **Agent 6**: Sales Coach Synthesizer
-
-### Key Technologies
-
-- **Transcription**: Faster-Whisper (large-v3)
-- **AI**: Google Gemini 1.5 Flash
-- **Database**: Google Cloud Firestore
-- **Interface**: Slack (slack-bolt)
-- **Cloud**: Google Cloud Platform (Cloud Run, Cloud Tasks, Cloud Storage)
-
----
-
-## 💰 Cost & Performance
-
-### Monthly Cost (250 files)
-
-- **Total**: $46.74/month
-  - Cloud Run (transcription): $28.80
-  - Gemini API (6 agents): $13.50
-  - Other GCP services: $4.44
-
-### Performance Targets
-
-- End-to-end processing: <4 minutes (90th percentile)
-- Transcription + Diarization: <5 minutes (40-min audio)
-- Multi-agent analysis: <40 seconds (parallel execution)
-- Slack notification: <1 minute
+| 服務 | 路徑 | 說明 |
+|------|------|------|
+| **slack-app** | `src/slack_app/` | Slack 互動介面、檔案上傳 |
+| **transcription-service** | `src/transcription/` | 音訊轉錄 (Gemini Audio) |
+| **analysis-service** | `analysis-service/` | 多 Agent AI 分析 |
+| **sms-service** | `sms-service/` | SMS/Email 發送 |
+| **web-service** | `web-service/` | 摘要網頁展示 |
 
 ---
 
-## 📚 Documentation
+## 🤖 Multi-Agent AI 架構
 
-### For AI Assistants
-
-- [`QUICK_START_FOR_AI.md`](./QUICK_START_FOR_AI.md) - 5-minute quick start guide
-- [`DEVELOPMENT_LOG.md`](./DEVELOPMENT_LOG.md) - Session history and decisions
-
-### Specifications
-
-- [`specs/001-sales-ai-automation/spec.md`](./specs/001-sales-ai-automation/spec.md) - Complete feature specification
-- [`specs/001-sales-ai-automation/plan.md`](./specs/001-sales-ai-automation/plan.md) - Technical implementation plan
-- [`specs/001-sales-ai-automation/research.md`](./specs/001-sales-ai-automation/research.md) - POC validation plan
-
-### Development
-
-- [`memory/constitution.md`](./memory/constitution.md) - System principles
-- [`docs/AUTHORITY_SOURCES.md`](./docs/AUTHORITY_SOURCES.md) - Authority map and reading order
-
-### Testing
-
-- [`specs/001-sales-ai-automation/poc-tests/`](./specs/001-sales-ai-automation/poc-tests/) - POC test scripts
-
-### Deployment / Infra
-
-- [`deploy/README.md`](./deploy/README.md) - Cloud Build/Dockerfile 對應表
-- [`deploy/ENV_VARS.md`](./deploy/ENV_VARS.md) - 服務環境變數名稱對照
-- `deploy/<service>/` - 各服務 Cloud Build 檔案的統一路徑入口（symlink 指向根目錄原檔）
+| Agent | 名稱 | 功能 | 模型 |
+|-------|------|------|------|
+| **Agent 1** | Context Analyzer | 會議脈絡、參與者分析 | gemini-2.5-flash |
+| **Agent 2** | Buyer Analyzer | 買家心理、MEDDIC 分析 | gemini-2.5-pro |
+| **Agent 3** | Seller Coach | 銷售技巧建議 | gemini-2.5-pro |
+| **Agent 4** | Summary Generator | 客戶摘要、SMS 文案 | gemini-2.5-flash |
 
 ---
 
-## 🎯 Success Criteria
+## 🔧 技術棧
 
-### Performance (6 metrics)
+### 核心依賴
 
-- Processing time <4 min for 90% of cases
-- Success rate >95%
-- Concurrent processing: 10+ files without degradation
-- Uptime >99.5%
-- Transcription quality >85%
-- Speaker diarization accuracy >80%
+| 類別 | 技術 | 版本 |
+|------|------|------|
+| **AI** | Google Gemini | 3 Flash Preview |
+| **Web** | Flask | 2.2.5 |
+| **Slack** | slack-bolt | 1.18.1 |
+| **Database** | Firestore | 2.13.1 |
+| **轉錄** | Gemini Audio API | - |
 
-### User Experience (5 metrics)
+### 雲端服務
 
-- Slack notification within 4 minutes
-- Conversational AI response <5 seconds
-- Engagement rate >70%
-- Feedback submission rate >60%
-- Average satisfaction >4.0/5.0
-
-### Cost Efficiency (3 metrics)
-
-- Monthly cost <$45 (actual: $46.74, acceptable)
-- Cost per file <$0.18
-- Gemini API costs <$15/month
+- **Cloud Run**: 所有微服務 (asia-east1)
+- **Cloud Storage**: 音訊檔案儲存
+- **Cloud Tasks**: 非同步任務處理
+- **Secret Manager**: API Keys 管理
 
 ---
 
-## 🔧 Development Workflow
+## 💰 成本估算 (100 案件/月)
 
-This project follows **spec-driven development**:
-
-1. **Specification First** (`spec.md`) - Define requirements, user stories, acceptance criteria
-2. **Technical Planning** (`plan.md`) - Document architecture, costs, decisions
-3. **Research & Validation** (`research.md`) - POC tests to validate assumptions
-4. **Task Breakdown** (`tasks.md`) - Sprint planning (not yet created)
-5. **Implementation** - TDD for critical paths
-6. **Review & Deploy** - Staging → Production with monitoring
-
----
-
-## 👥 Team
-
-**Product Owner**: Stephen
-**Development Team**: TBD (3-person team for POC phase)
+| 項目 | 成本 |
+|------|------|
+| Gemini 3 Flash API | ~$12/月 |
+| Cloud Run | ~$15/月 |
+| Firestore | ~$2/月 |
+| Cloud Storage | ~$1/月 |
+| **總計** | **~$30/月** |
 
 ---
 
-## 📞 Contact
+## 📁 專案結構
 
-For questions or contributions, see project documentation in `specs/` directory.
+```
+sales-ai-automation-V2/
+├── analysis-service/          # 分析服務
+│   ├── src/
+│   │   ├── agents/            # AI Agents
+│   │   ├── prompts/           # Prompt 模板
+│   │   └── main.py
+│   └── requirements.txt
+├── src/
+│   ├── slack_app/             # Slack 應用
+│   └── transcription/         # 轉錄服務
+├── sms-service/               # SMS/Email 服務
+├── web-service/               # 摘要網頁服務
+├── deploy/                    # 部署配置
+├── specs/                     # 規格文件
+├── docs/                      # 文檔
+└── tests/                     # 測試
+```
 
 ---
 
-*This project is being developed using spec-driven development workflow.*
-*Last Updated: 2025-01-29*
+## 🚀 部署
+
+### CloudBuild 配置
+
+| 服務 | 配置檔 |
+|------|--------|
+| Analysis | `cloudbuild.analysis.deploy.yaml` |
+| Transcription | `cloudbuild.transcription.yaml` |
+| Slack | `cloudbuild.slack.yaml` |
+| SMS | `cloudbuild.sms-service.yaml` |
+| Web | `cloudbuild.summary-web-service.yaml` |
+
+### 快速部署
+
+```bash
+# 部署 Analysis Service
+gcloud builds submit --config=cloudbuild.analysis.deploy.yaml
+
+# 部署 Transcription Service  
+gcloud builds submit --config=cloudbuild.transcription.yaml
+```
+
+---
+
+## 📚 文檔索引
+
+| 文檔 | 說明 |
+|------|------|
+| [`QUICK_START_FOR_AI.md`](./QUICK_START_FOR_AI.md) | AI 助理快速入門 |
+| [`DEVELOPMENT_LOG.md`](./DEVELOPMENT_LOG.md) | 開發日誌 |
+| [`specs/`](./specs/) | 功能規格書 |
+| [`docs/`](./docs/) | 技術文檔 |
+
+---
+
+## 📈 效能指標
+
+- **轉錄時間**: ~1 分鐘 / 10 分鐘音訊
+- **分析時間**: ~30 秒 (4 Agents 並行)
+- **端到端**: < 2 分鐘
+
+---
+
+*最後更新: 2025-12-18*

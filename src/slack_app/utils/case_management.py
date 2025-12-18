@@ -60,10 +60,17 @@ def build_initial_case_document(
     message_ts: Optional[str],
     thread_ts: Optional[str],
     notes: Optional[str] = None,
+    demo_meta: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
-    """Prepare the initial Firestore document for `cases/{case_id}`."""
+    """Prepare the initial Firestore document for `cases/{case_id}`.
+    
+    Args:
+        demo_meta: Optional dict with keys: store_type, service_type, 
+                   decision_maker_onsite, current_pos
+    """
     unit = (sales_rep.get("unit") or "IC").upper()
     customer_phone = customer.get("phone", "") or ""
+    customer_email = customer.get("email", "") or ""
 
     case_doc = {
         "caseId": case_id,
@@ -74,6 +81,7 @@ def build_initial_case_document(
         "customerName": customer.get("name", ""),
         "customerId": customer.get("id", ""),
         "customerPhone": customer_phone,
+        "customerEmail": customer_email,
         "salesRepName": sales_rep.get("name", ""),
         "salesRepEmail": sales_rep.get("email", ""),
         "salesRepSlackId": sales_rep.get("slack_id", ""),
@@ -105,6 +113,15 @@ def build_initial_case_document(
             "ingestedAt": firestore.SERVER_TIMESTAMP,
         },
     }
+
+    # Add demo_meta if provided
+    if demo_meta:
+        case_doc["demoMeta"] = {
+            "storeType": demo_meta.get("store_type", ""),
+            "serviceType": demo_meta.get("service_type", ""),
+            "decisionMakerOnsite": demo_meta.get("decision_maker_onsite"),
+            "currentPos": demo_meta.get("current_pos", ""),
+        }
 
     return case_doc
 
