@@ -21,7 +21,14 @@ echo "🧠 Deploying Analysis Service..."
 echo "   - Applying Orchestrator Optimizations (Parallel Agent 1, 5, 7)"
 echo "   - Preserving existing environment variables"
 echo "--------------------------------------------------------"
-# gcloud builds submit --config deploy/analysis/cloudbuild.analysis.deploy.yaml .
+gcloud builds submit --config deploy/analysis/cloudbuild.analysis.deploy.yaml .
+
+# Update Environment Variables for Analysis Service
+echo "🔧 Updating Analysis Service Environment Variables..."
+gcloud run services update analysis-service \
+  --update-env-vars MANAGER_CHANNEL_ID=C0A4F762FE0 \
+  --region asia-east1 \
+  --platform managed
 
 # 3. Deploy Slack App
 echo ""
