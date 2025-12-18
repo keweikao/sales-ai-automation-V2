@@ -542,20 +542,29 @@ class SlackNotifier:
         # Authority Status - 權威驗證 -> 決策者確認
         authority = data.get('authority_status', '')
         if authority:
+            authority_map = {
+                'Confirmed Owner': '確認為決策者',
+                'Suspected Owner': '疑似決策者',
+                'Employee': '一般員工',
+                'Unknown': '未知身分',
+            }
+            authority_zh = authority_map.get(authority, authority)
             authority_emoji = {
                 'Confirmed Owner': '✅',
                 'Suspected Owner': '🔸',
                 'Employee': '🔹',
                 'Unknown': '❓',
             }.get(authority, '❓')
-            sections.append(f"👤 *決策者確認*: {authority_emoji} {authority}")
+            sections.append(f"👤 *決策者確認*: {authority_emoji} {authority_zh}")
         
         # Urgency - 急迫性評估 -> 導入急迫度
         urgency = data.get('urgency', {})
         if urgency:
             level = urgency.get('level', 'Unknown')
+            level_map = {'High': '高', 'Medium': '中', 'Low': '低', 'Unknown': '未知'}
+            level_zh = level_map.get(level, level)
             level_emoji = {'High': '🔴', 'Medium': '🟡', 'Low': '🟢'}.get(level, '⚪')
-            urgency_text = f"⏰ *導入急迫度*: {level_emoji} {level}"
+            urgency_text = f"⏰ *導入急迫度*: {level_emoji} {level_zh}"
             
             deadline = urgency.get('deadline_date')
             if deadline:
@@ -578,12 +587,18 @@ class SlackNotifier:
         # Meta Validation - 資訊驗證
         meta_validation = data.get('meta_validation', '')
         if meta_validation:
+            validation_map = {
+                'Consistent': '資訊一致',
+                'Partial Match': '部分吻合',
+                'Inconsistent': '資訊矛盾',
+            }
+            validation_zh = validation_map.get(meta_validation, meta_validation)
             validation_emoji = {
                 'Consistent': '✅',
                 'Partial Match': '🔸',
                 'Inconsistent': '❌',
             }.get(meta_validation, '❓')
-            sections.append(f"📋 *資訊驗證*: {validation_emoji} {meta_validation}")
+            sections.append(f"📋 *資訊驗證*: {validation_emoji} {validation_zh}")
         
         return "\n\n".join(sections) if sections else ""
     
@@ -595,18 +610,28 @@ class SlackNotifier:
         buyer_type = data.get('buyer_type', {})
         if buyer_type:
             type_name = buyer_type.get('type', '') if isinstance(buyer_type, dict) else str(buyer_type)
+            type_map = {
+                'Impulsive': '衝動型',
+                'Calculated': '精算型',
+                'Skeptical': '懷疑型',
+                'Relationship': '關係導向型',
+                'Price Sensitivity': '價格敏感型',
+            }
+            type_zh = type_map.get(type_name, type_name)
             type_emoji = {
                 'Impulsive': '⚡',
                 'Calculated': '🧮',
                 'Skeptical': '🤔',
             }.get(type_name, '👤')
-            lines.append(f"*{type_emoji} 客戶類型*: {type_name}")
+            lines.append(f"*{type_emoji} 客戶類型*: {type_zh}")
         
         # Trust Score - 信任度
         trust_score = data.get('trust_score', '')
         if trust_score:
+            trust_map = {'High': '高', 'Medium': '中', 'Low': '低'}
+            trust_zh = trust_map.get(trust_score, trust_score)
             trust_emoji = {'High': '🟢', 'Medium': '🟡', 'Low': '🔴'}.get(trust_score, '⚪')
-            lines.append(f"*🤝 信任度*: {trust_emoji} {trust_score}")
+            lines.append(f"*🤝 信任度*: {trust_emoji} {trust_zh}")
         
         # Primary Blocker - 主要阻礙 -> 未成交原因
         primary_blocker = data.get('primary_blocker', '')
@@ -630,7 +655,9 @@ class SlackNotifier:
         if impl_fear and impl_fear.get('detected'):
             topic = impl_fear.get('topic', '未指定')
             complexity = impl_fear.get('complexity', 'Unknown')
-            lines.append(f"*😰 導入恐懼*: {topic} (複雜度: {complexity})")
+            complexity_map = {'High': '高', 'Medium': '中', 'Low': '低'}
+            complexity_zh = complexity_map.get(complexity, complexity)
+            lines.append(f"*😰 導入恐懼*: {topic} (複雜度: {complexity_zh})")
         
         # Missed Buying Signals - 錯失的購買信號
         missed_signals = data.get('missed_buying_signals', [])
@@ -673,6 +700,8 @@ class SlackNotifier:
                 'HardClose': '🔥 強力逼單',
                 'MicroCommit': '🔸 微承諾推進',
                 'PullBack': '🔄 暫停後退',
+                'ValueSelling': '💎 價值銷售',
+                'Consultative': '🤝 顧問式銷售',
             }.get(strategy_mode, strategy_mode)
             lines.append(f"*📋 建議策略*: {mode_zh}")
         
