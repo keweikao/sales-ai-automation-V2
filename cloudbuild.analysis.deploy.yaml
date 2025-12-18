@@ -3,6 +3,8 @@ steps:
   - name: 'gcr.io/cloud-builders/docker'
     args:
       - 'build'
+      - '--cache-from'
+      - 'asia-east1-docker.pkg.dev/sales-ai-automation-v2/sales-ai-automation-v2/analysis-service:latest'
       - '-t'
       - 'asia-east1-docker.pkg.dev/sales-ai-automation-v2/sales-ai-automation-v2/analysis-service:latest'
       - '-f'

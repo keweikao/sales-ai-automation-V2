@@ -2,7 +2,8 @@ steps:
   - name: 'gcr.io/cloud-builders/docker'
     args:
       - 'build'
-      - '--no-cache'
+      - '--cache-from'
+      - 'asia-east1-docker.pkg.dev/sales-ai-automation-v2/sales-ai-automation-v2/transcription-service:v1-iterative-fix'
       - '-t'
       - 'asia-east1-docker.pkg.dev/sales-ai-automation-v2/sales-ai-automation-v2/transcription-service:v1-iterative-fix'
       - '-f'
