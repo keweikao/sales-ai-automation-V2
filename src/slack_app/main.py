@@ -1934,25 +1934,6 @@ def handle_view_full_agent6_action(ack, body, client, logger):  # type: ignore[o
         )
 
 
-@app.action("ask_agent8")
-def handle_ask_agent8_button_action(ack, body, logger):  # type: ignore[override]
-    """
-    Handle the "追問 Agent 8" button from analysis notifications.
-    Note: This is different from the /ask-agent8 slash command.
-    """
-    ack()
-    logger.info("ask_agent8 button clicked: %s", body)
-
-    actions = body.get("actions") or []
-    action_value = actions[0].get("value") if actions else None
-    case_id = _extract_case_id(action_value, "ask_agent8_")
-
-    if case_id:
-        logger.info(f"User wants to ask Agent 8 about case {case_id}")
-        # TODO: Could open a modal for the user to type their question
-        # or redirect to the /ask-agent8 command
-
-
 @app.action("retry_analysis")
 def handle_retry_analysis_action(ack, body, logger):  # type: ignore[override]
     """
