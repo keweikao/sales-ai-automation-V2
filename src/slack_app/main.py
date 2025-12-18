@@ -1992,7 +1992,7 @@ def handle_transcription_progress():
         logger.warning("Invalid transcription progress payload: %s", payload)
         return {"error": "Invalid payload"}, 400
 
-    channel_id, thread_ts, customer_name = _resolve_notification_target(case_id, file_id)
+    channel_id, thread_ts, customer_name, _ = _resolve_notification_target(case_id, file_id)
     if not channel_id:
         logger.warning("No Slack channel found for case %s (file: %s)", case_id, file_id)
         return {"status": "ignored", "reason": "channel_not_found"}, 200
