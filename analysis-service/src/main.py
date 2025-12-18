@@ -28,6 +28,8 @@ from google.cloud import firestore
 from .orchestrator import MultiAgentOrchestrator, InsufficientDataError
 from .slack_notifier import SlackNotifier
 from .metrics import metrics, send_slack_alert
+from services.stats_service import StatsService
+from services.report_service import ReportService
 
 # --- Initialization ---
 logging.basicConfig(
@@ -52,14 +54,39 @@ AGENT6_NOTIFICATION_TOKEN = os.environ.get("AGENT6_NOTIFICATION_TOKEN")
 AGENT7_NOTIFICATION_ENDPOINT = os.environ.get("AGENT7_NOTIFICATION_ENDPOINT")
 AGENT7_NOTIFICATION_TOKEN = os.environ.get("AGENT7_NOTIFICATION_TOKEN")
 
+# Initialize global services
+stats_service: Optional[StatsService] = None
+
 # --- Initialize Clients ---
+# Initialize Firestore
+db: Optional[firestore.Client] = None
 try:
-    # Firestore client for reading transcripts and writing analysis results
-    db = firestore.Client()
+    project_id = os.environ.get("GCP_PROJECT_ID")
+    if project_id:
+        db = firestore.Client(project=project_id)
+    else:
+        # Fallback to default credentials
+        db = firestore.Client()
+        logger.warning(f"GCP_PROJECT_ID not set, using default project: {db.project}")
     logger.info("Firestore client initialized successfully")
+    
+    # Initialize Stats Service
+    stats_service = StatsService(db)
+    logger.info("StatsService initialized successfully")
+    
+    # Initialize Report Service
+    manager_channel_id = os.environ.get("MANAGER_CHANNEL_ID")
+    if slack_client and manager_channel_id:
+        report_service = ReportService(db, stats_service, slack_client, manager_channel_id)
+        logger.info("ReportService initialized successfully")
+    else:
+        report_service = None
+        logger.warning(f"ReportService skipped (SlackClient: {bool(slack_client)}, ChannelID: {bool(manager_channel_id)})")
+
 except Exception as e:
-    logger.error(f"Failed to initialize Firestore: {e}", exc_info=True)
+    logger.error(f"Failed to initialize Firestore or Services: {e}", exc_info=True)
     db = None
+    report_service = None
 
 try:
     # Multi-Agent Orchestrator for Agent 1-4 (3+1 Architecture)
@@ -311,6 +338,16 @@ def save_analysis_to_firestore(case_id: str, analysis_result: Any) -> bool:
         })
 
         logger.info(f"Saved analysis results for case {case_id} with status: {status}")
+
+        # Trigger Stats Update (Aggregation on Write)
+        if stats_service and status in ['completed', 'partial_success']:
+            try:
+                updated_snapshot = case_ref.get()
+                if updated_snapshot.exists:
+                    stats_service.update_daily_stats(case_id, updated_snapshot.to_dict())
+            except Exception as stats_error:
+                logger.error(f"Failed to update daily stats for case {case_id}: {stats_error}")
+
         return True
 
     except Exception as e:
@@ -525,6 +562,36 @@ def test_notification():
     except Exception as e:
         logger.error(f"Error in test notification: {e}", exc_info=True)
         return jsonify({"status": "error", "message": str(e)}), 500
+
+
+# --- Report Routes (Scheduled) ---
+
+@flask_app.route("/reports/daily-risk", methods=["POST"])
+def trigger_daily_risk_report():
+    """Trigger Daily Risk Report (Cron)"""
+    if not report_service:
+        return jsonify({"status": "error", "message": "ReportService not initialized"}), 503
+        
+    try:
+        result = report_service.generate_daily_risk_report()
+        return jsonify(result), 200
+    except Exception as e:
+        logger.error(f"Daily risk report failed: {e}", exc_info=True)
+        return jsonify({"status": "error", "error": str(e)}), 500
+
+
+@flask_app.route("/reports/weekly", methods=["POST"])
+def trigger_weekly_reports():
+    """Trigger Weekly Reports (Cron)"""
+    if not report_service:
+        return jsonify({"status": "error", "message": "ReportService not initialized"}), 503
+        
+    try:
+        result = report_service.generate_weekly_reports()
+        return jsonify(result), 200
+    except Exception as e:
+        logger.error(f"Weekly report failed: {e}", exc_info=True)
+        return jsonify({"status": "error", "error": str(e)}), 500
 
 
 if __name__ == "__main__":
