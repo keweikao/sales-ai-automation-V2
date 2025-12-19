@@ -56,9 +56,13 @@ AGENT7_NOTIFICATION_TOKEN = os.environ.get("AGENT7_NOTIFICATION_TOKEN")
 
 # Initialize global services
 stats_service: Optional[StatsService] = None
+report_service = None
+slack_client = None
+slack_notifier = None
+orchestrator = None
 
 # --- Initialize Clients ---
-# Initialize Firestore
+# 1. Initialize Firestore first (core dependency)
 db: Optional[firestore.Client] = None
 try:
     project_id = os.environ.get("GCP_PROJECT_ID")
@@ -73,23 +77,37 @@ try:
     # Initialize Stats Service
     stats_service = StatsService(db)
     logger.info("StatsService initialized successfully")
-    
-    # Initialize Report Service
+
+except Exception as e:
+    logger.error(f"Failed to initialize Firestore or StatsService: {e}", exc_info=True)
+    db = None
+
+# 2. Initialize Slack client (needed by ReportService and SlackNotifier)
+try:
+    slack_client = WebClient(token=os.environ.get("SLACK_BOT_TOKEN"))
+    logger.info("SlackClient initialized successfully")
+except Exception as e:
+    logger.error(f"Failed to initialize SlackClient: {e}", exc_info=True)
+    slack_client = None
+
+# 3. Initialize ReportService (depends on db, stats_service, slack_client)
+try:
     manager_channel_id = os.environ.get("MANAGER_CHANNEL_ID")
-    if slack_client and manager_channel_id:
+    if db and stats_service and slack_client and manager_channel_id:
         report_service = ReportService(db, stats_service, slack_client, manager_channel_id)
         logger.info("ReportService initialized successfully")
     else:
-        report_service = None
-        logger.warning(f"ReportService skipped (SlackClient: {bool(slack_client)}, ChannelID: {bool(manager_channel_id)})")
-
+        missing = []
+        if not db: missing.append("Firestore")
+        if not stats_service: missing.append("StatsService")
+        if not slack_client: missing.append("SlackClient")
+        if not manager_channel_id: missing.append("MANAGER_CHANNEL_ID")
+        logger.warning(f"ReportService skipped (missing: {', '.join(missing)})")
 except Exception as e:
-    logger.error(f"Failed to initialize Firestore or Services: {e}", exc_info=True)
-    db = None
-    report_service = None
+    logger.error(f"Failed to initialize ReportService: {e}", exc_info=True)
 
+# 4. Initialize Multi-Agent Orchestrator
 try:
-    # Multi-Agent Orchestrator for Agent 1-4 (3+1 Architecture)
     orchestrator = MultiAgentOrchestrator(
         model_name=GEMINI_MODEL_DEFAULT,
         model_config={
@@ -106,15 +124,6 @@ try:
     logger.info("Multi-Agent Orchestrator initialized successfully")
 except Exception as e:
     logger.error(f"Failed to initialize Multi-Agent Orchestrator: {e}", exc_info=True)
-    orchestrator = None
-
-try:
-    # Slack client for notifications
-    slack_client = WebClient(token=os.environ.get("SLACK_BOT_TOKEN"))
-    logger.info("SlackClient initialized successfully")
-except Exception as e:
-    logger.error(f"Failed to initialize SlackClient: {e}", exc_info=True)
-    slack_client = None
 
 try:
     # Slack notifier for analysis completion notifications
