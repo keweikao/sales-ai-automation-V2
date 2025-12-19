@@ -672,6 +672,7 @@ def _process_modal_submission(
 
     sales_rep_email = user_info.get("profile", {}).get("email", "")
     sales_rep_name = user_info.get("profile", {}).get("real_name") or user_info.get("profile", {}).get("display_name") or ""
+    sales_rep_display_name = user_info.get("profile", {}).get("display_name") or sales_rep_name
 
     firestore_unit = "IC"
     firestore_user_doc = None
@@ -683,6 +684,7 @@ def _process_modal_submission(
         "slack_id": user_id,
         "email": sales_rep_email,
         "name": sales_rep_name,
+        "slack_display_name": sales_rep_display_name,
         "unit": firestore_unit,
     }
 

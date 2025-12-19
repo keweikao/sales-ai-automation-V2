@@ -54,6 +54,8 @@ class SummaryContext:
     sales_rep_name: Optional[str]
     sales_rep_email: Optional[str]
     sales_rep_phone: Optional[str]
+    sales_rep_role: Optional[str]  # e.g. "iCHEF 開發顧問"
+    sales_rep_slack_name: Optional[str]  # Slack display name
     line_url: Optional[str]
     key_decisions: list
     next_steps_customer: list
@@ -173,6 +175,11 @@ class SummaryRenderer:
 
         next_steps = customer_summary.get("nextSteps") or {}
 
+        # Get sales rep info from case data
+        sales_rep_name = case_data.get("salesRepName") or case_data.get("uploadedByName")
+        sales_rep_slack_name = case_data.get("uploadedBySlackName") or case_data.get("uploadedByName")
+        sales_rep_role = case_data.get("salesRepRole") or "iCHEF 開發顧問"
+        
         context = SummaryContext(
             case_id=case_id,
             customer_name=case_data.get("customerName", "未命名客戶"),
@@ -181,9 +188,11 @@ class SummaryRenderer:
             meeting_date=self._format_datetime(created_at),
             last_updated=self._format_datetime(updated_at),
             unit=case_data.get("unit"),
-            sales_rep_name=case_data.get("salesRepName"),
+            sales_rep_name=sales_rep_name,
             sales_rep_email=case_data.get("salesRepEmail"),
             sales_rep_phone=case_data.get("salesRepPhone"),
+            sales_rep_role=sales_rep_role,
+            sales_rep_slack_name=sales_rep_slack_name,
             line_url=self._build_line_url(case_data),
             key_decisions=customer_summary.get("keyDecisions", []),
             next_steps_customer=next_steps.get("customer", []),

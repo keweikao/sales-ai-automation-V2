@@ -59,9 +59,9 @@ You will receive:
 ## 📝 會議摘要 (Markdown)
 
 ```markdown
-# [客戶名稱] x iCHEF 會議記錄
+# [店名] x iCHEF 會議記錄
 
-親愛的 [客戶名稱] 您好，
+親愛的 [店名] 您好，
 
 感謝您今天撥冗與我們討論。以下是會議重點摘要：
 

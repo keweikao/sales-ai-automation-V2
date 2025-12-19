@@ -371,6 +371,7 @@ class MultiAgentOrchestrator:
         
         # Define placeholder patterns and their replacements
         replacements = {
+            r'\[店名\]': customer_name,
             r'\[客戶名稱\]': customer_name,
             r'\[客戶姓名\]': customer_name,
             r'\[業務名稱\]': sales_rep_name,

@@ -87,6 +87,7 @@ def build_initial_case_document(
         "salesRepSlackId": sales_rep.get("slack_id", ""),
         "uploadedBy": sales_rep.get("slack_id", ""),
         "uploadedByName": sales_rep.get("name", ""),
+        "uploadedBySlackName": sales_rep.get("slack_display_name", "") or sales_rep.get("name", ""),
         "channelId": channel_id,
         "channelName": None,
         "threadTs": thread_ts or message_ts,
