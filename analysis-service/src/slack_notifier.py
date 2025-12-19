@@ -536,12 +536,22 @@ class SlackNotifier:
         return success_count > 0
     
     def _format_agent1_report(self, data: Dict[str, Any]) -> str:
-        """Format Agent 1 (Context/戰場偵查) report with V2 structure."""
+        """Format Agent 1 (Context/戰場偵查) report with V2/V3 structure."""
         sections = []
         
-        # Authority Status - 權威驗證 -> 決策者確認
-        authority = data.get('authority_status', '')
-        if authority:
+        # Decision Maker - 決策者確認 (V3: decision_maker_confirmed, decision_maker)
+        decision_maker_confirmed = data.get('decision_maker_confirmed')
+        decision_maker = data.get('decision_maker', '')
+        authority = data.get('authority_status', '')  # Legacy fallback
+        
+        if decision_maker_confirmed is not None:
+            dm_emoji = '✅' if decision_maker_confirmed else '❓'
+            dm_status = '確認為決策者' if decision_maker_confirmed else '未確認決策者身分'
+            dm_text = f"👤 *決策者確認*: {dm_emoji} {dm_status}"
+            if decision_maker:
+                dm_text += f"\n    決策者：{decision_maker}"
+            sections.append(dm_text)
+        elif authority:
             authority_map = {
                 'Confirmed Owner': '確認為決策者',
                 'Suspected Owner': '疑似決策者',
@@ -549,55 +559,47 @@ class SlackNotifier:
                 'Unknown': '未知身分',
             }
             authority_zh = authority_map.get(authority, authority)
-            authority_emoji = {
-                'Confirmed Owner': '✅',
-                'Suspected Owner': '🔸',
-                'Employee': '🔹',
-                'Unknown': '❓',
-            }.get(authority, '❓')
+            authority_emoji = {'Confirmed Owner': '✅', 'Suspected Owner': '🔸', 'Employee': '🔹'}.get(authority, '❓')
             sections.append(f"👤 *決策者確認*: {authority_emoji} {authority_zh}")
         
-        # Urgency - 急迫性評估 -> 導入急迫度
-        urgency = data.get('urgency', {})
-        if urgency:
-            level = urgency.get('level', 'Unknown')
-            level_map = {'High': '高', 'Medium': '中', 'Low': '低', 'Unknown': '未知'}
-            level_zh = level_map.get(level, level)
-            level_emoji = {'High': '🔴', 'Medium': '🟡', 'Low': '🟢'}.get(level, '⚪')
+        # Urgency - 導入急迫度 (V3: urgency_level, deadline_date)
+        urgency_level = data.get('urgency_level', '') or data.get('urgency', {}).get('level', '')
+        deadline_date = data.get('deadline_date', '') or data.get('urgency', {}).get('deadline_date', '')
+        
+        if urgency_level:
+            level_map = {'High': '高', 'Medium': '中', 'Low': '低', 'Unknown': '未知', 'high': '高', 'medium': '中', 'low': '低'}
+            level_zh = level_map.get(urgency_level, urgency_level)
+            level_emoji = {'High': '🔴', 'Medium': '🟡', 'Low': '🟢', 'high': '🔴', 'medium': '🟡', 'low': '🟢'}.get(urgency_level, '⚪')
             urgency_text = f"⏰ *導入急迫度*: {level_emoji} {level_zh}"
-            
-            deadline = urgency.get('deadline_date')
-            if deadline:
-                urgency_text += f"\n    📅 預計時程：{deadline}"
-            
-            driver = urgency.get('primary_driver')
-            if driver:
-                urgency_text += f"\n    🎯 主要驅動因素：{driver}"
-            
+            if deadline_date:
+                urgency_text += f"\n    📅 預計時程：{deadline_date}"
             sections.append(urgency_text)
         
-        # Constraints - 硬性限制 -> 導入障礙
-        constraints = data.get('constraints', [])
-        if constraints:
-            constraint_text = "🚧 *導入障礙*:\n"
-            for c in constraints:
-                constraint_text += f"    • {c}\n"
-            sections.append(constraint_text.strip())
+        # Customer Motivation - 客戶動機 (V3 new field)
+        motivation = data.get('customer_motivation', '')
+        if motivation:
+            sections.append(f"🎯 *客戶動機*:\n{motivation}")
         
-        # Meta Validation - 資訊驗證
+        # Barriers - 導入障礙 (V3: barriers)
+        barriers = data.get('barriers', []) or data.get('constraints', [])
+        if barriers:
+            barrier_text = "🚧 *導入障礙*:\n"
+            for b in barriers:
+                barrier_text += f"    • {b}\n"
+            sections.append(barrier_text.strip())
+        
+        # Meta Validation - 資訊驗證 (V3: meta_consistent)
+        meta_consistent = data.get('meta_consistent')
         meta_validation = data.get('meta_validation', '')
-        if meta_validation:
-            validation_map = {
-                'Consistent': '資訊一致',
-                'Partial Match': '部分吻合',
-                'Inconsistent': '資訊矛盾',
-            }
+        
+        if meta_consistent is not None:
+            validation_emoji = '✅' if meta_consistent else '❌'
+            validation_zh = '資訊一致' if meta_consistent else '資訊矛盾'
+            sections.append(f"📋 *資訊驗證*: {validation_emoji} {validation_zh}")
+        elif meta_validation:
+            validation_map = {'Consistent': '資訊一致', 'Partial Match': '部分吻合', 'Inconsistent': '資訊矛盾'}
             validation_zh = validation_map.get(meta_validation, meta_validation)
-            validation_emoji = {
-                'Consistent': '✅',
-                'Partial Match': '🔸',
-                'Inconsistent': '❌',
-            }.get(meta_validation, '❓')
+            validation_emoji = {'Consistent': '✅', 'Partial Match': '🔸', 'Inconsistent': '❌'}.get(meta_validation, '❓')
             sections.append(f"📋 *資訊驗證*: {validation_emoji} {validation_zh}")
         
         return "\n\n".join(sections) if sections else ""
@@ -684,52 +686,84 @@ class SlackNotifier:
         return "\n\n".join(lines) if lines else ""
     
     def _format_agent3_report(self, data: Dict[str, Any]) -> str:
-        """Format Agent 3 (Seller/Coach 逼單教練) report with V2 structure."""
+        """Format Agent 3 (Seller/Coach 逼單教練) report with V2/V3 structure."""
         lines = []
         
-        # Closing Score - 逼單評分 -> 成交推進力
-        closing_score = data.get('closing_score', 0)
-        if closing_score:
-            score_emoji = "🟢" if closing_score >= 70 else "🟡" if closing_score >= 50 else "🔴"
-            lines.append(f"*{score_emoji} 成交推進力*: {closing_score}/100")
+        # Progress Score - 成交推進力 (V3: progress_score, Legacy: closing_score)
+        progress_score = data.get('progress_score', 0) or data.get('closing_score', 0)
+        if progress_score:
+            score_emoji = "🟢" if progress_score >= 70 else "🟡" if progress_score >= 50 else "🔴"
+            lines.append(f"*{score_emoji} 成交推進力*: {progress_score}/100")
         
-        # Strategy Mode - 策略模式 -> 建議策略
-        strategy_mode = data.get('strategy_mode', '')
-        if strategy_mode:
+        # Recommended Strategy - 建議策略 (V3: recommended_strategy, Legacy: strategy_mode)
+        recommended_strategy = data.get('recommended_strategy', '') or data.get('strategy_mode', '')
+        if recommended_strategy:
             mode_zh = {
                 'HardClose': '🔥 強力逼單',
                 'MicroCommit': '🔸 微承諾推進',
                 'PullBack': '🔄 暫停後退',
                 'ValueSelling': '💎 價值銷售',
                 'Consultative': '🤝 顧問式銷售',
-            }.get(strategy_mode, strategy_mode)
+                'hard_close': '🔥 強力逼單',
+                'micro_commit': '🔸 微承諾推進',
+                'pull_back': '🔄 暫停後退',
+                'value_selling': '💎 價值銷售',
+                'consultative': '🤝 顧問式銷售',
+            }.get(recommended_strategy, f"📋 {recommended_strategy}")
             lines.append(f"*📋 建議策略*: {mode_zh}")
         
-        # Recommended CE - 建議 CE -> 下一步行動
-        recommended_ce = data.get('recommended_ce', '')
-        if recommended_ce:
-            ce_zh = {
-                'CE1': 'CE1 - 預約安裝',
-                'CE2': 'CE2 - 索取菜單資料',
-                'CE3': 'CE3 - 同意提供報價',
-            }.get(recommended_ce, recommended_ce)
-            lines.append(f"*🎯 下一步行動*: {ce_zh}")
+        # Strategy Reason - 策略理由 (V3 new field)
+        strategy_reason = data.get('strategy_reason', '')
+        if strategy_reason:
+            lines.append(f"*💭 策略理由*: {strategy_reason[:200]}{'...' if len(strategy_reason) > 200 else ''}")
+        
+        # Next Action - 下一步行動 (V3: next_action as dict or string, Legacy: recommended_ce)
+        next_action = data.get('next_action', '') or data.get('recommended_ce', '')
+        if next_action:
+            if isinstance(next_action, dict):
+                # V3 format: next_action is a dict with action, deadline, suggested_script
+                action = next_action.get('action', '')
+                deadline = next_action.get('deadline', '')
+                action_text = f"*🎯 下一步行動*: {action}"
+                if deadline:
+                    action_text += f"\n    ⏱️ 期限：{deadline}"
+                lines.append(action_text)
+            else:
+                # Legacy format: next_action is a string (CE1, CE2, CE3)
+                ce_zh = {
+                    'CE1': 'CE1 - 預約安裝',
+                    'CE2': 'CE2 - 索取菜單資料',
+                    'CE3': 'CE3 - 同意提供報價',
+                }.get(next_action, next_action)
+                lines.append(f"*🎯 下一步行動*: {ce_zh}")
         
         # Safety Alert - 安全警示
         safety_alert = data.get('safety_alert')
         if safety_alert:
-            lines.append("*⚠️ 安全警示*: 客戶可能有抵觸情緒，建議放緩節奏")
+            if isinstance(safety_alert, bool) and safety_alert:
+                lines.append("*⚠️ 安全警示*: 客戶可能有抵觸情緒，建議放緩節奏")
+            elif isinstance(safety_alert, str) and safety_alert:
+                lines.append(f"*⚠️ 安全警示*: {safety_alert}")
         
-        # Pitch Diagnosis - 簡報診斷 -> 銷售技巧診斷
-        pitch_diagnosis = data.get('pitch_diagnosis', {})
-        if pitch_diagnosis:
-            pain_addressed = pitch_diagnosis.get('pain_addressed', False)
-            pain_emoji = "✅" if pain_addressed else "❌"
-            lines.append(f"*💡 銷售技巧診斷 (痛點覆蓋)*: {pain_emoji}")
-            
-            improvements = pitch_diagnosis.get('improvement_areas', [])
-            if improvements:
-                lines.append(f"*📝 改進建議*:\n" + "\n".join([f"    • {i}" for i in improvements[:3]]))
+        # Has Clear Ask (V3 new field)
+        has_clear_ask = data.get('has_clear_ask')
+        if has_clear_ask is not None:
+            ask_emoji = "✅" if has_clear_ask else "❌"
+            lines.append(f"*🎤 有明確請求*: {ask_emoji}")
+        
+        # Skills Diagnosis - 銷售技巧診斷 (V3: skills_diagnosis, Legacy: pitch_diagnosis)
+        skills_diagnosis = data.get('skills_diagnosis', {}) or data.get('pitch_diagnosis', {})
+        if skills_diagnosis:
+            if isinstance(skills_diagnosis, dict):
+                pain_addressed = skills_diagnosis.get('pain_addressed', False)
+                pain_emoji = "✅" if pain_addressed else "❌"
+                lines.append(f"*💡 銷售技巧診斷 (痛點覆蓋)*: {pain_emoji}")
+                
+                improvements = skills_diagnosis.get('improvement_areas', [])
+                if improvements:
+                    lines.append(f"*📝 改進建議*:\n" + "\n".join([f"    • {i}" for i in improvements[:3]]))
+            elif isinstance(skills_diagnosis, str):
+                lines.append(f"*💡 銷售技巧診斷*:\n{skills_diagnosis[:300]}")
         
         # Coach Tips - 教練提示
         coach_tips = data.get('coach_tips', [])
