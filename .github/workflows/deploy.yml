@@ -86,3 +86,40 @@ jobs:
           echo "✅ Deployment completed successfully!"
           echo "Deployed services:"
           gcloud run services list --platform managed --region asia-east1 --format="table(SERVICE,REGION,URL,LAST_DEPLOYED)"
+
+  # 部署成功後自動更新 PROJECT_CONTEXT.md
+  update-context:
+    needs: deploy
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # 需要寫入權限來 commit
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install PyYAML
+
+      - name: Generate PROJECT_CONTEXT.md
+        run: python .conductor/generate_context.py
+
+      - name: Commit and push context update
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .conductor/PROJECT_CONTEXT.md
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "docs: auto-update PROJECT_CONTEXT.md [skip ci]"
+            git push
+          fi
