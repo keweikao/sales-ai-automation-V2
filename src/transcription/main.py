@@ -38,7 +38,7 @@ TARGET_CHUNK_DURATION = int(os.environ.get("TARGET_CHUNK_DURATION", "600"))
 OVERLAP_DURATION = float(os.environ.get("OVERLAP_DURATION", "2"))
 VAD_PRESET = os.environ.get("VAD_PRESET", "meeting")
 TRANSCRIPTION_LANGUAGE = os.environ.get("TRANSCRIPTION_LANGUAGE", "zh")
-TRANSCRIPTION_ENGINE = "gemini"  # Hardcoded to use Gemini API only (STT Batch API removed)
+TRANSCRIPTION_ENGINE = os.environ.get("TRANSCRIPTION_ENGINE", "stt_v1")  # Changed from gemini to stt_v1
 ENABLE_DIARIZATION = os.getenv("ENABLE_DIARIZATION", "false").lower() == "true"
 DIARIZATION_MODEL = os.environ.get("DIARIZATION_MODEL", "pyannote/speaker-diarization")
 DIARIZATION_ALLOW_OVERLAP = (

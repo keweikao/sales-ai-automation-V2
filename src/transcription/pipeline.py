@@ -18,6 +18,7 @@ from .diarization import create_diarizer
 from .quality import calculate_transcription_quality
 from .gemini_pipeline import GeminiTranscriptionPipeline
 from .stt_batch_pipeline import STTBatchTranscriptionPipeline
+from .stt_v1_pipeline import STTV1Pipeline
 import os
 
 logger = logging.getLogger(__name__)
@@ -560,6 +561,8 @@ def get_pipeline(engine: str = None, **kwargs):
     if engine:
         if engine == "stt_batch":
             return STTBatchTranscriptionPipeline(**kwargs)
+        elif engine == "stt_v1":
+            return STTV1Pipeline(**kwargs)
         elif engine == "gemini":
             return GeminiTranscriptionPipeline(**kwargs)
         else:
@@ -570,7 +573,12 @@ def get_pipeline(engine: str = None, **kwargs):
         engine = TRANSCRIPTION_ENGINE
         logger.info(f"Initializing Global Pipeline. Engine: '{engine}'")
         
-        if engine == "gemini":
+        if engine == "stt_v1":
+            # Speech-to-Text V1 with LongRunningRecognize
+            language = os.getenv("TRANSCRIPTION_LANGUAGE", "cmn-Hant-TW")
+            pipeline = STTV1Pipeline(language_code=language)
+            
+        elif engine == "gemini":
             api_key = os.getenv("GEMINI_API_KEY")
             if not api_key:
                 raise ValueError("GEMINI_API_KEY is required for Gemini engine")
@@ -582,10 +590,11 @@ def get_pipeline(engine: str = None, **kwargs):
             pipeline = STTBatchTranscriptionPipeline(project_id=project_id, location=location)
             
         else:
-            # Fallback or Error. For now, let's error if not one of the supported ones to avoid confusion
-            # unless we want to keep Whisper? The previous code had Whisper.
-            # Let's assume we only support stt_batch and gemini for this deployment.
-            raise ValueError(f"Unsupported TRANSCRIPTION_ENGINE: {engine}")
+            # Fallback to stt_v1 as default
+            logger.warning(f"Unknown engine '{engine}', falling back to stt_v1")
+            language = os.getenv("TRANSCRIPTION_LANGUAGE", "cmn-Hant-TW")
+            pipeline = STTV1Pipeline(language_code=language)
             
     return pipeline
+
 
