@@ -1,7 +1,7 @@
 # Sales AI Automation V2 - Project Context
 
 > 🤖 此文檔由 `.conductor/generate_context.py` 自動生成
-> 最後更新：2025-12-19 17:03
+> 最後更新：2025-12-23 07:33
 
 ## 專案概述
 
@@ -9,7 +9,7 @@
 業務人員透過 Slack 上傳通話錄音，系統自動轉錄並使用多 Agent 架構分析通話內容，
 最後產生客戶摘要報告。
 
-- **程式碼行數**：~30,093 行 Python
+- **程式碼行數**：~30,360 行 Python
 - **服務數量**：5 個 Cloud Run 服務
 
 ## 技術架構
@@ -70,11 +70,11 @@ cases/{caseId} = {
 ## 關鍵檔案
 
 - `analysis-service/src/orchestrator.py`
-- `.venv-1/lib/python3.13/site-packages/pip/_internal/main.py`
-- `.venv-1/lib/python3.13/site-packages/pip/_internal/cli/main.py`
 - `sms-service/src/main.py`
-- `tools/code_intelligence/requirements.txt`
+- `web-service/src/main.py`
+- `analysis-service/src/main.py`
 - `sms-service/requirements.txt`
+- `tools/code_intelligence/requirements.txt`
 - `web-service/requirements.txt`
 - `Dockerfile`
 - `sms-service/Dockerfile`
