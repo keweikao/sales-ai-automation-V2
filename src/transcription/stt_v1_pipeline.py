@@ -252,8 +252,10 @@ class STTV1Pipeline(TranscriptionPipeline):
         full_text = " ".join(full_text_parts)
         
         return {
+            "success": True,
             "segments": formatted_segments,
             "text": full_text,
+            "full_text": full_text,  # Alias for compatibility
             "speakers": list(speakers_set),
             "engine": "stt_v1",
             "language": self.language_code,

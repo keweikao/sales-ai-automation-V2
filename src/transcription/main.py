@@ -178,41 +178,37 @@ def transcribe_audio():
             logger.error(f"Failed to update Firestore status: {e}")
             # Continue anyway - transcription is more important
 
-    # 2. Download audio from GCS
+    # 2. Get pipeline and determine processing method
     try:
-        storage_client = gcs_storage.Client()
-        bucket_name = gcs_uri.replace("gs://", "").split("/")[0]
-        blob_path = "/".join(gcs_uri.replace("gs://", "").split("/")[1:])
+        pipeline_instance = get_pipeline()  # Uses global singleton
+        engine = os.environ.get("TRANSCRIPTION_ENGINE", "stt_v1")
         
-        bucket = storage_client.bucket(bucket_name)
-        blob = bucket.blob(blob_path)
-        
-        # Create temp file with correct extension
-        file_ext = blob_path.split(".")[-1] if "." in blob_path else "mp3"
-        with tempfile.NamedTemporaryFile(suffix=f".{file_ext}", delete=False) as tmp_file:
-            blob.download_to_filename(tmp_file.name)
-            local_path = tmp_file.name
-        
-        logger.info(f"Downloaded audio to {local_path}")
-        
-    except Exception as e:
-        error_msg = f"Failed to download audio: {e}"
-        logger.error(error_msg, exc_info=True)
-        if db:
-            db.collection('cases').document(case_id).update({
-                "status": "transcription_failed",
-                "error": error_msg,
-                "updatedAt": firestore.SERVER_TIMESTAMP
-            })
-        return jsonify({"error": error_msg}), 500
+        # STT V1 uses GCS URI directly (no download needed)
+        if engine == "stt_v1":
+            logger.info(f"Using STT V1 with GCS URI directly: {gcs_uri}")
+            result = pipeline_instance.transcribe(gcs_uri)
+        else:
+            # Gemini requires local file - download from GCS
+            from google.cloud import storage as gcs_storage
+            storage_client = gcs_storage.Client()
+            bucket_name = gcs_uri.replace("gs://", "").split("/")[0]
+            blob_path = "/".join(gcs_uri.replace("gs://", "").split("/")[1:])
+            
+            bucket = storage_client.bucket(bucket_name)
+            blob = bucket.blob(blob_path)
+            
+            # Create temp file with correct extension
+            file_ext = blob_path.split(".")[-1] if "." in blob_path else "mp3"
+            with tempfile.NamedTemporaryFile(suffix=f".{file_ext}", delete=False) as tmp_file:
+                blob.download_to_filename(tmp_file.name)
+                local_path = tmp_file.name
+            
+            logger.info(f"Downloaded audio to {local_path}")
+            result = pipeline_instance.transcribe(local_path)
+            
+            # Cleanup temp file
+            os.remove(local_path)
 
-    # 3. Transcribe with Gemini
-    try:
-        gemini_pipeline = get_pipeline()  # Uses global singleton
-        result = gemini_pipeline.transcribe(local_path)
-        
-        # Cleanup temp file
-        os.remove(local_path)
         
         if result.get("success"):
             # Save to Firestore
