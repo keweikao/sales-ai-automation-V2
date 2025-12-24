@@ -121,5 +121,7 @@ jobs:
             echo "No changes to commit"
           else
             git commit -m "docs: auto-update PROJECT_CONTEXT.md [skip ci]"
-            git push
+            # 處理競爭條件：先 pull --rebase 再 push
+            git pull --rebase origin main || true
+            git push || echo "Push failed, likely due to concurrent updates - this is non-critical"
           fi
