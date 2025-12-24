@@ -3,14 +3,19 @@ Speech-to-Text V1 Pipeline for synchronous transcription.
 
 Uses LongRunningRecognize API with polling for long audio files.
 Supports speaker diarization and Traditional Chinese (Taiwan).
+Now includes M4A to MP3 conversion for unsupported formats.
 """
 
 import os
 import logging
 import time
+import subprocess
+import tempfile
+import uuid
 from typing import Dict, Any, List, Optional
 
 from google.cloud import speech_v1 as speech
+from google.cloud import storage
 from google.api_core import exceptions as gapi_exceptions
 
 from .base_pipeline import TranscriptionPipeline
@@ -98,11 +103,83 @@ class STTV1Pipeline(TranscriptionPipeline):
         
         return speech.RecognitionConfig(**config_dict)
     
+    def _convert_m4a_to_mp3(self, gcs_uri: str) -> str:
+        """
+        Convert M4A audio from GCS to MP3 and upload back to GCS.
+        
+        Args:
+            gcs_uri: Original GCS URI (gs://bucket/path/file.m4a)
+            
+        Returns:
+            New GCS URI with MP3 file (gs://bucket/path/file_converted.mp3)
+        """
+        logger.info(f"Converting M4A to MP3: {gcs_uri}")
+        
+        # Parse GCS URI
+        parts = gcs_uri.replace("gs://", "").split("/", 1)
+        bucket_name = parts[0]
+        blob_path = parts[1] if len(parts) > 1 else ""
+        
+        # Create temp files
+        with tempfile.NamedTemporaryFile(suffix=".m4a", delete=False) as m4a_file:
+            m4a_path = m4a_file.name
+        
+        mp3_path = m4a_path.replace(".m4a", ".mp3")
+        
+        try:
+            # Download M4A from GCS
+            storage_client = storage.Client()
+            bucket = storage_client.bucket(bucket_name)
+            blob = bucket.blob(blob_path)
+            blob.download_to_filename(m4a_path)
+            logger.info(f"Downloaded M4A to {m4a_path}")
+            
+            # Convert to MP3 using ffmpeg
+            cmd = [
+                "ffmpeg", "-y", "-i", m4a_path,
+                "-acodec", "libmp3lame",
+                "-ar", "16000",  # 16kHz sample rate
+                "-ac", "1",      # Mono
+                "-q:a", "2",     # High quality
+                mp3_path
+            ]
+            
+            result = subprocess.run(cmd, capture_output=True, text=True)
+            if result.returncode != 0:
+                logger.error(f"ffmpeg conversion failed: {result.stderr}")
+                raise RuntimeError(f"ffmpeg conversion failed: {result.stderr}")
+            
+            logger.info(f"Converted to MP3: {mp3_path}")
+            
+            # Upload MP3 to GCS
+            mp3_blob_path = blob_path.rsplit(".", 1)[0] + "_converted.mp3"
+            mp3_blob = bucket.blob(mp3_blob_path)
+            mp3_blob.upload_from_filename(mp3_path)
+            
+            new_gcs_uri = f"gs://{bucket_name}/{mp3_blob_path}"
+            logger.info(f"Uploaded MP3 to {new_gcs_uri}")
+            
+            return new_gcs_uri
+            
+        finally:
+            # Cleanup temp files
+            for path in [m4a_path, mp3_path]:
+                try:
+                    if os.path.exists(path):
+                        os.remove(path)
+                except Exception as e:
+                    logger.warning(f"Failed to cleanup temp file {path}: {e}")
+    
     def _transcribe_gcs(self, gcs_uri: str) -> Dict[str, Any]:
         """Transcribe audio from GCS URI using LongRunningRecognize."""
         
         logger.info(f"Starting transcription for: {gcs_uri}")
         start_time = time.time()
+        
+        # Check if M4A format - needs conversion
+        if gcs_uri.lower().endswith(".m4a"):
+            logger.info("Detected M4A format, converting to MP3...")
+            gcs_uri = self._convert_m4a_to_mp3(gcs_uri)
         
         # Detect encoding from file extension
         encoding = self._detect_encoding(gcs_uri)
@@ -119,8 +196,8 @@ class STTV1Pipeline(TranscriptionPipeline):
             
             logger.info(f"Operation started: {operation.operation.name}")
             
-            # Poll for result with timeout (10 minutes)
-            result = operation.result(timeout=600)
+            # Poll for result with timeout (30 minutes for long audio)
+            result = operation.result(timeout=1800)
             
             elapsed = time.time() - start_time
             logger.info(f"Transcription completed in {elapsed:.1f}s")
