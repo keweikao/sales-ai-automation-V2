@@ -28,6 +28,8 @@ SUPPORTED_AUDIO_FORMATS = {
     "flac": ["audio/flac", "audio/x-flac"],
     "ogg": ["audio/ogg", "audio/x-ogg"],
     "aac": ["audio/aac", "audio/x-aac"],
+    # iPhone Core Audio Format (語音備忘錄直接分享)
+    "caf": ["audio/x-caf", "audio/caf"],
 }
 
 # 所有支援的 MIME types

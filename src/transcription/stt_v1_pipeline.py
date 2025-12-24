@@ -103,7 +103,7 @@ class STTV1Pipeline(TranscriptionPipeline):
         
         return speech.RecognitionConfig(**config_dict)
     
-    def _convert_m4a_to_mp3(self, gcs_uri: str) -> str:
+    def _convert_to_mp3(self, gcs_uri: str) -> str:
         """
         Convert M4A audio from GCS to MP3 and upload back to GCS.
         
@@ -176,10 +176,12 @@ class STTV1Pipeline(TranscriptionPipeline):
         logger.info(f"Starting transcription for: {gcs_uri}")
         start_time = time.time()
         
-        # Check if M4A format - needs conversion
-        if gcs_uri.lower().endswith(".m4a"):
-            logger.info("Detected M4A format, converting to MP3...")
-            gcs_uri = self._convert_m4a_to_mp3(gcs_uri)
+        # Check if unsupported format - needs conversion to MP3
+        lower_uri = gcs_uri.lower()
+        if lower_uri.endswith(".m4a") or lower_uri.endswith(".caf"):
+            format_name = "M4A" if lower_uri.endswith(".m4a") else "CAF"
+            logger.info(f"Detected {format_name} format, converting to MP3...")
+            gcs_uri = self._convert_to_mp3(gcs_uri)
         
         # Detect encoding from file extension
         encoding = self._detect_encoding(gcs_uri)
