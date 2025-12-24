@@ -66,6 +66,13 @@ def validate_audio_file(file_info: Dict) -> Tuple[bool, Optional[str]]:
         file_size = file_info.get("size", 0)
         mime_type = file_info.get("mimetype", "").lower()
 
+        # iPhone 直接分享時，Slack API 可能不回傳 filetype
+        # 需要從檔名副檔名推斷格式
+        if not file_type and file_name:
+            if "." in file_name:
+                file_type = file_name.rsplit(".", 1)[-1].lower()
+                logger.info(f"Inferred file type from filename: {file_type}")
+
         logger.info(
             f"Validating file: {file_id} ({file_name}), "
             f"type={file_type}, size={file_size}, mime={mime_type}"
