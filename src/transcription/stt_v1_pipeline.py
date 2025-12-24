@@ -257,6 +257,10 @@ class STTV1Pipeline(TranscriptionPipeline):
         """
         Parse Speech-to-Text response into standardized format.
         
+        Note: For STT V1 diarization, speaker_tag information is ONLY complete
+        in the LAST result's words array. Earlier results may have incomplete
+        or missing speaker tags.
+        
         Returns:
             Dict with segments, text, and speakers
         """
@@ -264,28 +268,29 @@ class STTV1Pipeline(TranscriptionPipeline):
         full_text_parts = []
         speakers_set = set()
         
+        # Collect all transcript text
         for result in response.results:
-            if not result.alternatives:
-                continue
-            
-            alternative = result.alternatives[0]
-            transcript = alternative.transcript
-            full_text_parts.append(transcript)
-            
-            # If diarization is enabled, extract speaker info from words
-            if self.enable_diarization and alternative.words:
-                # Group words by speaker
+            if result.alternatives:
+                full_text_parts.append(result.alternatives[0].transcript)
+        
+        # For diarization, use ONLY the last result's words (they contain complete speaker info)
+        if self.enable_diarization and response.results:
+            last_result = response.results[-1]
+            if last_result.alternatives and last_result.alternatives[0].words:
+                words = last_result.alternatives[0].words
+                
                 current_speaker = None
                 current_segment = None
                 
-                for word_info in alternative.words:
-                    speaker_tag = getattr(word_info, 'speaker_tag', 0)
+                for word_info in words:
+                    # speaker_tag is 1-indexed, 0 means unknown
+                    speaker_tag = word_info.speaker_tag if hasattr(word_info, 'speaker_tag') else 0
                     speaker_label = f"Speaker {speaker_tag}" if speaker_tag > 0 else "Unknown"
                     speakers_set.add(speaker_label)
                     
                     word = word_info.word
-                    start_time = word_info.start_time.total_seconds()
-                    end_time = word_info.end_time.total_seconds()
+                    start_time = word_info.start_time.total_seconds() if word_info.start_time else 0.0
+                    end_time = word_info.end_time.total_seconds() if word_info.end_time else 0.0
                     
                     if speaker_label != current_speaker:
                         # Save previous segment
@@ -309,14 +314,17 @@ class STTV1Pipeline(TranscriptionPipeline):
                 # Don't forget last segment
                 if current_segment:
                     segments.append(current_segment)
-            else:
-                # No diarization, just create one segment per result
-                segments.append({
-                    "start": 0.0,
-                    "end": 0.0,
-                    "speaker": "Unknown",
-                    "text": transcript,
-                })
+        
+        # Fallback: if no diarization segments, create segments from results
+        if not segments:
+            for result in response.results:
+                if result.alternatives:
+                    segments.append({
+                        "start": 0.0,
+                        "end": 0.0,
+                        "speaker": "Unknown",
+                        "text": result.alternatives[0].transcript,
+                    })
         
         # Format segments with timestamps for output
         formatted_segments = []
