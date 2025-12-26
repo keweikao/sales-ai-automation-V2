@@ -31,6 +31,7 @@ from .metrics import metrics, send_slack_alert
 from .services.stats_service import StatsService
 from .services.report_service import ReportService
 from .services.player_card_service import PlayerCardService
+from .agents.agent5_coach import CoachAgent
 from .templates.player_card_slack import (
     build_personal_player_card_blocks,
     build_team_dashboard_blocks,
@@ -60,6 +61,7 @@ GEMINI_MODEL_DEFAULT = os.environ.get("GEMINI_MODEL_DEFAULT", "gemini-2.5-flash"
 stats_service: Optional[StatsService] = None
 report_service = None
 player_card_service: Optional[PlayerCardService] = None
+coach_agent: Optional[CoachAgent] = None
 slack_client = None
 slack_notifier = None
 orchestrator = None
@@ -123,6 +125,21 @@ try:
 except Exception as e:
     logger.error(f"Failed to initialize PlayerCardService: {e}", exc_info=True)
     player_card_service = None
+
+# 3.6. Initialize CoachAgent (Agent 5)
+try:
+    gemini_api_key = os.environ.get("GEMINI_API_KEY")
+    if db:
+        coach_agent = CoachAgent(
+            db_client=db,
+            gemini_api_key=gemini_api_key,
+        )
+        logger.info("CoachAgent (Agent 5) initialized successfully")
+    else:
+        logger.warning("CoachAgent skipped (missing Firestore)")
+except Exception as e:
+    logger.error(f"Failed to initialize CoachAgent: {e}", exc_info=True)
+    coach_agent = None
 
 # 4. Initialize Multi-Agent Orchestrator
 try:
@@ -357,6 +374,91 @@ def save_analysis_to_firestore(case_id: str, analysis_result: Any) -> bool:
         return False
 
 
+def _trigger_coach_alert(case_id: str, analysis_result: Any) -> None:
+    """
+    Trigger Agent 5 Coach Alert if conditions are met.
+    
+    Evaluates the analysis result and sends immediate Slack alert
+    to the sales rep if action is needed.
+    """
+    if not coach_agent or not slack_client or not db:
+        return
+    
+    try:
+        # Get agent results
+        agent_results = analysis_result.agent_results
+        
+        agent1_result = agent_results.get("agent1")
+        agent3_result = agent_results.get("agent3")
+        
+        if not agent1_result or not agent1_result.success:
+            logger.debug("Agent 1 failed, skipping coach alert")
+            return
+        if not agent3_result or not agent3_result.success:
+            logger.debug("Agent 3 failed, skipping coach alert")
+            return
+        
+        context_data = agent1_result.data or {}
+        seller_data = agent3_result.data or {}
+        buyer_data = agent_results.get("agent2", {})
+        if hasattr(buyer_data, 'data'):
+            buyer_data = buyer_data.data or {}
+        
+        # Get case metadata
+        case_doc = db.collection("cases").document(case_id).get()
+        if not case_doc.exists:
+            return
+        
+        case_data = case_doc.to_dict() or {}
+        rep_id = case_data.get("uploadedBy", "")
+        rep_name = case_data.get("uploadedByName", case_data.get("salesRepName", "Unknown"))
+        store_name = case_data.get("storeName", "Unknown")
+        
+        if not rep_id:
+            logger.warning(f"Case {case_id} has no uploadedBy, skipping coach alert")
+            return
+        
+        # Evaluate if alert is needed
+        alert = coach_agent.evaluate(
+            case_id=case_id,
+            rep_id=rep_id,
+            rep_name=rep_name,
+            store_name=store_name,
+            context_data=context_data,
+            buyer_data=buyer_data,
+            seller_data=seller_data,
+        )
+        
+        if not alert:
+            logger.info(f"Case {case_id}: No coach alert needed")
+            return
+        
+        # Build and send Slack message
+        blocks = coach_agent.build_alert_blocks(alert)
+        
+        # Send as DM to the sales rep
+        response = slack_client.chat_postMessage(
+            channel=rep_id,
+            blocks=blocks,
+            text=f"{alert.alert_type}: {alert.store_name}"
+        )
+        
+        if response.get("ok"):
+            # Save alert to Firestore
+            slack_ts = response.get("ts", "")
+            coach_agent.save_alert(
+                alert=alert,
+                slack_channel=rep_id,
+                slack_ts=slack_ts,
+            )
+            logger.info(f"Coach alert sent for case {case_id}: {alert.alert_type}")
+        else:
+            logger.error(f"Failed to send coach alert: {response}")
+            
+    except Exception as e:
+        logger.error(f"Error in _trigger_coach_alert for {case_id}: {e}", exc_info=True)
+
+
 # --- Flask Routes ---
 
 @flask_app.route("/analyze", methods=["POST"])
@@ -439,7 +541,15 @@ def analyze_transcript():
                 logger.error(f"Error sending Slack notification: {e}", exc_info=True)
                 # Don't fail the request
 
-
+        # Trigger Agent 5 Coach Alert (if applicable)
+        if coach_agent and slack_client:
+            try:
+                _trigger_coach_alert(
+                    case_id=case_id,
+                    analysis_result=analysis_result,
+                )
+            except Exception as e:
+                logger.error(f"Error triggering coach alert: {e}", exc_info=True)
         # Determine response based on analysis result
         if analysis_result.success:
             # Full or partial success (>= 3/5 agents succeeded)
