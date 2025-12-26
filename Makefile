@@ -4,7 +4,6 @@ test-analysis:
 	PYTHONPATH=analysis-service/src pytest analysis-service/tests
 
 test-slack:
-	python3 src/slack_app/test_notifications.py
 	pytest src/slack_app/tests
 
 test-summary-web:
