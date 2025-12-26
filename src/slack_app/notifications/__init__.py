@@ -2,6 +2,6 @@
 Slack notification modules for various analysis stages.
 """
 
-from .summary_delivery import SummaryDelivery
+from .summary_delivery import SummaryDeliveryService, DeliveryResult
 
-__all__ = ['SummaryDelivery']
+__all__ = ['SummaryDeliveryService', 'DeliveryResult']
