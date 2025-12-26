@@ -43,10 +43,9 @@ async def main():
             model_name=GEMINI_MODEL_DEFAULT,
             model_config={
                 "agent1": GEMINI_MODEL_FAST,
-                "agent2": GEMINI_MODEL_FAST,
+                "agent2": GEMINI_MODEL_PRO,
                 "agent3": GEMINI_MODEL_PRO,
                 "agent4": GEMINI_MODEL_FAST,
-                "agent5": GEMINI_MODEL_PRO,
             },
             min_success_threshold=3,
             db_client=db,
@@ -67,7 +66,7 @@ async def main():
     logger.info("Successfully fetched and processed transcript data.")
 
     # 3. Execute the analysis pipeline
-    logger.info("Executing analysis pipeline (Agents 1-5)...")
+    logger.info("Executing analysis pipeline (Agents 1-4)...")
     try:
         analysis_result = await orchestrator.analyze_transcript(
             case_id=CASE_ID_TO_ANALYZE,

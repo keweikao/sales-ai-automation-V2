@@ -30,6 +30,11 @@ from .slack_notifier import SlackNotifier
 from .metrics import metrics, send_slack_alert
 from .services.stats_service import StatsService
 from .services.report_service import ReportService
+from .services.player_card_service import PlayerCardService
+from .templates.player_card_slack import (
+    build_personal_player_card_blocks,
+    build_team_dashboard_blocks,
+)
 
 # --- Initialization ---
 logging.basicConfig(
@@ -49,14 +54,12 @@ GEMINI_MODEL_FAST = os.environ.get("GEMINI_MODEL_FAST", "gemini-2.5-flash")
 GEMINI_MODEL_PRO = os.environ.get("GEMINI_MODEL_PRO", "gemini-2.5-pro-preview-06-05")
 GEMINI_MODEL_DEFAULT = os.environ.get("GEMINI_MODEL_DEFAULT", "gemini-2.5-flash")
 
-AGENT6_NOTIFICATION_ENDPOINT = os.environ.get("AGENT6_NOTIFICATION_ENDPOINT")
-AGENT6_NOTIFICATION_TOKEN = os.environ.get("AGENT6_NOTIFICATION_TOKEN")
-AGENT7_NOTIFICATION_ENDPOINT = os.environ.get("AGENT7_NOTIFICATION_ENDPOINT")
-AGENT7_NOTIFICATION_TOKEN = os.environ.get("AGENT7_NOTIFICATION_TOKEN")
+
 
 # Initialize global services
 stats_service: Optional[StatsService] = None
 report_service = None
+player_card_service: Optional[PlayerCardService] = None
 slack_client = None
 slack_notifier = None
 orchestrator = None
@@ -90,7 +93,6 @@ except Exception as e:
     logger.error(f"Failed to initialize SlackClient: {e}", exc_info=True)
     slack_client = None
 
-# 3. Initialize ReportService (depends on db, stats_service, slack_client)
 try:
     manager_channel_id = os.environ.get("MANAGER_CHANNEL_ID")
     if db and stats_service and slack_client and manager_channel_id:
@@ -105,6 +107,22 @@ try:
         logger.warning(f"ReportService skipped (missing: {', '.join(missing)})")
 except Exception as e:
     logger.error(f"Failed to initialize ReportService: {e}", exc_info=True)
+
+# 3.5. Initialize PlayerCardService
+try:
+    gemini_api_key = os.environ.get("GEMINI_API_KEY")
+    if db and stats_service:
+        player_card_service = PlayerCardService(
+            db_client=db,
+            stats_service=stats_service,
+            gemini_api_key=gemini_api_key,
+        )
+        logger.info("PlayerCardService initialized successfully")
+    else:
+        logger.warning("PlayerCardService skipped (missing Firestore or StatsService)")
+except Exception as e:
+    logger.error(f"Failed to initialize PlayerCardService: {e}", exc_info=True)
+    player_card_service = None
 
 # 4. Initialize Multi-Agent Orchestrator
 try:
@@ -288,31 +306,6 @@ def save_analysis_to_firestore(case_id: str, analysis_result: Any) -> bool:
                 analysis_data['agents'][agent_id]['error'] = agent_result.error
                 analysis_data['agents'][agent_id]['errorType'] = agent_result.error_type
 
-        # Promote Agent 6 structured/raw outputs to top-level analysis fields
-        agent6_result = analysis_result.agent_results.get('agent6')
-        if agent6_result and agent6_result.success and agent6_result.data:
-            structured = agent6_result.data.get('structured')
-            raw_output = agent6_result.data.get('rawOutput')
-            if structured:
-                analysis_data['structured'] = structured
-            if raw_output:
-                analysis_data['rawOutput'] = raw_output
-
-        # Promote Agent 7 customerSummary to top-level analysis fields (legacy)
-        agent7_result = analysis_result.agent_results.get('agent7')
-        if agent7_result and agent7_result.success and agent7_result.data:
-            customer_summary = agent7_result.data.get('customerSummary')
-            markdown = agent7_result.data.get('markdown')
-            if customer_summary or markdown:
-                summary_doc = customer_summary.copy() if customer_summary else {}
-                if markdown:
-                    summary_doc['markdown'] = markdown
-                    summary_doc.setdefault('originalMarkdown', markdown)
-                summary_doc.setdefault('isEdited', False)
-                summary_doc.setdefault('editCount', 0)
-                summary_doc.setdefault('editedBy', None)
-                summary_doc.setdefault('editHistory', [])
-                analysis_data['customerSummary'] = summary_doc
 
         # V2 Architecture: Promote Agent 4 (Summary) to customerSummary
         agent4_result = analysis_result.agent_results.get('agent4')
@@ -446,8 +439,6 @@ def analyze_transcript():
                 logger.error(f"Error sending Slack notification: {e}", exc_info=True)
                 # Don't fail the request
 
-        # Agent 6 & 7 notifications are now handled directly in slack_notifier.py
-        # Removed redundant trigger_agent6_notification and trigger_agent7_notification calls
 
         # Determine response based on analysis result
         if analysis_result.success:
@@ -603,7 +594,150 @@ def trigger_weekly_reports():
         return jsonify({"status": "error", "error": str(e)}), 500
 
 
+# --- Player Card Routes ---
+
+@flask_app.route("/reports/player-cards/weekly", methods=["POST"])
+def trigger_weekly_player_cards():
+    """
+    Trigger Weekly Player Cards Generation and Send to Slack
+    Called by Cloud Scheduler (週一 9:00 AM)
+    """
+    if not player_card_service:
+        return jsonify({"status": "error", "message": "PlayerCardService not initialized"}), 503
+    
+    if not slack_client:
+        return jsonify({"status": "error", "message": "Slack client not initialized"}), 503
+    
+    try:
+        data = request.get_json() or {}
+        week_of = data.get("weekOf")  # Optional, defaults to current week
+        
+        # Generate all player cards
+        cards = player_card_service.generate_weekly_player_cards(week_of=week_of)
+        
+        if not cards:
+            return jsonify({"status": "skipped", "reason": "no_data"}), 200
+        
+        # Calculate rankings
+        sorted_cards = sorted(cards, key=lambda c: c.get("indices", {}).get("overall", 0), reverse=True)
+        rank_map = {c["repId"]: i + 1 for i, c in enumerate(sorted_cards)}
+        
+        # Send personal player cards to each rep
+        sent_count = 0
+        for card in cards:
+            try:
+                rank = rank_map.get(card["repId"], 0)
+                blocks = build_personal_player_card_blocks(card, rank=rank, total_reps=len(cards))
+                slack_client.chat_postMessage(
+                    channel=card["repId"],
+                    blocks=blocks,
+                    text=f"👤 {card.get('repName', 'Unknown')} 的本週球員卡"
+                )
+                sent_count += 1
+            except Exception as e:
+                logger.error(f"Failed to send player card to {card.get('repId')}: {e}")
+        
+        # Send team dashboard to manager channel
+        manager_channel = os.environ.get("MANAGER_CHANNEL_ID")
+        if manager_channel:
+            try:
+                team_blocks = build_team_dashboard_blocks(
+                    cards=sorted_cards,
+                    week_of=week_of or cards[0].get("weekOf", ""),
+                    team_stats={}
+                )
+                slack_client.chat_postMessage(
+                    channel=manager_channel,
+                    blocks=team_blocks,
+                    text="📊 團隊球員卡週報"
+                )
+            except Exception as e:
+                logger.error(f"Failed to send team dashboard: {e}")
+        
+        return jsonify({
+            "status": "success",
+            "cardsGenerated": len(cards),
+            "cardsSent": sent_count,
+            "weekOf": week_of or cards[0].get("weekOf", "")
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Weekly player cards failed: {e}", exc_info=True)
+        return jsonify({"status": "error", "error": str(e)}), 500
+
+
+@flask_app.route("/reports/player-cards/generate", methods=["POST"])
+def generate_single_player_card():
+    """
+    Generate a single player card for a specific rep
+    Used for manual testing or on-demand generation
+    """
+    if not player_card_service:
+        return jsonify({"status": "error", "message": "PlayerCardService not initialized"}), 503
+    
+    data = request.get_json() or {}
+    rep_id = data.get("repId")
+    week_of = data.get("weekOf")
+    send_slack = data.get("sendSlack", False)
+    
+    if not rep_id:
+        return jsonify({"status": "error", "message": "Missing repId"}), 400
+    
+    try:
+        card = player_card_service.generate_player_card(rep_id=rep_id, week_of=week_of)
+        
+        if not card:
+            return jsonify({"status": "error", "message": "No data for this rep"}), 404
+        
+        # Optionally send to Slack
+        if send_slack and slack_client:
+            try:
+                blocks = build_personal_player_card_blocks(card)
+                slack_client.chat_postMessage(
+                    channel=rep_id,
+                    blocks=blocks,
+                    text=f"👤 {card.get('repName', 'Unknown')} 的球員卡"
+                )
+                card["slackSent"] = True
+            except Exception as e:
+                logger.error(f"Failed to send player card to Slack: {e}")
+                card["slackSent"] = False
+        
+        return jsonify({"status": "success", "card": card}), 200
+        
+    except Exception as e:
+        logger.error(f"Generate player card failed: {e}", exc_info=True)
+        return jsonify({"status": "error", "error": str(e)}), 500
+
+
+@flask_app.route("/reports/player-cards/<rep_id>", methods=["GET"])
+def get_player_card(rep_id: str):
+    """
+    Get a player card for a specific rep (for Web Dashboard)
+    """
+    if not player_card_service:
+        return jsonify({"status": "error", "message": "PlayerCardService not initialized"}), 503
+    
+    week_of = request.args.get("weekOf")
+    
+    try:
+        if not week_of:
+            week_of = player_card_service._get_current_week()
+        
+        card = player_card_service._get_player_card(rep_id, week_of)
+        
+        if not card:
+            return jsonify({"status": "error", "message": "Player card not found"}), 404
+        
+        return jsonify({"status": "success", "card": card}), 200
+        
+    except Exception as e:
+        logger.error(f"Get player card failed: {e}", exc_info=True)
+        return jsonify({"status": "error", "error": str(e)}), 500
+
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))
     logger.info(f"Starting Analysis Service on port {port}")
     flask_app.run(host="0.0.0.0", port=port)
+

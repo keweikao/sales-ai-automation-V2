@@ -32,8 +32,6 @@ from utils.file_pipeline import (
     upload_to_gcs,
 )
 
-from notifications.agent6_notifier import Agent6Notifier
-from notifications.agent7_notifier import Agent7Notifier
 from notifications.summary_delivery import DeliveryResult, SummaryDeliveryService
 from interactions.summary_editor import SummaryEditor
 from interactions.summary_sender import SummarySender
@@ -85,23 +83,10 @@ SUMMARY_BASE_URL = os.getenv("SUMMARY_BASE_URL")
 SHORT_URL_BASE = os.getenv("SHORT_URL_BASE")
 
 slack_client: Optional[WebClient] = WebClient(token=SLACK_BOT_TOKEN) if SLACK_BOT_TOKEN else None
-agent6_notifier: Optional[Agent6Notifier] = None
-agent7_notifier: Optional[Agent7Notifier] = None
 summary_editor: Optional[SummaryEditor] = None
 summary_sender: Optional[SummarySender] = None
 summary_delivery_service: Optional[SummaryDeliveryService] = None
 if slack_client and db:
-    try:
-        agent6_notifier = Agent6Notifier(slack_client, db)
-        logger.info("Agent 6 notifier initialized successfully")
-    except Exception as notifier_error:  # pylint: disable=broad-except
-        logger.error("Failed to initialize Agent 6 notifier: %s", notifier_error, exc_info=True)
-
-    try:
-        agent7_notifier = Agent7Notifier(slack_client, db)
-        logger.info("Agent 7 notifier initialized successfully")
-    except Exception as notifier_error:  # pylint: disable=broad-except
-        logger.error("Failed to initialize Agent 7 notifier: %s", notifier_error, exc_info=True)
 
     try:
         summary_editor = SummaryEditor(slack_client, db)
@@ -1090,97 +1075,6 @@ def _log_notification_fallback(case_id: str, fallback_type: str, original_error:
         logger.warning(f"Failed to log notification fallback for {case_id}: {e}")
 
 
-def _handle_agent6_notification(
-    case_id: str,
-    file_id: Optional[str] = None,
-    channel_override: Optional[str] = None,
-    thread_override: Optional[str] = None,
-) -> Tuple[bool, str]:
-    """
-    Dispatch Agent 6 notification using available context with fallback support.
-    Returns (success, reason).
-    """
-    if not agent6_notifier:
-        logger.warning("Agent 6 notifier not initialized; cannot send notification for %s", case_id)
-        return False, "notifier_unavailable"
-
-    channel_id, thread_ts, _, user_id = _resolve_notification_target(case_id, file_id)
-    target_channel = channel_override or channel_id
-    target_thread = thread_override or thread_ts
-
-    if not target_channel:
-        target_channel = user_id  # Fallback to DM immediately if no channel
-
-    return _send_notification_with_fallback(
-        case_id=case_id,
-        notifier_func=agent6_notifier.send_agent6_notification,
-        fallback_prefix="Agent6",
-        user_id=target_channel,
-        thread_ts=target_thread,
-    )
-
-
-def _handle_agent7_notification(
-    case_id: str,
-    file_id: Optional[str] = None,
-    channel_override: Optional[str] = None,
-    thread_override: Optional[str] = None,
-) -> Tuple[bool, str]:
-    """
-    Dispatch Agent 7 preview notification with fallback support.
-    """
-    if not agent7_notifier:
-        logger.warning("Agent 7 notifier not initialized; cannot send preview for %s", case_id)
-        return False, "notifier_unavailable"
-
-    channel_id, thread_ts, _, user_id = _resolve_notification_target(case_id, file_id)
-    target_channel = channel_override or channel_id
-    target_thread = thread_override or thread_ts
-
-    if not target_channel:
-        target_channel = user_id  # Fallback to DM immediately if no channel
-        if not target_channel:
-            logger.warning("No Slack channel or user found for Agent 7 notification (%s)", case_id)
-            return False, "channel_not_found"
-
-    return _send_notification_with_fallback(
-        case_id=case_id,
-        notifier_func=agent7_notifier.send_agent7_preview,
-        fallback_prefix="Agent7",
-        channel_id=target_channel,
-        thread_ts=target_thread,
-        is_edited=False,
-    )
-
-
-def _refresh_agent7_preview_message(case_id: str) -> None:
-    """
-    Refresh the Agent 7 preview message in Slack after edits.
-    """
-    if not (agent7_notifier and db):
-        logger.debug("Cannot refresh Agent 7 preview (dependencies unavailable)")
-        return
-
-    snapshot = db.collection("cases").document(case_id).get()
-    if not snapshot.exists:
-        logger.warning("Cannot refresh Agent 7 preview: case %s not found", case_id)
-        return
-
-    case_data = snapshot.to_dict() or {}
-    notification = case_data.get("notification") or {}
-    channel_id = notification.get("agent7ChannelId") or notification.get("slackChannelId")
-    message_ts = notification.get("agent7MessageTs")
-
-    if not channel_id or not message_ts:
-        logger.info("Agent 7 preview message context missing for case %s", case_id)
-        return
-
-    updated = agent7_notifier.update_preview_message(case_id, channel_id, message_ts)
-    if updated:
-        logger.info("Agent 7 preview refreshed after edit (case %s)", case_id)
-    else:
-        logger.warning("Failed to refresh Agent 7 preview for case %s", case_id)
-
 
 def _notify_summary_delivery_result(
     case_id: str,
@@ -1811,9 +1705,6 @@ def handle_edit_summary_submission(ack, body, view, logger):  # type: ignore[ove
     if response and response.get("response_action") == "errors":
         return
 
-    if case_id:
-        _refresh_agent7_preview_message(case_id)
-
 
 @app.view("confirm_send_summary_modal")
 def handle_confirm_send_summary_modal(ack, body, view, logger):  # type: ignore[override]
@@ -1912,27 +1803,6 @@ def handle_view_full_analysis_action(ack, body, client, logger):  # type: ignore
             channel=body["container"]["channel_id"],
             user=body["user"]["id"],
             text=f"完整分析功能開發中。案件 ID: {case_id}"
-        )
-
-
-@app.action("view_full_agent6")
-def handle_view_full_agent6_action(ack, body, client, logger):  # type: ignore[override]
-    """
-    Handle the "查看完整分析" button from Agent 6 notifications.
-    """
-    ack()
-    logger.info("view_full_agent6 button clicked: %s", body)
-
-    actions = body.get("actions") or []
-    action_value = actions[0].get("value") if actions else None
-    case_id = _extract_case_id(action_value, "view_full_agent6_")
-
-    if case_id:
-        logger.info(f"User requested full Agent 6 analysis for case {case_id}")
-        client.chat_postEphemeral(
-            channel=body["container"]["channel_id"],
-            user=body["user"]["id"],
-            text=f"完整 Agent 6 分析功能開發中。案件 ID: {case_id}"
         )
 
 
@@ -2043,82 +1913,6 @@ def handle_transcription_progress():
         return {"error": "Failed to post Slack message"}, 500
 
     return {"status": "ok"}, 200
-
-
-@flask_app.route("/internal/agent6-notification", methods=["POST"])
-def handle_agent6_notification_request():
-    """
-    Internal endpoint invoked when Agent 6 analysis completes.
-    Triggers the sales coaching Slack card delivery.
-    """
-    if PROGRESS_SHARED_TOKEN:
-        provided_token = request.headers.get("X-Progress-Token")
-        if provided_token != PROGRESS_SHARED_TOKEN:
-            logger.warning("Rejected agent6 notification webhook: invalid token")
-            return {"error": "Unauthorized"}, 403
-
-    if not agent6_notifier:
-        logger.warning("Agent 6 notifier unavailable; skipping notification request")
-        return {"error": "Notifier unavailable"}, 503
-
-    payload = request.get_json(silent=True) or {}
-    case_id = payload.get("caseId")
-    if not case_id:
-        return {"error": "Missing caseId"}, 400
-
-    file_id = payload.get("fileId")
-    channel_override = payload.get("channelId")
-    thread_override = payload.get("threadTs")
-
-    success, reason = _handle_agent6_notification(
-        case_id=case_id,
-        file_id=file_id,
-        channel_override=channel_override,
-        thread_override=thread_override,
-    )
-
-    status_code = 200 if success else 500
-    body = {"status": "ok" if success else "error", "reason": reason}
-    logger.info("Agent 6 notification request for case %s -> %s", case_id, body)
-    return body, status_code
-
-
-@flask_app.route("/internal/agent7-notification", methods=["POST"])
-def handle_agent7_notification_request():
-    """
-    Internal endpoint invoked when Agent 7 analysis completes.
-    Sends the customer-facing preview with edit controls.
-    """
-    if PROGRESS_SHARED_TOKEN:
-        provided_token = request.headers.get("X-Progress-Token")
-        if provided_token != PROGRESS_SHARED_TOKEN:
-            logger.warning("Rejected agent7 notification webhook: invalid token")
-            return {"error": "Unauthorized"}, 403
-
-    if not agent7_notifier:
-        logger.warning("Agent 7 notifier unavailable; skipping notification request")
-        return {"error": "Notifier unavailable"}, 503
-
-    payload = request.get_json(silent=True) or {}
-    case_id = payload.get("caseId")
-    if not case_id:
-        return {"error": "Missing caseId"}, 400
-
-    file_id = payload.get("fileId")
-    channel_override = payload.get("channelId")
-    thread_override = payload.get("threadTs")
-
-    success, reason = _handle_agent7_notification(
-        case_id=case_id,
-        file_id=file_id,
-        channel_override=channel_override,
-        thread_override=thread_override,
-    )
-
-    status_code = 200 if success else 500
-    body = {"status": "ok" if success else "error", "reason": reason}
-    logger.info("Agent 7 notification request for case %s -> %s", case_id, body)
-    return body, status_code
 
 
 @flask_app.route("/internal/summary-delivery", methods=["POST"])

@@ -176,46 +176,12 @@ def sample_agent_results():
         "agent4": {
             "success": True,
             "data": {
-                "competitors_mentioned": [],
-                "competitive_advantages": [],
-            },
-        },
-        "agent5": {
-            "success": True,
-            "data": {
-                "questionnaire": {
-                    "budget_discussed": False,
-                    "timeline_discussed": False,
-                    "decision_maker_identified": True,
+                "email_subject": "會議摘要",
+                "email_body": "感謝您今天的時間討論 POS 系統...",
+                "action_items": {
+                    "sales": ["安排產品示範"],
+                    "customer": ["準備需求清單"],
                 },
-            },
-        },
-        "agent6": {
-            "success": True,
-            "data": {
-                "sales_stage": "需求證明",
-                "deal_health_score": 75,
-                "key_decision_makers": ["王小明"],
-                "risks": [
-                    {
-                        "risk": "預算未討論",
-                        "mitigation": "下次會議確認預算範圍",
-                    }
-                ],
-                "next_steps": [
-                    {
-                        "action": "安排產品示範",
-                        "priority": "high",
-                        "timeline": "本週內",
-                    }
-                ],
-            },
-        },
-        "agent7": {
-            "success": True,
-            "data": {
-                "summary": "# 會議摘要\n\n本次會議客戶表達對 POS 系統的興趣...",
-                "markdown": "...",
             },
         },
     }
