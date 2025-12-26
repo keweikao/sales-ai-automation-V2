@@ -1,7 +1,7 @@
 # Sales AI Automation V2 - Project Context
 
 > 🤖 此文檔由 `.conductor/generate_context.py` 自動生成
-> 最後更新：2025-12-26 03:15
+> 最後更新：2025-12-26 04:58
 
 ## 專案概述
 
@@ -9,7 +9,7 @@
 業務人員透過 Slack 上傳通話錄音，系統自動轉錄並使用多 Agent 架構分析通話內容，
 最後產生客戶摘要報告。
 
-- **程式碼行數**：~27,706 行 Python
+- **程式碼行數**：~28,259 行 Python
 - **服務數量**：5 個 Cloud Run 服務
 
 ## 技術架構
@@ -34,6 +34,7 @@
 | agent2_buyer | `analysis-service/src/agents/agent2_buyer.py` | `analysis-service/src/agents/prompts/agent2-buyer.md` | Agent 2 - Buyer Perspective (Customer & Product). |
 | agent3_seller | `analysis-service/src/agents/agent3_seller.py` | `analysis-service/src/agents/prompts/agent3-seller.md` | Agent 3 - Seller Perspective (Sales & Strategy). |
 | agent4_summary | `analysis-service/src/agents/agent4_summary.py` | `analysis-service/src/agents/prompts/agent4-summary.md` | Agent 4 - The Recap (Customer Summary). |
+| agent5_coach | `analysis-service/src/agents/agent5_coach.py` | - | Agent 5: Sales Coach - 即時銷售教練 |
 
 ## 執行流程 (orchestrator.py)
 
