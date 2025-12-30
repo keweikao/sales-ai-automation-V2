@@ -6,7 +6,7 @@ Agent 5: Sales Coach - 即時銷售教練
 """
 
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
@@ -20,6 +20,30 @@ except ImportError:
     genai = None
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class ManagerAlert:
+    """Structure for a Manager-facing Alert (主管警示)"""
+    alert_type: str  # 'consecutive_low_scores', 'high_risk_deal'
+    rep_id: str
+    rep_name: str
+    case_id: str
+    reason: str
+    severity: str = "medium" # medium, high
+    timestamp: datetime = field(default_factory=datetime.utcnow)
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "alert_type": self.alert_type,
+            "rep_id": self.rep_id,
+            "rep_name": self.rep_name,
+            "case_id": self.case_id,
+            "reason": self.reason,
+            "severity": self.severity,
+            "timestamp": self.timestamp,
+            "sent": False
+        }
 
 
 @dataclass
@@ -425,19 +449,134 @@ class CoachAgent:
         return doc_id
     
     def get_alert_by_thread_ts(self, thread_ts: str) -> Optional[Dict]:
-        """根據 Slack Thread TS 取得提醒"""
+        """根據 Slack Thread TS 取得提醒 (搜尋 Coach Alerts 和 Manager Alerts)"""
         try:
+            # 1. Search Coach Alerts
             query = (
                 self.db.collection(self.collection_name)
                 .where("slackTs", "==", thread_ts)
                 .limit(1)
             )
-            
             docs = list(query.stream())
             if docs:
                 return docs[0].to_dict()
+
+            # 2. Search Manager Alerts
+            query_manager = (
+                self.db.collection("manager_alerts")
+                .where("slackTs", "==", thread_ts)
+                .limit(1)
+            )
+            docs_manager = list(query_manager.stream())
+            if docs_manager:
+                return docs_manager[0].to_dict()
+
             return None
             
         except Exception as e:
             logger.error(f"Failed to get alert by thread_ts: {e}")
             return None
+
+    # =========================================================================
+    # Phase 5: Manager Alerting
+    # =========================================================================
+
+    def evaluate_manager_alert(self, case_id: str, rep_id: str, current_score: int) -> Optional[ManagerAlert]:
+        """
+        Check if a Manager Alert should be triggered based on history.
+        Rule: 3 consecutive cases with progress_score < 50.
+        """
+        if not self.db or not rep_id:
+            return None
+
+        # 1. Check current score condition first
+        if current_score >= 50:
+            return None
+
+        try:
+            # 2. Query last 2 COMPLETED cases for this rep
+            cases_ref = (
+                self.db.collection("cases")
+                .where("uploadedBy", "==", rep_id)
+                .where("status", "==", "completed")
+                .order_by("createdAt", direction=firestore.Query.DESCENDING)
+                .limit(2)
+            )
+            
+            docs = list(cases_ref.stream())
+            
+            if len(docs) < 2:
+                return None
+
+            prev_scores = []
+            for doc in docs:
+                data = doc.to_dict()
+                agent3 = data.get("analysis", {}).get("agents", {}).get("agent3", {}).get("data", {})
+                score = agent3.get("progress_score", 100) 
+                
+                if score < 50:
+                    prev_scores.append(score)
+                else:
+                    return None 
+
+            rep_name = docs[0].to_dict().get("uploadedByName") or docs[0].to_dict().get("salesRepName", "Unknown")
+            scores_str = f"{current_score}, " + ", ".join(map(str, prev_scores))
+
+            return ManagerAlert(
+                alert_type="consecutive_low_scores",
+                rep_id=rep_id,
+                rep_name=rep_name,
+                case_id=case_id,
+                reason=f"連續 3 筆案件推進力低於 50 (近期分數: {scores_str})",
+                severity="high"
+            )
+
+        except Exception as e:
+            logger.error(f"Error checking manager alert: {e}")
+            return None
+
+    def save_manager_alert(self, alert: ManagerAlert, slack_channel: str = None, slack_ts: str = None):
+        """Save manager alert to Firestore"""
+        if not self.db:
+            return
+        
+        try:
+            data = alert.to_dict()
+            if slack_channel:
+                data["slackChannel"] = slack_channel
+            if slack_ts:
+                data["slackTs"] = slack_ts
+                
+            # Use deterministic ID if possible or just new doc
+            # If we want to support duplicates (multiple alerts for same case), add is fine.
+            # But query expects slackTs to be unique enough.
+            
+            self.db.collection("manager_alerts").add(data)
+            logger.info(f"Saved manager alert for {alert.rep_name}")
+        except Exception as e:
+            logger.error(f"Failed to save manager alert: {e}")
+
+    def build_manager_alert_blocks(self, alert: ManagerAlert) -> List[Dict]:
+        """Build Slack Block Kit message for Manager"""
+        return [
+            {
+                "type": "header",
+                "text": {"type": "plain_text", "text": "🚨 業務異常狀況警示", "emoji": True}
+            },
+            {
+                "type": "section",
+                "fields": [
+                    {"type": "mrkdwn", "text": f"*業務:* {alert.rep_name}"},
+                    {"type": "mrkdwn", "text": f"*類型:* 連續表現低落"},
+                    {"type": "mrkdwn", "text": f"*嚴重性:* {alert.severity.upper()}"}
+                ]
+            },
+            {
+                "type": "section",
+                "text": {"type": "mrkdwn", "text": f"*原因:* {alert.reason}"}
+            },
+            {
+                "type": "context",
+                "elements": [{"type": "mrkdwn", "text": f"Latest Case ID: {alert.case_id}"}]
+            }
+        ]

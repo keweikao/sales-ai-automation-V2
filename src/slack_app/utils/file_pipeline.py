@@ -94,16 +94,75 @@ def upload_to_gcs(
     bucket_name: str,
     destination_blob: str,
     storage_client: Optional[storage.Client] = None,
+    max_retries: int = 3,
 ) -> str:
     """
     Upload a local file to GCS and return the gs:// URI.
+    
+    Uses resumable upload with retry logic to handle SSL errors.
     """
+    import logging
+    import time
+    from google.api_core import retry as api_retry
+    from google.api_core import exceptions as api_exceptions
+    
+    logger = logging.getLogger(__name__)
+    
+    # Create a fresh client for each upload to avoid connection pooling issues
     client = storage_client or storage.Client()
     bucket = client.bucket(bucket_name)
     blob = bucket.blob(destination_blob)
-    blob.upload_from_filename(str(local_path), timeout=900)
-
-    return f"gs://{bucket_name}/{destination_blob}"
+    
+    file_size = local_path.stat().st_size
+    logger.info(f"Uploading {local_path.name} ({file_size / 1024 / 1024:.2f} MB) to gs://{bucket_name}/{destination_blob}")
+    
+    # Retry configuration for transient errors
+    retry_errors = (
+        api_exceptions.ServiceUnavailable,
+        api_exceptions.GatewayTimeout,
+        api_exceptions.InternalServerError,
+        ConnectionError,
+        TimeoutError,
+    )
+    
+    last_error = None
+    for attempt in range(1, max_retries + 1):
+        try:
+            logger.info(f"Upload attempt {attempt}/{max_retries}")
+            
+            # Use resumable upload for large files (>8MB is automatic)
+            # Set num_retries for internal resumable upload retries
+            blob.upload_from_filename(
+                str(local_path),
+                timeout=900,
+                num_retries=3,  # Built-in retries for resumable upload chunks
+            )
+            
+            logger.info(f"Upload successful on attempt {attempt}")
+            return f"gs://{bucket_name}/{destination_blob}"
+            
+        except Exception as e:
+            last_error = e
+            error_type = type(e).__name__
+            logger.warning(f"Upload attempt {attempt} failed: {error_type}: {str(e)[:200]}")
+            
+            # Check if error is retryable
+            is_ssl_error = "SSL" in str(type(e).__mro__) or "SSL" in str(e)
+            is_connection_error = isinstance(e, retry_errors) or is_ssl_error
+            
+            if attempt < max_retries and is_connection_error:
+                wait_time = 2 ** attempt  # Exponential backoff: 2, 4, 8 seconds
+                logger.info(f"Retrying in {wait_time} seconds...")
+                time.sleep(wait_time)
+                
+                # Create fresh client to get new connection
+                client = storage.Client()
+                bucket = client.bucket(bucket_name)
+                blob = bucket.blob(destination_blob)
+            else:
+                raise
+    
+    raise last_error
 
 
 def enqueue_transcription_task(

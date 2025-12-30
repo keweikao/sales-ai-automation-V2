@@ -38,7 +38,7 @@ TARGET_CHUNK_DURATION = int(os.environ.get("TARGET_CHUNK_DURATION", "600"))
 OVERLAP_DURATION = float(os.environ.get("OVERLAP_DURATION", "2"))
 VAD_PRESET = os.environ.get("VAD_PRESET", "meeting")
 TRANSCRIPTION_LANGUAGE = os.environ.get("TRANSCRIPTION_LANGUAGE", "zh")
-TRANSCRIPTION_ENGINE = os.environ.get("TRANSCRIPTION_ENGINE", "stt_v1")  # Changed from gemini to stt_v1
+TRANSCRIPTION_ENGINE = os.environ.get("TRANSCRIPTION_ENGINE", "stt_v2")  # Use Chirp 3 for best accuracy
 ENABLE_DIARIZATION = os.getenv("ENABLE_DIARIZATION", "false").lower() == "true"
 DIARIZATION_MODEL = os.environ.get("DIARIZATION_MODEL", "pyannote/speaker-diarization")
 DIARIZATION_ALLOW_OVERLAP = (
@@ -382,38 +382,105 @@ def trigger_batch():
         
         return jsonify({"message": f"Gemini transcription complete", "count": processed_count}), 200
     
-    # --- STT Batch Engine: Submit to Batch API ---
-    else:
-        pipeline = get_pipeline(engine="stt_batch", project_id=GCP_PROJECT_ID, location=GCP_LOCATION)
+    # --- STT V2 Engine (Chirp 3): Process one by one, wait for result ---
+    elif engine == "stt_v2":
+        from google.cloud import storage as gcs_storage
         
-        try:
-            # 2. Submit Batch
-            op_name = pipeline.submit_batch(audio_uris)
+        stt_v2_pipeline = get_pipeline()  # Uses global singleton (stt_v2)
+        processed_count = 0
+        failed_count = 0
+        
+        for doc in queued_cases:
+            case_id = doc.id
+            data = doc.to_dict()
+            gcs_uri = data.get("gcsUri")
             
-            # 3. Update Firestore with Operation Name
-            batch_ref = db.collection("transcription_batches").document()
-            batch_ref.set({
-                "operationName": op_name,
-                "caseIds": [d.id for d in queued_cases],
-                "status": "submitted",
-                "createdAt": firestore.SERVER_TIMESTAMP
-            })
+            logger.info(f"Processing case {case_id} with STT V2 (Chirp 3)...")
             
-            for doc in queued_cases:
+            try:
+                # Update status to transcribing
                 doc.reference.update({
-                    "status": "batch_submitted",
-                    "batchId": batch_ref.id,
-                    "operationName": op_name,
+                    "status": "transcribing",
                     "updatedAt": firestore.SERVER_TIMESTAMP
                 })
-                # Notify Slack
-                notify_slack_progress(case_id=doc.id, file_id=None, status="batch_submitted")
+                notify_slack_progress(case_id=case_id, file_id=None, status="transcribing")
                 
-            return jsonify({"message": f"Batch submitted: {op_name}", "count": len(queued_cases)}), 200
-            
-        except Exception as e:
-            logger.error(f"Batch submission failed: {e}", exc_info=True)
-            return jsonify({"error": str(e)}), 500
+                # Transcribe synchronously (waits for result)
+                result = stt_v2_pipeline.transcribe(gcs_uri)
+                
+                if result.get("success"):
+                    # Save transcription
+                    doc.reference.update({
+                        "status": "transcribed",
+                        "transcription": {
+                            "text": result.get("text", ""),
+                            "segments": result.get("segments", []),
+                            "engine": "stt_v2",
+                            "model": "chirp_3",
+                        },
+                        "updatedAt": firestore.SERVER_TIMESTAMP
+                    })
+                    notify_slack_progress(case_id=case_id, file_id=None, status="transcribed")
+                    processed_count += 1
+                    logger.info(f"Case {case_id} transcribed successfully")
+                else:
+                    doc.reference.update({
+                        "status": "transcription_failed",
+                        "error": result.get("error", "Unknown error"),
+                        "updatedAt": firestore.SERVER_TIMESTAMP
+                    })
+                    notify_slack_progress(case_id=case_id, file_id=None, status="transcription_failed")
+                    failed_count += 1
+                    logger.error(f"Case {case_id} transcription failed: {result.get('error')}")
+                    
+            except Exception as e:
+                logger.error(f"Error processing case {case_id}: {e}", exc_info=True)
+                doc.reference.update({
+                    "status": "transcription_failed",
+                    "error": str(e),
+                    "updatedAt": firestore.SERVER_TIMESTAMP
+                })
+                notify_slack_progress(case_id=case_id, file_id=None, status="transcription_failed")
+                failed_count += 1
+        
+        return jsonify({
+            "message": f"STT V2 transcription complete",
+            "processed": processed_count,
+            "failed": failed_count
+        }), 200
+    
+    # --- Legacy STT Batch Engine (DEPRECATED - disabled to avoid confusion) ---
+    # The batch engine submits to async batch API and requires 8-12 hours of polling.
+    # Use stt_v2 for synchronous processing instead.
+    else:
+        logger.error(f"Unsupported engine: {engine}. Use 'stt_v2' or 'gemini'.")
+        return jsonify({
+            "error": f"Unsupported engine: {engine}. Please use 'stt_v2' (recommended) or 'gemini'."
+        }), 400
+        
+        # --- LEGACY CODE (kept for reference, not executed) ---
+        # pipeline = get_pipeline(engine="stt_batch", project_id=GCP_PROJECT_ID, location=GCP_LOCATION)
+        # try:
+        #     op_name = pipeline.submit_batch(audio_uris)
+        #     batch_ref = db.collection("transcription_batches").document()
+        #     batch_ref.set({
+        #         "operationName": op_name,
+        #         "caseIds": [d.id for d in queued_cases],
+        #         "status": "submitted",
+        #         "createdAt": firestore.SERVER_TIMESTAMP
+        #     })
+        #     for doc in queued_cases:
+        #         doc.reference.update({
+        #             "status": "batch_submitted",
+        #             "batchId": batch_ref.id,
+        #             "operationName": op_name,
+        #             "updatedAt": firestore.SERVER_TIMESTAMP
+        #         })
+        #         notify_slack_progress(case_id=doc.id, file_id=None, status="batch_submitted")
+        #     return jsonify({"message": f"Batch submitted: {op_name}", "count": len(queued_cases)}), 200
+        # except Exception as e:
+        #     logger.error(f"Batch submission failed: {e}", exc_info=True)
+        #     return jsonify({"error": str(e)}), 500
 
 
 @flask_app.route("/check-results", methods=["POST"])

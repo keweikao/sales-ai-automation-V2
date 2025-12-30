@@ -38,6 +38,8 @@ class AnalysisResult:
     agent_results: Dict[str, AgentResult] = field(default_factory=dict)
     total_duration: float = 0.0
     error: Optional[str] = None
+    coach_alert: Optional[Any] = None  # CoachAlert object from Agent 5
+    manager_alert: Optional[Any] = None # ManagerAlert object from Agent 5
 
     def get_agent_data(self, agent_id: str) -> Optional[Dict[str, Any]]:
         """Get structured data from a specific agent."""

@@ -19,6 +19,7 @@ from .quality import calculate_transcription_quality
 from .gemini_pipeline import GeminiTranscriptionPipeline
 from .stt_batch_pipeline import STTBatchTranscriptionPipeline
 from .stt_v1_pipeline import STTV1Pipeline
+from .stt_v2_pipeline import STTV2Pipeline
 import os
 
 logger = logging.getLogger(__name__)
@@ -563,6 +564,8 @@ def get_pipeline(engine: str = None, **kwargs):
             return STTBatchTranscriptionPipeline(**kwargs)
         elif engine == "stt_v1":
             return STTV1Pipeline(**kwargs)
+        elif engine == "stt_v2":
+            return STTV2Pipeline(**kwargs)
         elif engine == "gemini":
             return GeminiTranscriptionPipeline(**kwargs)
         else:
@@ -578,6 +581,12 @@ def get_pipeline(engine: str = None, **kwargs):
             language = os.getenv("TRANSCRIPTION_LANGUAGE", "cmn-Hant-TW")
             pipeline = STTV1Pipeline(language_code=language)
             
+        elif engine == "stt_v2":
+            # Speech-to-Text V2 with Chirp 3 (synchronous)
+            project_id = os.getenv("GCP_PROJECT_ID", "sales-ai-automation-v2")
+            location = os.getenv("GCP_LOCATION", "us")  # us multi-region for Chirp 3 GA
+            pipeline = STTV2Pipeline(project_id=project_id, location=location)
+            
         elif engine == "gemini":
             api_key = os.getenv("GEMINI_API_KEY")
             if not api_key:
@@ -590,10 +599,11 @@ def get_pipeline(engine: str = None, **kwargs):
             pipeline = STTBatchTranscriptionPipeline(project_id=project_id, location=location)
             
         else:
-            # Fallback to stt_v1 as default
-            logger.warning(f"Unknown engine '{engine}', falling back to stt_v1")
-            language = os.getenv("TRANSCRIPTION_LANGUAGE", "cmn-Hant-TW")
-            pipeline = STTV1Pipeline(language_code=language)
+            # Fallback to stt_v2 as default (most accurate)
+            logger.warning(f"Unknown engine '{engine}', falling back to stt_v2")
+            project_id = os.getenv("GCP_PROJECT_ID", "sales-ai-automation-v2")
+            location = os.getenv("GCP_LOCATION", "us-central1")
+            pipeline = STTV2Pipeline(project_id=project_id, location=location)
             
     return pipeline
 

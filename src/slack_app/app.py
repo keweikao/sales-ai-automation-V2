@@ -549,6 +549,66 @@ def handle_email_modal_submit(ack, body, client, view, logger):
         logger.error(f"Failed to post Email result: {e.response['error']}")
 
 
+
+# --- Coach Chat Handler ---
+@app.event("message")
+def handle_message(event, client, logger):
+    """
+    Handle replies in threads.
+    Checks if the thread is a Coach Alert thread by calling Analysis Service.
+    """
+    # Ignore bot messages and non-message events
+    if event.get("bot_id") or event.get("subtype") == "bot_message":
+        return
+
+    # Only process thread replies
+    thread_ts = event.get("thread_ts")
+    if not thread_ts:
+        return
+
+    channel_id = event.get("channel")
+    user_message = event.get("text")
+    
+    logger.info(f"Received thread reply in {channel_id}, ts={thread_ts}")
+
+    # Call Analysis Service to get Coach response
+    # We call the service and if it returns a response, we post it.
+    # If it returns "active: false" or 404, we ignore it.
+    
+    analysis_service_url = os.environ.get("ANALYSIS_SERVICE_URL", "https://analysis-service-497329205771.asia-east1.run.app")
+    
+    try:
+        import requests
+        response = requests.post(
+            f"{analysis_service_url}/coach/chat",
+            json={
+                "threadId": thread_ts,
+                "channelId": channel_id,
+                "message": user_message
+            },
+            timeout=10 # Short timeout for chat
+        )
+        
+        if response.status_code == 200:
+            data = response.json()
+            if data.get("status") == "success" and data.get("response"):
+                # Coach has a response! Post it.
+                coach_response = data.get("response")
+                client.chat_postMessage(
+                    channel=channel_id,
+                    thread_ts=thread_ts,
+                    text=coach_response
+                )
+                logger.info(f"Posted Coach response to thread {thread_ts}")
+            else:
+                logger.debug(f"No coach response for thread {thread_ts}: {data}")
+        else:
+            logger.warning(f"Analysis Service returned {response.status_code}")
+
+    except Exception as e:
+        logger.error(f"Error calling Analysis Service for coach chat: {e}")
+
+
 # --- Main Execution ---
 if __name__ == "__main__":
     logging.info("Starting Slack App in Socket Mode...")

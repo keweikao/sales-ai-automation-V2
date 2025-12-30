@@ -35,6 +35,7 @@ from .agents.agent1_context import ContextAgent
 from .agents.agent2_buyer import BuyerAgent
 from .agents.agent3_seller import SellerAgent
 from .agents.agent4_summary import SummaryAgent
+from .agents.agent6_crm_extractor import CRMExtractorAgent
 
 logger = logging.getLogger(__name__)
 
@@ -56,6 +57,9 @@ try:
 except ImportError:
     RESILIENCE_AVAILABLE = False
 
+
+from .agents.agent5_coach import CoachAgent, CoachAlert
+import os
 
 # =============================================================================
 # Shared State Object
@@ -79,6 +83,10 @@ class AnalysisState:
     competitor_data: Optional[Dict] = None  # From Agent 4 (Competitor)
     seller_data: Optional[Dict] = None      # From Agent 3
     summary_data: Optional[Dict] = None     # From Agent 4 (Summary - kept for backwards compat)
+    
+    # Coach Output
+    coach_alert: Optional[CoachAlert] = None
+    manager_alert: Optional[Any] = None # ManagerAlert
     
     # Metadata for Flow Control
     feedback_history: List[str] = field(default_factory=list)
@@ -157,6 +165,10 @@ class MultiAgentOrchestrator:
                 ),
                 "agent4": SummaryAgent(
                     model_name=self.model_config.get("agent4", self.model_name),
+                    temperature=self.temperature
+                ),
+                "agent6": CRMExtractorAgent(
+                    model_name=self.model_config.get("agent6", self.model_name),
                     temperature=self.temperature
                 ),
             }
@@ -672,6 +684,94 @@ class MultiAgentOrchestrator:
             self._persist_summary_results(case_id, result_a4)
 
         # =====================================================================
+        # Phase 6: CRM Extraction (Agent 6 - Salesforce 欄位擷取)
+        # =====================================================================
+        logger.info("Phase 6: Agent 6 (CRM Extractor)")
+        
+        result_a6 = await self._run_agent_with_retry(
+            case_id, "agent6",
+            lambda: agents['agent6'].extract(
+                transcript_segments=transcript_segments,
+                context_insights=state.context_data or {},
+                buyer_insights=state.buyer_data or {},
+                seller_insights=state.seller_data or {}
+            )
+        )
+        agent_results['agent6'] = result_a6
+        
+        if result_a6.success:
+            self._persist_agent_result(case_id, 'agent6', result_a6)
+            # Trigger CRM update asynchronously
+            self._trigger_crm_update(case_id, result_a6.data)
+        else:
+            logger.warning("Agent 6 (CRM Extractor) failed. Salesforce update skipped.")
+
+        # =====================================================================
+        # Phase 6: Agent 5 (Sales Coach) - Evaluate
+        # =====================================================================
+        logger.info("Phase 6: Agent 5 (Sales Coach) - Evaluate")
+        
+        try:
+            # Get case data for rep info
+            case_data = {}
+            if self.db:
+                case_doc = self.db.collection('cases').document(case_id).get()
+                if case_doc.exists:
+                    case_data = case_doc.to_dict() or {}
+            
+            coach_agent = CoachAgent(
+                db_client=self.db, 
+                gemini_api_key=os.environ.get("GEMINI_API_KEY")
+            )
+            
+            # Evaluate if alert is needed
+            coach_alert = coach_agent.evaluate(
+                case_id=case_id,
+                rep_id=case_data.get("uploadedBy", ""),
+                rep_name=case_data.get("uploadedByName", "") or case_data.get("salesRepName", ""),
+                store_name=case_data.get("customerName", ""),
+                context_data=state.context_data or {},
+                buyer_data=state.buyer_data or {},
+                seller_data=state.seller_data or {},
+            )
+            
+            state.coach_alert = coach_alert
+            
+            # If alert triggered, save it
+            if coach_alert:
+                logger.info(f"Coach Alert Triggered: {coach_alert.alert_type}")
+                
+                # Get slack channel/ts from notification field if available
+                notification = case_data.get("notification", {})
+                slack_channel = notification.get("slackChannelId", "")
+                slack_ts = notification.get("slackThreadTs", "")
+                
+                coach_agent.save_alert(coach_alert, slack_channel, slack_ts)
+            else:
+                logger.info("No Coach Alert triggered for this case.")
+
+            # Manager Alert (Phase 5)
+            # Check for anomalies like consecutive low scores
+            rep_id = case_data.get("uploadedBy", "")
+            current_score = 0
+            if state.seller_data:
+                current_score = state.seller_data.get("progress_score", 0)
+                
+            manager_alert = coach_agent.evaluate_manager_alert(
+                case_id=case_id,
+                rep_id=rep_id,
+                current_score=current_score
+            )
+            state.manager_alert = manager_alert
+            
+            if manager_alert:
+                coach_agent.save_manager_alert(manager_alert)
+                logger.info(f"Manager Alert Triggered: {manager_alert.alert_type}")
+                
+        except Exception as e:
+            logger.error(f"Agent 5 (Coach) execution failed: {e}", exc_info=True)
+
+        # =====================================================================
         # Final Status
         # =====================================================================
         success = (
@@ -690,5 +790,58 @@ class MultiAgentOrchestrator:
             case_id=case_id,
             success=success,
             agent_results=agent_results,
-            total_duration=total_duration
+            total_duration=total_duration,
+            coach_alert=state.coach_alert,
+            manager_alert=state.manager_alert
         )
+
+    def _trigger_crm_update(self, case_id: str, agent6_data: Dict[str, Any]) -> None:
+        """
+        Trigger CRM service to update Salesforce.
+        
+        This is a fire-and-forget async call to crm-service.
+        """
+        import os
+        import requests
+        
+        crm_service_url = os.environ.get("CRM_SERVICE_URL")
+        if not crm_service_url:
+            logger.info("CRM_SERVICE_URL not configured, skipping Salesforce update")
+            return
+        
+        try:
+            # Get customer_id from case
+            customer_id = None
+            if self.db:
+                case_doc = self.db.collection('cases').document(case_id).get()
+                if case_doc.exists:
+                    case_data = case_doc.to_dict() or {}
+                    customer = case_data.get('customer', {})
+                    customer_id = customer.get('id')
+            
+            if not customer_id:
+                logger.warning(f"No customer_id found for case {case_id}, skipping CRM update")
+                return
+            
+            # Prepare update payload
+            stage_name = agent6_data.get('stage_name')
+            payload = {
+                "customerId": customer_id,
+                "stageName": stage_name or "Needs Analysis",
+            }
+            
+            # Call update-status endpoint
+            response = requests.post(
+                f"{crm_service_url}/update-status",
+                json=payload,
+                timeout=10
+            )
+            
+            if response.status_code == 200:
+                logger.info(f"Successfully triggered CRM update for case {case_id}")
+            else:
+                logger.warning(f"CRM update failed: {response.status_code} - {response.text}")
+                
+        except Exception as e:
+            logger.error(f"Failed to trigger CRM update for case {case_id}: {e}")
+
