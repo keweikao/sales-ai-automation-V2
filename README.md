@@ -1,164 +1,149 @@
-# Sales AI Automation V2.0
+# 🚀 Sales AI Automation System V2.0
+### Enterprise-Grade Sales Intelligence Pipeline | Powered by Gemini 3 Flash
 
-## iCHEF 銷售 AI 自動化系統
+[![Status](https://img.shields.io/badge/Status-Production-green)]()
+[![Model](https://img.shields.io/badge/AI-Gemini_3_Flash_Preview-blueviolet)]()
+[![Stack](https://img.shields.io/badge/Stack-Python_%7C_Cloud_Run_%7C_Slack-blue)]()
+[![Cost](https://img.shields.io/badge/Cost-%7E%2430%2Fmonth-brightgreen)]()
 
-使用 Gemini 3 Flash 進行銷售通話轉錄與多 Agent AI 分析，透過 Slack 提供互動式體驗。
+> **"Turning unstructured sales conversations into actionable business intelligence via Multi-Agent AI."**
 
----
-
-## 📊 系統概覽
-
-| 項目 | 說明 |
-|------|------|
-| **核心模型** | Gemini 3 Flash Preview |
-| **轉錄引擎** | Gemini Audio API |
-| **雲端平台** | Google Cloud Platform |
-| **使用介面** | Slack |
+This project demonstrates how a **Sales Operations Architect** can build a scalable, low-cost AI pipeline to solve real-world business problems. It integrates **Google Cloud Platform**, **Gemini 3 Flash**, and **Slack** to provide real-time coaching for sales teams.
 
 ---
 
-## 🏗️ 系統架構
+## 💼 The Business Problem
+
+In high-volume sales organizations (like **iCHEF**), manual call reviews are unscalable. Valuable insights—customer objections, competitor mentions, and buying signals—often disappear into a "Data Blackhole."
+
+**The Solution:** An automated pipeline that transcribes, analyzes, and coaches sales reps within minutes of a call ending.
+* **Speed:** End-to-end processing in **< 2 minutes**.
+* **Cost:** Enterprise-grade analysis for only **~$30/month** (for 100 cases).
+* **Experience:** Interactive Slack notifications, not boring dashboards.
+
+---
+
+## 🏗️ System Architecture
+
+The system follows an **Event-Driven Microservices** architecture deployed on **Google Cloud Run**.
+
+```mermaid
+graph TD
+    User[Slack App] -->|Upload Audio| Storage[Cloud Storage]
+    Storage -->|Event Trigger| Transcribe[Transcription Service]
+    Transcribe -->|Gemini Audio API| Text[Transcript]
+    Text -->|Trigger| Analysis[Analysis Service]
+    
+    subgraph "Multi-Agent Core (Gemini 3 Flash)"
+        Analysis --> Agent1[Context Analyzer]
+        Analysis --> Agent2[Buyer Analyzer]
+        Analysis --> Agent3[Seller Coach]
+        Analysis --> Agent4[Summary Generator]
+    end
+    
+    Agent4 -->|Notify| Slack[Slack Interface]
+    Agent4 -->|Email/SMS| Notify[SMS Service]
+    Slack -->|Feedback Loop| Firestore[(Firestore DB)]
 
 ```
-┌─────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│  Slack App  │───▶│  Transcription   │───▶│    Analysis     │
-│ (Cloud Run) │    │    Service       │    │    Service      │
-└─────────────┘    │  (Cloud Run)     │    │  (Cloud Run)    │
-       │           └──────────────────┘    └─────────────────┘
-       │                    │                       │
-       ▼                    ▼                       ▼
-┌─────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│ SMS Service │    │   Cloud Storage  │    │    Firestore    │
-│ (Cloud Run) │    │  (Audio Files)   │    │   (Cases DB)    │
-└─────────────┘    └──────────────────┘    └─────────────────┘
-       │
-       ▼
-┌─────────────┐
-│ Web Service │
-│ (Summary)   │
-└─────────────┘
-```
 
-### 微服務列表
+### Microservices Breakdown
 
-| 服務 | 路徑 | 說明 |
-|------|------|------|
-| **slack-app** | `src/slack_app/` | Slack 互動介面、檔案上傳 |
-| **transcription-service** | `src/transcription/` | 音訊轉錄 (Gemini Audio) |
-| **analysis-service** | `analysis-service/` | 多 Agent AI 分析 |
-| **sms-service** | `sms-service/` | SMS/Email 發送 |
-| **web-service** | `web-service/` | 摘要網頁展示 |
+| Service | Path | Description |
+| --- | --- | --- |
+| **Slack App** | `src/slack_app/` | Handles user interaction, file ingestion, and interactive Block Kit messages. |
+| **Transcription** | `src/transcription/` | High-fidelity transcription using **Gemini Audio API**. |
+| **Analysis** | `analysis-service/` | The brain of the system. Orchestrates Multi-Agent reasoning. |
+| **SMS Service** | `sms-service/` | Delivers summaries to clients via SMS/Email. |
+| **Web Service** | `web-service/` | Renders shareable, professional summary pages for clients. |
 
 ---
 
-## 🤖 Multi-Agent AI 架構
+## 🤖 Multi-Agent Intelligence
 
-| Agent | 名稱 | 功能 | 模型 |
-|-------|------|------|------|
-| **Agent 1** | Context Analyzer | 會議脈絡、參與者分析 | gemini-2.5-flash |
-| **Agent 2** | Buyer Analyzer | 買家心理、MEDDIC 分析 | gemini-2.5-pro |
-| **Agent 3** | Seller Coach | 銷售技巧建議 | gemini-2.5-pro |
-| **Agent 4** | Summary Generator | 客戶摘要、SMS 文案 | gemini-2.5-flash |
+Instead of a single giant prompt, the system orchestrates specialized agents to mimic a management team:
 
----
-
-## 🔧 技術棧
-
-### 核心依賴
-
-| 類別 | 技術 | 版本 |
-|------|------|------|
-| **AI** | Google Gemini | 3 Flash Preview |
-| **Web** | Flask | 2.2.5 |
-| **Slack** | slack-bolt | 1.18.1 |
-| **Database** | Firestore | 2.13.1 |
-| **轉錄** | Gemini Audio API | - |
-
-### 雲端服務
-
-- **Cloud Run**: 所有微服務 (asia-east1)
-- **Cloud Storage**: 音訊檔案儲存
-- **Cloud Tasks**: 非同步任務處理
-- **Secret Manager**: API Keys 管理
+| Agent | Role | Model | Responsibility |
+| --- | --- | --- | --- |
+| **Agent 1** | **Context Analyzer** | `gemini-2.5-flash` | Analyzes meeting context, participant roles, and decision-making power. |
+| **Agent 2** | **Buyer Analyzer** | `gemini-2.5-pro` | Decodes buyer psychology, MEDDIC criteria, and hidden objections. |
+| **Agent 3** | **Seller Coach** | `gemini-2.5-pro` | Provides specific sales technique recommendations and next-step strategies. |
+| **Agent 4** | **Summary Generator** | `gemini-2.5-flash` | Generates client-facing summaries and SMS drafts. |
 
 ---
 
-## 💰 成本估算 (100 案件/月)
+## 🛠️ Tech Stack & Infrastructure
 
-| 項目 | 成本 |
-|------|------|
-| Gemini 3 Flash API | ~$12/月 |
-| Cloud Run | ~$15/月 |
-| Firestore | ~$2/月 |
-| Cloud Storage | ~$1/月 |
-| **總計** | **~$30/月** |
+Built with a focus on modern, serverless technologies:
 
----
-
-## 📁 專案結構
-
-```
-sales-ai-automation-V2/
-├── analysis-service/          # 分析服務
-│   ├── src/
-│   │   ├── agents/            # AI Agents
-│   │   ├── prompts/           # Prompt 模板
-│   │   └── main.py
-│   └── requirements.txt
-├── src/
-│   ├── slack_app/             # Slack 應用
-│   └── transcription/         # 轉錄服務
-├── sms-service/               # SMS/Email 服務
-├── web-service/               # 摘要網頁服務
-├── deploy/                    # 部署配置
-├── specs/                     # 規格文件
-├── docs/                      # 文檔
-└── tests/                     # 測試
-```
+* **Core AI:** Google Gemini 3 Flash Preview (High speed/Low latency)
+* **Frameworks:** Flask (v2.2.5), Slack Bolt (v1.18.1)
+* **Database:** Firestore (NoSQL for flexible case data)
+* **Compute:** Cloud Run (Serverless container execution)
+* **Async Tasks:** Cloud Tasks & Pub/Sub
 
 ---
 
-## 🚀 部署
+## 💰 Cost Optimization (Real-world Data)
 
-### CloudBuild 配置
+As an Ops-focused project, cost efficiency is paramount. Current production metrics for **100 cases/month**:
 
-| 服務 | 配置檔 |
-|------|--------|
-| Analysis | `cloudbuild.analysis.deploy.yaml` |
-| Transcription | `cloudbuild.transcription.yaml` |
-| Slack | `cloudbuild.slack.yaml` |
-| SMS | `cloudbuild.sms-service.yaml` |
-| Web | `cloudbuild.summary-web-service.yaml` |
+| Component | Estimated Cost |
+| --- | --- |
+| **Gemini 3 Flash API** | ~$12.00 / mo |
+| **Cloud Run Compute** | ~$15.00 / mo |
+| **Firestore Database** | ~$2.00 / mo |
+| **Cloud Storage** | ~$1.00 / mo |
+| **Total** | **~$30.00 / Month** |
 
-### 快速部署
+---
+
+## 🚀 Deployment
+
+The project includes `cloudbuild` configurations for CI/CD. To deploy individual services:
 
 ```bash
-# 部署 Analysis Service
+# Deploy Analysis Service
 gcloud builds submit --config=cloudbuild.analysis.deploy.yaml
 
-# 部署 Transcription Service  
+# Deploy Transcription Service
 gcloud builds submit --config=cloudbuild.transcription.yaml
+
 ```
 
 ---
 
-## 📚 文檔索引
+## 📈 Performance Metrics
 
-| 文檔 | 說明 |
-|------|------|
-| [`QUICK_START_FOR_AI.md`](./QUICK_START_FOR_AI.md) | AI 助理快速入門 |
-| [`DEVELOPMENT_LOG.md`](./DEVELOPMENT_LOG.md) | 開發日誌 |
-| [`specs/`](./specs/) | 功能規格書 |
-| [`docs/`](./docs/) | 技術文檔 |
+* **Transcription:** ~1 min for a 10-minute audio file.
+* **Analysis:** ~30 seconds (Parallel Agent Execution).
+* **Total Latency:** System delivers results to Slack in **< 2 minutes**.
 
 ---
 
-## 📈 效能指標
+## 📂 Project Structure
 
-- **轉錄時間**: ~1 分鐘 / 10 分鐘音訊
-- **分析時間**: ~30 秒 (4 Agents 並行)
-- **端到端**: < 2 分鐘
+```text
+sales-ai-automation-V2/
+├── analysis-service/          # Multi-Agent Core
+│   ├── src/agents/            # Agent Definitions & Prompts
+│   └── src/main.py            # Orchestrator
+├── src/
+│   ├── slack_app/             # Slack Interface
+│   └── transcription/         # Audio Processing
+├── sms-service/               # Notification Service
+├── web-service/               # Client Summary Renderer
+├── specs/                     # Spec-Driven Development Docs
+└── docs/                      # Technical Documentation
+
+```
 
 ---
 
-*最後更新: 2025-12-26*
+## 👤 Maintainer
+
+**Kewei Kao (Stephen)**
+
+* **Role:** AI Operations Architect | Ex-iCHEF Director of Sales Ops
+* **Focus:** Bridging the gap between Business Strategy and AI Implementation.
+* **Connect:** [LinkedIn](https://www.linkedin.com/in/kao-ke-wei-18aa6685/)
