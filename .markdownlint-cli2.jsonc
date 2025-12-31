@@ -5,7 +5,8 @@
     "!**/node_modules/**",
     "!**/.claude/**",
     "!**/agents/prompts/**",
-    "!services/**"
+    "!services/**",
+    "!**/.venv/**"
   ],
   // https://github.com/DavidAnson/markdownlint/blob/main/doc/Rules.md
   "config": {

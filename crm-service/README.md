@@ -1,6 +1,7 @@
 # CRM Service
 
 Salesforce 整合微服務，負責：
+
 1. 定期從 Salesforce 同步 Opportunity 資料
 2. 分析完成後即時更新 Salesforce StageName
 3. 回填 Agent 6 擷取的結構化欄位

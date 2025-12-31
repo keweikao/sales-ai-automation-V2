@@ -52,16 +52,19 @@ gcloud scheduler jobs create http sync-salesforce-opportunities \
 ## 測試 Endpoints
 
 ### 健康檢查
+
 ```bash
 curl https://crm-service-XXXXXX-de.a.run.app/health
 ```
 
 ### 手動觸發同步
+
 ```bash
 curl -X POST https://crm-service-XXXXXX-de.a.run.app/sync-opportunities
 ```
 
 ### 更新機會狀態
+
 ```bash
 curl -X POST https://crm-service-XXXXXX-de.a.run.app/update-status \
   -H "Content-Type: application/json" \
