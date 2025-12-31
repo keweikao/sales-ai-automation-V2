@@ -1,7 +1,7 @@
 # Sales AI Automation V2 - Project Context
 
 > 🤖 此文檔由 `.conductor/generate_context.py` 自動生成
-> 最後更新：2025-12-26 04:58
+> 最後更新：2025-12-31 03:12
 
 ## 專案概述
 
@@ -9,7 +9,7 @@
 業務人員透過 Slack 上傳通話錄音，系統自動轉錄並使用多 Agent 架構分析通話內容，
 最後產生客戶摘要報告。
 
-- **程式碼行數**：~28,259 行 Python
+- **程式碼行數**：~30,630 行 Python
 - **服務數量**：5 個 Cloud Run 服務
 
 ## 技術架構
@@ -35,6 +35,7 @@
 | agent3_seller | `analysis-service/src/agents/agent3_seller.py` | `analysis-service/src/agents/prompts/agent3-seller.md` | Agent 3 - Seller Perspective (Sales & Strategy). |
 | agent4_summary | `analysis-service/src/agents/agent4_summary.py` | `analysis-service/src/agents/prompts/agent4-summary.md` | Agent 4 - The Recap (Customer Summary). |
 | agent5_coach | `analysis-service/src/agents/agent5_coach.py` | - | Agent 5: Sales Coach - 即時銷售教練 |
+| agent6_crm_extractor | `analysis-service/src/agents/agent6_crm_extractor.py` | `analysis-service/src/agents/prompts/agent6-crm-extractor.md` | Agent 6: CRM Extractor - Salesforce 欄位擷取. |
 
 ## 執行流程 (orchestrator.py)
 
@@ -72,14 +73,14 @@ cases/{caseId} = {
 
 - `analysis-service/src/orchestrator.py`
 - `sms-service/src/main.py`
+- `crm-service/src/main.py`
 - `web-service/src/main.py`
-- `analysis-service/src/main.py`
 - `sms-service/requirements.txt`
+- `crm-service/requirements.txt`
 - `tools/code_intelligence/requirements.txt`
-- `web-service/requirements.txt`
 - `Dockerfile`
 - `sms-service/Dockerfile`
-- `web-service/Dockerfile`
+- `crm-service/Dockerfile`
 
 ## 編碼規範
 
