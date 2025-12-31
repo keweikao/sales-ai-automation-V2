@@ -92,6 +92,14 @@ SERVICE_ACCOUNT_EMAIL = os.environ.get(
 SLACK_PROGRESS_ENDPOINT = os.environ.get("SLACK_PROGRESS_ENDPOINT")
 SLACK_PROGRESS_TOKEN = os.environ.get("SLACK_PROGRESS_TOKEN")
 
+# --- Cloud Tasks Configuration for Transcription Queue ---
+TRANSCRIPTION_QUEUE = "transcription-queue"
+TRANSCRIPTION_LOCATION = "asia-east1"
+TRANSCRIPTION_SERVICE_URL = os.environ.get(
+    "TRANSCRIPTION_SERVICE_URL",
+    "https://transcription-service-497329205771.asia-east1.run.app"
+)
+
 
 def notify_slack_progress(*, case_id: Optional[str], file_id: Optional[str], status: str) -> None:
     """Send transcription progress to Slack service when configured."""
@@ -269,12 +277,98 @@ def transcribe_audio():
         return jsonify({"error": error_msg, "caseId": case_id}), 500
 
 
+@flask_app.route("/transcribe-single", methods=["POST"])
+def transcribe_single():
+    """
+    Process a SINGLE transcription case. Called by Cloud Tasks.
+    Expects JSON body: { "caseId": "..." }
+    """
+    if not db:
+        return jsonify({"error": "Firestore not initialized"}), 500
+    
+    data = request.get_json()
+    case_id = data.get("caseId") if data else None
+    
+    if not case_id:
+        return jsonify({"error": "Missing caseId"}), 400
+    
+    logger.info(f"Processing single case: {case_id}")
+    
+    # Fetch case from Firestore
+    doc_ref = db.collection("cases").document(case_id)
+    doc = doc_ref.get()
+    
+    if not doc.exists:
+        return jsonify({"error": f"Case {case_id} not found"}), 404
+    
+    case_data = doc.to_dict()
+    gcs_uri = case_data.get("gcsUri")
+    
+    if not gcs_uri:
+        return jsonify({"error": f"Case {case_id} has no gcsUri"}), 400
+    
+    engine = os.getenv("TRANSCRIPTION_ENGINE", "stt_v2").strip().lower()
+    
+    try:
+        # Update status to transcribing
+        doc_ref.update({
+            "status": "transcribing",
+            "updatedAt": firestore.SERVER_TIMESTAMP
+        })
+        notify_slack_progress(case_id=case_id, file_id=None, status="transcribing")
+        
+        if engine == "stt_v2":
+            stt_v2_pipeline = get_pipeline()
+            result = stt_v2_pipeline.transcribe(gcs_uri)
+            
+            if result.get("success"):
+                doc_ref.update({
+                    "status": "transcribed",
+                    "transcription": {
+                        "text": result.get("text", ""),
+                        "segments": result.get("segments", []),
+                        "engine": "stt_v2",
+                        "model": "chirp_3",
+                    },
+                    "updatedAt": firestore.SERVER_TIMESTAMP
+                })
+                notify_slack_progress(case_id=case_id, file_id=None, status="transcribed")
+                
+                # Trigger analysis
+                _trigger_analysis(case_id)
+                
+                logger.info(f"Case {case_id} transcribed successfully")
+                return jsonify({"success": True, "caseId": case_id}), 200
+            else:
+                error_msg = result.get("error", "Unknown error")
+                doc_ref.update({
+                    "status": "transcription_failed",
+                    "error": error_msg,
+                    "updatedAt": firestore.SERVER_TIMESTAMP
+                })
+                notify_slack_progress(case_id=case_id, file_id=None, status="transcription_failed")
+                logger.error(f"Case {case_id} transcription failed: {error_msg}")
+                return jsonify({"success": False, "error": error_msg}), 500
+        else:
+            return jsonify({"error": f"Unsupported engine: {engine}"}), 400
+            
+    except Exception as e:
+        logger.error(f"Error processing case {case_id}: {e}", exc_info=True)
+        doc_ref.update({
+            "status": "transcription_failed",
+            "error": str(e),
+            "updatedAt": firestore.SERVER_TIMESTAMP
+        })
+        notify_slack_progress(case_id=case_id, file_id=None, status="transcription_failed")
+        return jsonify({"error": str(e)}), 500
+
+
 @flask_app.route("/process-queue", methods=["POST"])
 def process_queue():
     """
     Triggered by Cloud Scheduler or manually.
-    For stt_batch engine: Collects 'queued_for_batch' cases and submits them to STT Batch API.
-    For gemini engine: Processes cases one by one using Gemini API.
+    Enqueues each 'queued_for_batch' case as an independent Cloud Task.
+    Returns immediately after enqueuing.
     """
     if not db:
         return jsonify({"error": "Firestore not initialized"}), 500
@@ -282,24 +376,84 @@ def process_queue():
     engine = os.getenv("TRANSCRIPTION_ENGINE", "stt_batch").strip().lower()
     logger.info(f"Trigger batch called with engine: {engine}")
         
-    # 1. Query queued cases
+    if not tasks_client:
+        return jsonify({"error": "Cloud Tasks not initialized"}), 500
+    
+    # Query queued cases
     docs = db.collection("cases").where("status", "==", "queued_for_batch").stream()
     
     queued_cases = []
-    audio_uris = []
-    
     for doc in docs:
         data = doc.to_dict()
         if data.get("gcsUri"):
             queued_cases.append(doc)
-            audio_uris.append(data.get("gcsUri"))
+            
+    if not queued_cases:
+        return jsonify({"message": "No cases to process"}), 200
+        
+    logger.info(f"Found {len(queued_cases)} cases to enqueue.")
+    
+    # Enqueue each case as a Cloud Task
+    enqueued_count = 0
+    queue_path = tasks_client.queue_path(GCP_PROJECT_ID, TRANSCRIPTION_LOCATION, TRANSCRIPTION_QUEUE)
+    
+    for doc in queued_cases:
+        case_id = doc.id
+        
+        try:
+            # Create task payload
+            task = {
+                "http_request": {
+                    "http_method": tasks_v2.HttpMethod.POST,
+                    "url": f"{TRANSCRIPTION_SERVICE_URL}/transcribe-single",
+                    "headers": {"Content-Type": "application/json"},
+                    "body": json.dumps({"caseId": case_id}).encode(),
+                    "oidc_token": {
+                        "service_account_email": SERVICE_ACCOUNT_EMAIL,
+                    },
+                }
+            }
+            
+            # Create the task
+            tasks_client.create_task(parent=queue_path, task=task)
+            enqueued_count += 1
+            logger.info(f"Enqueued task for case {case_id}")
+            
+        except Exception as e:
+            logger.error(f"Failed to enqueue task for case {case_id}: {e}")
+    
+    return jsonify({
+        "message": f"Enqueued {enqueued_count} cases for processing",
+        "count": enqueued_count
+    }), 200
+
+
+# --- LEGACY: Direct processing endpoints (kept for backward compatibility) ---
+
+@flask_app.route("/process-queue-sync", methods=["POST"])
+def process_queue_sync():
+    """
+    LEGACY: Synchronous processing. Use /process-queue for Cloud Tasks version.
+    """
+    if not db:
+        return jsonify({"error": "Firestore not initialized"}), 500
+    
+    engine = os.getenv("TRANSCRIPTION_ENGINE", "stt_batch").strip().lower()
+    logger.info(f"Sync processing with engine: {engine}")
+    
+    docs = db.collection("cases").where("status", "==", "queued_for_batch").stream()
+    
+    queued_cases = []
+    for doc in docs:
+        data = doc.to_dict()
+        if data.get("gcsUri"):
+            queued_cases.append(doc)
             
     if not queued_cases:
         return jsonify({"message": "No cases to process"}), 200
         
     logger.info(f"Found {len(queued_cases)} cases to process.")
     
-    # --- Gemini Engine: Process one by one ---
     if engine == "gemini":
         from google.cloud import storage as gcs_storage
         import tempfile
