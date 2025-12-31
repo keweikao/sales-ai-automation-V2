@@ -1,10 +1,11 @@
 # 🚀 Sales AI Automation System V2.0
-### Enterprise-Grade Sales Intelligence Pipeline | Powered by Gemini 3 Flash
 
-[![Status](https://img.shields.io/badge/Status-Production-green)]()
-[![Model](https://img.shields.io/badge/AI-Gemini_3_Flash_Preview-blueviolet)]()
-[![Stack](https://img.shields.io/badge/Stack-Python_%7C_Cloud_Run_%7C_Slack-blue)]()
-[![Cost](https://img.shields.io/badge/Cost-%7E%2430%2Fmonth-brightgreen)]()
+## Enterprise-Grade Sales Intelligence Pipeline | Powered by Gemini 3 Flash
+
+[![Status](https://img.shields.io/badge/Status-Production-green)](https://github.com/keweikao/sales-ai-automation-V2)
+[![Model](https://img.shields.io/badge/AI-Gemini_3_Flash_Preview-blueviolet)](https://github.com/keweikao/sales-ai-automation-V2)
+[![Stack](https://img.shields.io/badge/Stack-Python_%7C_Cloud_Run_%7C_Slack-blue)](https://github.com/keweikao/sales-ai-automation-V2)
+[![Cost](https://img.shields.io/badge/Cost-%7E%2430%2Fmonth-brightgreen)](https://github.com/keweikao/sales-ai-automation-V2)
 
 > **"Turning unstructured sales conversations into actionable business intelligence via Multi-Agent AI."**
 
@@ -17,6 +18,7 @@ This project demonstrates how a **Sales Operations Architect** can build a scala
 In high-volume sales organizations (like **iCHEF**), manual call reviews are unscalable. Valuable insights—customer objections, competitor mentions, and buying signals—often disappear into a "Data Blackhole."
 
 **The Solution:** An automated pipeline that transcribes, analyzes, and coaches sales reps within minutes of a call ending.
+
 * **Speed:** End-to-end processing in **< 2 minutes**.
 * **Cost:** Enterprise-grade analysis for only **~$30/month** (for 100 cases).
 * **Experience:** Interactive Slack notifications, not boring dashboards.
