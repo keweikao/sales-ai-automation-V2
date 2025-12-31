@@ -269,8 +269,8 @@ def transcribe_audio():
         return jsonify({"error": error_msg, "caseId": case_id}), 500
 
 
-@flask_app.route("/trigger-batch", methods=["POST"])
-def trigger_batch():
+@flask_app.route("/process-queue", methods=["POST"])
+def process_queue():
     """
     Triggered by Cloud Scheduler or manually.
     For stt_batch engine: Collects 'queued_for_batch' cases and submits them to STT Batch API.
