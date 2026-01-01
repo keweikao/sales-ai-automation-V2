@@ -9,18 +9,16 @@ import subprocess
 from typing import Callable, Dict, Optional
 from pathlib import Path
 import time
-
-from .vad.processor import VADProcessor
-from .chunking.chunker import AudioChunker
-from .parallel.transcriber import ParallelTranscriber
-from .merging.merger import TranscriptionMerger
-from .diarization import create_diarizer
-from .quality import calculate_transcription_quality
-from .gemini_pipeline import GeminiTranscriptionPipeline
-from .stt_batch_pipeline import STTBatchTranscriptionPipeline
-from .stt_v1_pipeline import STTV1Pipeline
-from .stt_v2_pipeline import STTV2Pipeline
 import os
+
+# Lazy imports to reduce memory footprint
+# from .diarization import create_diarizer  # Moved to lazy import
+# from .vad.processor import VADProcessor  # Not used for STT V2
+# from .chunking.chunker import AudioChunker  # Not used for STT V2
+# from .parallel.transcriber import ParallelTranscriber  # Not used for STT V2
+# from .merging.merger import TranscriptionMerger  # Not used for STT V2
+# from .quality import calculate_transcription_quality  # Not used for STT V2
+# from .gemini_pipeline import GeminiTranscriptionPipeline  # Lazy loaded
 
 logger = logging.getLogger(__name__)
 
@@ -556,55 +554,82 @@ if __name__ == "__main__":
         print("="*60)
 
 def get_pipeline(engine: str = None, **kwargs):
+    """
+    Get or create transcription pipeline.
+    
+    Uses lazy imports to minimize memory footprint.
+    Only imports the specific pipeline module when needed.
+    """
     global pipeline
     
-    # If engine is explicitly provided, return a new instance (factory mode)
-    if engine:
-        if engine == "stt_batch":
-            return STTBatchTranscriptionPipeline(**kwargs)
-        elif engine == "stt_v1":
-            return STTV1Pipeline(**kwargs)
-        elif engine == "stt_v2":
-            return STTV2Pipeline(**kwargs)
-        elif engine == "gemini":
-            return GeminiTranscriptionPipeline(**kwargs)
-        else:
-            raise ValueError(f"Unknown transcription engine: {engine}")
-
-    # Singleton mode (for main service)
-    if pipeline is None:
+    # Determine which engine to use
+    if engine is None:
         engine = TRANSCRIPTION_ENGINE
-        logger.info(f"Initializing Global Pipeline. Engine: '{engine}'")
+    
+    # If factory mode (explicit engine), create new instance
+    # If singleton mode (no engine), use global instance
+    if pipeline is not None and engine is None:
+        return pipeline
+    
+    logger.info(f"Initializing Pipeline. Engine: '{engine}'")
+    
+    # Lazy import based on engine
+    if engine == "stt_v2" or engine == "stt_v2_sync":
+        # Speech-to-Text V2 with Chirp 2 - 10-min chunking (faster)
+        from .stt_v2_sync_pipeline import STTV2SyncPipeline
+        project_id = kwargs.get("project_id") or os.getenv("GCP_PROJECT_ID", "sales-ai-automation-v2")
+        location = kwargs.get("location") or os.getenv("GCP_LOCATION", "asia-southeast1")
+        result = STTV2SyncPipeline(project_id=project_id, location=location)
         
-        if engine == "stt_v1":
-            # Speech-to-Text V1 with LongRunningRecognize
-            language = os.getenv("TRANSCRIPTION_LANGUAGE", "cmn-Hant-TW")
-            pipeline = STTV1Pipeline(language_code=language)
-            
-        elif engine == "stt_v2":
-            # Speech-to-Text V2 with Chirp 3 (synchronous)
-            project_id = os.getenv("GCP_PROJECT_ID", "sales-ai-automation-v2")
-            location = os.getenv("GCP_LOCATION", "us")  # us multi-region for Chirp 3 GA
-            pipeline = STTV2Pipeline(project_id=project_id, location=location)
-            
-        elif engine == "gemini":
-            api_key = os.getenv("GEMINI_API_KEY")
-            if not api_key:
-                raise ValueError("GEMINI_API_KEY is required for Gemini engine")
-            pipeline = GeminiTranscriptionPipeline(api_key=api_key)
-            
-        elif engine == "stt_batch":
-            project_id = os.getenv("GCP_PROJECT_ID", "sales-ai-automation-v2")
-            location = os.getenv("GCP_LOCATION", "asia-southeast1")
-            pipeline = STTBatchTranscriptionPipeline(project_id=project_id, location=location)
-            
-        else:
-            # Fallback to stt_v2 as default (most accurate)
-            logger.warning(f"Unknown engine '{engine}', falling back to stt_v2")
-            project_id = os.getenv("GCP_PROJECT_ID", "sales-ai-automation-v2")
-            location = os.getenv("GCP_LOCATION", "us-central1")
-            pipeline = STTV2Pipeline(project_id=project_id, location=location)
-            
-    return pipeline
+    elif engine == "stt_v2_batch":
+        # Speech-to-Text V2 with Chirp 3 - Batch API (slower, for very long audio)
+        from .stt_v2_pipeline import STTV2Pipeline
+        project_id = kwargs.get("project_id") or os.getenv("GCP_PROJECT_ID", "sales-ai-automation-v2")
+        location = kwargs.get("location") or os.getenv("GCP_LOCATION", "us")
+        result = STTV2Pipeline(project_id=project_id, location=location)
+        
+    elif engine == "stt_v1":
+        from .stt_v1_pipeline import STTV1Pipeline
+        language = os.getenv("TRANSCRIPTION_LANGUAGE", "cmn-Hant-TW")
+        result = STTV1Pipeline(language_code=language)
+        
+    elif engine == "stt_batch":
+        from .stt_batch_pipeline import STTBatchTranscriptionPipeline
+        project_id = kwargs.get("project_id") or os.getenv("GCP_PROJECT_ID", "sales-ai-automation-v2")
+        location = kwargs.get("location") or os.getenv("GCP_LOCATION", "asia-southeast1")
+        result = STTBatchTranscriptionPipeline(project_id=project_id, location=location)
+        
+    elif engine == "gemini":
+        from .gemini_pipeline import GeminiTranscriptionPipeline
+        api_key = os.getenv("GEMINI_API_KEY")
+        if not api_key:
+            raise ValueError("GEMINI_API_KEY is required for Gemini engine")
+        result = GeminiTranscriptionPipeline(api_key=api_key)
+    
+    elif engine == "faster_whisper":
+        # Faster-Whisper with large-v3-turbo model
+        from .faster_whisper_pipeline import FasterWhisperPipeline
+        model_size = kwargs.get("model_size") or os.getenv("WHISPER_MODEL", "large-v3-turbo")
+        enable_diarization = os.getenv("ENABLE_DIARIZATION", "true").lower() == "true"
+        language = os.getenv("TRANSCRIPTION_LANGUAGE", "zh")
+        result = FasterWhisperPipeline(
+            model_size=model_size,
+            language=language,
+            enable_diarization=enable_diarization,
+        )
+        
+    else:
+        # Fallback to stt_v2_sync as default (faster with chunking)
+        logger.warning(f"Unknown engine '{engine}', falling back to stt_v2_sync")
+        from .stt_v2_sync_pipeline import STTV2SyncPipeline
+        project_id = os.getenv("GCP_PROJECT_ID", "sales-ai-automation-v2")
+        location = os.getenv("GCP_LOCATION", "asia-southeast1")
+        result = STTV2SyncPipeline(project_id=project_id, location=location)
+    
+    # Set global singleton if this was the first call
+    if pipeline is None:
+        pipeline = result
+    
+    return result
 
 

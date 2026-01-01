@@ -7,8 +7,11 @@ steps:
       - '-t'
       - 'asia-east1-docker.pkg.dev/sales-ai-automation-v2/sales-ai-automation-v2/transcription-service:v1-iterative-fix'
       - '-f'
-      - 'src/transcription/Dockerfile'
+      - 'src/transcription/Dockerfile.whisper'
       - '.'
+      - '--build-arg'
+      - 'HUGGINGFACE_TOKEN=$$HUGGINGFACE_TOKEN'
+    secretEnv: ['HUGGINGFACE_TOKEN']
 
   - name: 'gcr.io/cloud-builders/docker'
     args:
@@ -26,16 +29,29 @@ steps:
       - '--region=asia-east1'
       - '--platform=managed'
       - '--allow-unauthenticated'
-      - '--memory=2Gi'
-      - '--cpu=1'
+      - '--memory=32Gi'
+      - '--cpu=8'
       - '--timeout=3600'
       - '--concurrency=1'
-      - '--max-instances=5'
-      - '--set-env-vars=TRANSCRIPTION_ENGINE=stt_v2,TRANSCRIPTION_LANGUAGE=cmn-Hant-TW,GCP_LOCATION=asia-southeast1,SLACK_PROGRESS_ENDPOINT=https://slack-app-acv3ye2faq-de.a.run.app/internal/transcription-progress,SLACK_PROGRESS_TOKEN=3d4ebd6a1cfe8ac77a60e8a69cc4a52a57ad482e940e52d4eb2c17c6c45801d3'
+      - '--min-instances=0'
+      - '--max-instances=10'
+      - '--cpu-boost'
+      - '--set-env-vars=TRANSCRIPTION_ENGINE=faster_whisper,WHISPER_MODEL=large-v3-turbo,TRANSCRIPTION_LANGUAGE=zh,ENABLE_DIARIZATION=true,GCP_LOCATION=asia-southeast1,SLACK_PROGRESS_ENDPOINT=https://slack-app-acv3ye2faq-de.a.run.app/internal/transcription-progress,SLACK_PROGRESS_TOKEN=3d4ebd6a1cfe8ac77a60e8a69cc4a52a57ad482e940e52d4eb2c17c6c45801d3'
       - '--set-secrets=GEMINI_API_KEY=gemini-api-key:latest,HUGGINGFACE_TOKEN=huggingface-token:latest'
 
 images:
   - 'asia-east1-docker.pkg.dev/sales-ai-automation-v2/sales-ai-automation-v2/transcription-service:v1-iterative-fix'
 
-timeout: 3600s
+timeout: 7200s
+
+substitutions:
+  _REGION: asia-east1
+
+availableSecrets:
+  secretManager:
+  - versionName: projects/$PROJECT_ID/secrets/huggingface-token/versions/latest
+    env: 'HUGGINGFACE_TOKEN'
+
+options:
+  machineType: 'E2_HIGHCPU_8'
 

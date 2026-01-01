@@ -66,3 +66,8 @@ q/
 
 .gemini/
 gha-creds-*.json
+
+# Batch processing state
+.batch_state.json
+.batch_state.completed.json
+tools/batch/*.json
