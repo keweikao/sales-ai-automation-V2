@@ -619,12 +619,17 @@ def get_pipeline(engine: str = None, **kwargs):
         )
         
     else:
-        # Fallback to stt_v2_sync as default (faster with chunking)
-        logger.warning(f"Unknown engine '{engine}', falling back to stt_v2_sync")
-        from .stt_v2_sync_pipeline import STTV2SyncPipeline
-        project_id = os.getenv("GCP_PROJECT_ID", "sales-ai-automation-v2")
-        location = os.getenv("GCP_LOCATION", "asia-southeast1")
-        result = STTV2SyncPipeline(project_id=project_id, location=location)
+        # Fallback to faster_whisper as default
+        logger.warning(f"Unknown engine '{engine}', falling back to faster_whisper")
+        from .faster_whisper_pipeline import FasterWhisperPipeline
+        model_size = os.getenv("WHISPER_MODEL", "large-v3-turbo")
+        enable_diarization = os.getenv("ENABLE_DIARIZATION", "true").lower() == "true"
+        language = os.getenv("TRANSCRIPTION_LANGUAGE", "zh")
+        result = FasterWhisperPipeline(
+            model_size=model_size,
+            language=language,
+            enable_diarization=enable_diarization,
+        )
     
     # Set global singleton if this was the first call
     if pipeline is None:

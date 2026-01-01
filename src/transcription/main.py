@@ -38,7 +38,7 @@ TARGET_CHUNK_DURATION = int(os.environ.get("TARGET_CHUNK_DURATION", "600"))
 OVERLAP_DURATION = float(os.environ.get("OVERLAP_DURATION", "2"))
 VAD_PRESET = os.environ.get("VAD_PRESET", "meeting")
 TRANSCRIPTION_LANGUAGE = os.environ.get("TRANSCRIPTION_LANGUAGE", "zh")
-TRANSCRIPTION_ENGINE = os.environ.get("TRANSCRIPTION_ENGINE", "stt_v2")  # Use Chirp 3 for best accuracy
+TRANSCRIPTION_ENGINE = os.environ.get("TRANSCRIPTION_ENGINE", "faster_whisper")
 ENABLE_DIARIZATION = os.getenv("ENABLE_DIARIZATION", "false").lower() == "true"
 DIARIZATION_MODEL = os.environ.get("DIARIZATION_MODEL", "pyannote/speaker-diarization")
 DIARIZATION_ALLOW_OVERLAP = (
@@ -307,7 +307,7 @@ def transcribe_single():
     if not gcs_uri:
         return jsonify({"error": f"Case {case_id} has no gcsUri"}), 400
     
-    engine = os.getenv("TRANSCRIPTION_ENGINE", "stt_v2").strip().lower()
+    engine = os.getenv("TRANSCRIPTION_ENGINE", "faster_whisper").strip().lower()
     
     try:
         # Update status to transcribing
@@ -317,40 +317,44 @@ def transcribe_single():
         })
         notify_slack_progress(case_id=case_id, file_id=None, status="transcribing")
         
-        if engine == "stt_v2":
-            stt_v2_pipeline = get_pipeline()
-            result = stt_v2_pipeline.transcribe(gcs_uri)
+        # Use get_pipeline() to handle any engine (Faster-Whisper, STT V2, Gemini)
+        current_pipeline = get_pipeline()
+        result = current_pipeline.transcribe(gcs_uri)
+        
+        if result.get("success"):
+            # Normalize result structure for Firestore
+            transcription_text = result.get("text") or result.get("full_text") or ""
+            segments = result.get("segments", [])
+            speakers = result.get("speakers", [])
             
-            if result.get("success"):
-                doc_ref.update({
-                    "status": "transcribed",
-                    "transcription": {
-                        "text": result.get("text", ""),
-                        "segments": result.get("segments", []),
-                        "engine": "stt_v2",
-                        "model": "chirp_3",
-                    },
-                    "updatedAt": firestore.SERVER_TIMESTAMP
-                })
-                notify_slack_progress(case_id=case_id, file_id=None, status="transcribed")
-                
-                # Trigger analysis
-                _trigger_analysis(case_id)
-                
-                logger.info(f"Case {case_id} transcribed successfully")
-                return jsonify({"success": True, "caseId": case_id}), 200
-            else:
-                error_msg = result.get("error", "Unknown error")
-                doc_ref.update({
-                    "status": "transcription_failed",
-                    "error": error_msg,
-                    "updatedAt": firestore.SERVER_TIMESTAMP
-                })
-                notify_slack_progress(case_id=case_id, file_id=None, status="transcription_failed")
-                logger.error(f"Case {case_id} transcription failed: {error_msg}")
-                return jsonify({"success": False, "error": error_msg}), 500
+            doc_ref.update({
+                "status": "transcribed",
+                "transcription": {
+                    "text": transcription_text,
+                    "segments": segments,
+                    "speakers": speakers,
+                    "engine": engine,
+                    "model": os.getenv("WHISPER_MODEL", "large-v3-turbo") if "whisper" in engine else "default",
+                },
+                "updatedAt": firestore.SERVER_TIMESTAMP
+            })
+            notify_slack_progress(case_id=case_id, file_id=None, status="transcribed")
+            
+            # Trigger analysis
+            _trigger_analysis(case_id)
+            
+            logger.info(f"Case {case_id} transcribed successfully using {engine}")
+            return jsonify({"success": True, "caseId": case_id}), 200
         else:
-            return jsonify({"error": f"Unsupported engine: {engine}"}), 400
+            error_msg = result.get("error", "Unknown error")
+            doc_ref.update({
+                "status": "transcription_failed",
+                "error": error_msg,
+                "updatedAt": firestore.SERVER_TIMESTAMP
+            })
+            notify_slack_progress(case_id=case_id, file_id=None, status="transcription_failed")
+            logger.error(f"Case {case_id} transcription failed: {error_msg}")
+            return jsonify({"success": False, "error": error_msg}), 500
             
     except Exception as e:
         logger.error(f"Error processing case {case_id}: {e}", exc_info=True)

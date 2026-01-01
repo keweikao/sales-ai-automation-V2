@@ -1,10 +1,8 @@
 """
-Dynamic Batch 結果處理工具
+Dynamic Batch 結果處理工具 (修正版)
 
 下載批次轉錄結果，解析並更新 Firestore。
-
-用法：
-    python tools/batch/process_batch_results.py [--trigger-analysis]
+支援 Speech V2 Dynamic Batch 輸出格式。
 """
 
 import os
@@ -17,7 +15,6 @@ from typing import Dict, List, Optional
 import re
 
 from google.cloud import firestore, storage, tasks_v2
-from google.cloud.speech_v2.types import cloud_speech
 
 # Configure logging
 logging.basicConfig(
@@ -52,7 +49,7 @@ class BatchResultProcessor:
             self.tasks_client = tasks_v2.CloudTasksClient()
         except Exception:
             self.tasks_client = None
-            logger.warning("Cloud Tasks client 初始化失敗，將無法觸發分析")
+            logger.warning("Cloud Tasks client 初始化失敗，內容更新後將無法自動觸發分析")
     
     def load_state(self) -> dict:
         """載入批次狀態"""
@@ -63,7 +60,7 @@ class BatchResultProcessor:
         with open(BATCH_STATE_FILE, "r") as f:
             return json.load(f)
     
-    def download_results(self, output_uri: str) -> Dict[str, str]:
+    def download_results(self, output_uri: str, case_mapping: Dict[str, str]) -> Dict[str, str]:
         """
         從 GCS 下載結果檔案
         
@@ -83,8 +80,6 @@ class BatchResultProcessor:
         bucket = self.storage_client.bucket(bucket_name)
         blobs = list(bucket.list_blobs(prefix=prefix))
         
-        logger.info(f"找到 {len(blobs)} 個結果檔案")
-        
         results = {}
         
         for blob in blobs:
@@ -94,43 +89,64 @@ class BatchResultProcessor:
             logger.info(f"  處理: {blob.name}")
             
             try:
+                # 1. 尋找匹配的原始音檔 URI
+                # 輸出檔名格式通常為: [bucket]/[prefix]/[audio_filename]_transcript_[op_id].json
+                # 我們嘗試尋找 mapping 中包含此檔名的 URI
+                filename_without_json = os.path.basename(blob.name).replace(".json", "")
+                # 移除 _transcript_... 部分
+                match = re.search(r"(.+)_transcript_[a-f0-9-]+", filename_without_json)
+                if match:
+                    base_audio_name = match.group(1)
+                else:
+                    base_audio_name = filename_without_json
+                
+                audio_uri = None
+                for uri in case_mapping.keys():
+                    if base_audio_name in uri:
+                        audio_uri = uri
+                        break
+                
+                if not audio_uri:
+                    logger.warning(f"    無法為 {blob.name} 找到對應的原始音檔 URI")
+                    continue
+                
+                # 2. 下載並解析 JSON
                 content = blob.download_as_text()
                 data = json.loads(content)
                 
-                # Parse the result
-                for uri, result in data.get("results", {}).items():
-                    transcription = self._parse_result(result)
-                    if transcription:
-                        results[uri] = transcription
+                # Speech V2 output Format: {"results": [...]}
+                transcription = self._parse_v2_results(data.get("results", []))
+                if transcription:
+                    results[audio_uri] = transcription
+                    logger.info(f"    成功解析: {audio_uri} ({len(transcription['segments'])} segments)")
                         
             except Exception as e:
-                logger.error(f"處理 {blob.name} 失敗: {e}")
+                logger.error(f"  處理 {blob.name} 失敗: {e}")
         
         return results
     
-    def _parse_result(self, result: dict) -> Optional[Dict]:
-        """解析單一轉錄結果"""
-        if result.get("error"):
-            logger.warning(f"轉錄錯誤: {result['error']}")
+    def _parse_v2_results(self, results_api: List[dict]) -> Optional[Dict]:
+        """解析 Speech V2 的結果列表"""
+        if not results_api:
             return None
-        
-        transcript = result.get("transcript", {})
-        results = transcript.get("results", [])
         
         segments = []
         full_text_parts = []
         speakers = set()
         
-        for res in results:
+        for res in results_api:
             alternatives = res.get("alternatives", [])
             if not alternatives:
                 continue
             
             alt = alternatives[0]
             text = alt.get("transcript", "")
+            if not text:
+                continue
+                
             full_text_parts.append(text)
             
-            # Process words
+            # 處理詞級別資訊和說話者
             words = alt.get("words", [])
             if words:
                 current_segment = None
@@ -154,34 +170,33 @@ class BatchResultProcessor:
                             "text": word,
                         }
                     else:
-                        current_segment["text"] += " " + word
+                        current_segment["text"] += word # 中文不加空格
                         current_segment["end"] = end_time
                 
                 if current_segment:
                     segments.append(current_segment)
+            else:
+                # 如果沒有 words 資訊，將整個 alternative 作為一個 segment
+                segments.append({
+                    "start": 0.0,
+                    "end": 0.0,
+                    "speaker": "Speaker",
+                    "text": text,
+                })
         
-        full_text = " ".join(full_text_parts)
-        
-        # Fallback segment if no word-level info
-        if not segments and full_text:
-            segments.append({
-                "start": 0.0,
-                "end": 0.0,
-                "speaker": "Speaker",
-                "text": full_text,
-            })
+        full_text = "".join(full_text_parts) # 中文合併
         
         return {
             "text": full_text,
             "full_text": full_text,
             "segments": segments,
-            "speakers": list(speakers),
+            "speakers": list(speakers) if speakers else ["Speaker"],
             "engine": "dynamic_batch",
             "model": "chirp_2",
         }
     
     def _parse_duration(self, duration_str: str) -> float:
-        """解析 duration 字串 (e.g., '1.5s', '0.123s')"""
+        """解析 duration 字串 (e.g., '1.500s')"""
         if not duration_str:
             return 0.0
         
@@ -202,17 +217,16 @@ class BatchResultProcessor:
                 "transcriptionEngine": "dynamic_batch",
             })
             
-            logger.info(f"✅ 已更新 {case_id}")
+            logger.info(f"  ✅ 已更新 {case_id}")
             return True
             
         except Exception as e:
-            logger.error(f"更新 {case_id} 失敗: {e}")
+            logger.error(f"  ❌ 更新 {case_id} 失敗: {e}")
             return False
     
     def trigger_analysis(self, case_id: str) -> bool:
         """觸發分析服務"""
         if not self.tasks_client:
-            logger.warning(f"無法觸發 {case_id} 的分析（Cloud Tasks 未初始化）")
             return False
         
         try:
@@ -220,18 +234,27 @@ class BatchResultProcessor:
                 PROJECT_ID, TASKS_LOCATION, TASKS_QUEUE
             )
             
+            # 使用 OIDC Token 認證
             task = {
                 "http_request": {
                     "http_method": tasks_v2.HttpMethod.POST,
                     "url": f"{ANALYSIS_SERVICE_URL}/analyze",
                     "headers": {"Content-Type": "application/json"},
                     "body": json.dumps({"caseId": case_id}).encode(),
+                    "oidc_token": {
+                        "service_account_email": f"{PROJECT_ID}@appspot.gserviceaccount.com" # 假設預設 SA
+                    }
                 }
             }
             
-            self.tasks_client.create_task(parent=parent, task=task)
-            logger.info(f"  已觸發 {case_id} 的分析")
-            return True
+            # 嘗試取得目前的分析服務 URL
+            try:
+                self.tasks_client.create_task(parent=parent, task=task)
+                logger.info(f"    已觸發 {case_id} 的分析")
+                return True
+            except Exception as te:
+                logger.warning(f"    觸發分析失敗 (可能是 SA 權限問題): {te}")
+                return False
             
         except Exception as e:
             logger.error(f"觸發 {case_id} 分析失敗: {e}")
@@ -240,19 +263,11 @@ class BatchResultProcessor:
     def process(self, trigger_analysis: bool = False):
         """處理批次結果"""
         state = self.load_state()
-        
-        # Support both single operation (legacy) and list of operations
         operations_data = state.get("operations", [])
-        if not operations_data and state.get("output_uri"):
-            operations_data = [{
-                "name": state.get("operation_name", "unknown"),
-                "output_uri": state.get("output_uri")
-            }]
-            
         case_mapping = state.get("case_mapping", {})
         
         if not operations_data:
-            logger.error("找不到輸出 URI")
+            logger.error("找不到操作狀態")
             return
         
         print("\n" + "=" * 60)
@@ -264,61 +279,54 @@ class BatchResultProcessor:
         
         for i, op_data in enumerate(operations_data, 1):
             output_uri = op_data["output_uri"]
-            print(f"\n批次 {i}/{len(operations_data)}: 下載結果...")
+            print(f"\n批次 {i}/{len(operations_data)}: 下載與解析...")
             
-            # Download and parse results
             try:
-                results = self.download_results(output_uri)
+                results = self.download_results(output_uri, case_mapping)
             except Exception as e:
                 logger.error(f"下載失敗 {output_uri}: {e}")
                 continue
             
             if not results:
-                logger.warning("  沒有找到任何結果")
+                logger.warning("  沒有找到任何有效結果")
                 continue
             
-            # Update Firestore
+            # 更新 Firestore
             batch_success = 0
             batch_fail = 0
             
-            for gcs_uri, transcription in results.items():
-                case_id = case_mapping.get(gcs_uri)
+            for audio_uri, transcription in results.items():
+                case_id = case_mapping.get(audio_uri)
                 
                 if not case_id:
-                    # Try to extract case_id from URI
-                    match = re.search(r"/uploads/([^/]+)/", gcs_uri)
-                    if match:
-                        case_id = match.group(1)
-                
-                if not case_id:
-                    logger.warning(f"  找不到 {gcs_uri} 對應的 case_id")
+                    logger.warning(f"  找不到 {audio_uri} 對應的 case_id")
                     continue
                 
-                # Update Firestore
+                # 更新 Firestore
                 if self.update_firestore(case_id, transcription):
                     batch_success += 1
                     total_success += 1
                     
-                    # Trigger analysis if requested
+                    # 觸發分析
                     if trigger_analysis:
                         self.trigger_analysis(case_id)
                 else:
                     batch_fail += 1
                     total_fail += 1
             
-            print(f"  ✅ 成功: {batch_success}, ❌ 失敗: {batch_fail}")
+            print(f"  批次摘要: ✅ 成功: {batch_success}, ❌ 失敗: {batch_fail}")
         
         print("-" * 60)
-        print(f"總計成功: {total_success}")
+        print(f"總計成功更新: {total_success} 案")
         print(f"總計失敗: {total_fail}")
         print("=" * 60)
         
-        # Clean up state file
-        if total_success > 0 and total_fail == 0:
-            # Rename state file to indicate completion
+        # 標記完成
+        if total_success > 0:
             completed_file = BATCH_STATE_FILE.replace(".json", ".completed.json")
-            os.rename(BATCH_STATE_FILE, completed_file)
-            logger.info(f"狀態檔案已移至: {completed_file}")
+            if os.path.exists(BATCH_STATE_FILE):
+                os.rename(BATCH_STATE_FILE, completed_file)
+                logger.info(f"已完成。狀態檔案移至: {completed_file}")
 
 
 def main():
