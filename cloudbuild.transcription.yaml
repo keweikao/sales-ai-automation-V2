@@ -24,7 +24,7 @@ steps:
       - 'deploy'
       - 'transcription-service'
       - '--image=asia-east1-docker.pkg.dev/sales-ai-automation-v2/sales-ai-automation-v2/transcription-service:v1-iterative-fix'
-      - '--region=asia-east1'
+      - '--region=$_REGION'
       - '--platform=managed'
       - '--allow-unauthenticated'
       - '--memory=32Gi'
@@ -49,4 +49,4 @@ substitutions:
 
 options:
   machineType: 'E2_HIGHCPU_8'
-
+  substitutionOption: 'ALLOW_LOOSE'
