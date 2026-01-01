@@ -140,14 +140,26 @@ class FasterWhisperPipeline:
         return self._diarizer
     
     def _cleanup_models(self):
-        """釋放模型記憶體"""
+        """釋放所有模型記憶體"""
+        self._cleanup_diarizer()
+        self._cleanup_whisper_model()
+        gc.collect()
+
+    def _cleanup_whisper_model(self):
+        """單獨釋放 Whisper 模型"""
+        if self._whisper_model is not None:
+            logger.info("釋放 Whisper 模型記憶體...")
+            del self._whisper_model
+            self._whisper_model = None
+            gc.collect()
+
+    def _cleanup_diarizer(self):
+        """單獨釋放說話者辨識模型"""
         if self._diarizer is not None:
             logger.info("釋放說話者辨識模型...")
             del self._diarizer
             self._diarizer = None
             gc.collect()
-        
-        # Whisper 模型保留，因為可能會連續處理多個檔案
     
     def transcribe(self, audio_path: str) -> Dict[str, Any]:
         """
@@ -181,9 +193,10 @@ class FasterWhisperPipeline:
             else:
                 result = self._transcribe_single(local_audio)
             
-            # Step 4: 說話者辨識（如啟用）
-            if result.get("success") and self.enable_diarization:
-                result = self._apply_diarization(local_audio, result)
+            # Step 4: 取得轉錄結果後，先釋放 Whisper 模型以騰出記憶體給 Diarization
+            if self.enable_diarization:
+                self._cleanup_whisper_model()
+                result = self._apply_diarization(local_audio, result, duration)
             
             # Step 5: 清理
             self._cleanup_file(local_audio)
@@ -421,13 +434,25 @@ class FasterWhisperPipeline:
             "chunk_count": len(results),
         }
     
-    def _apply_diarization(self, audio_path: str, result: Dict) -> Dict:
-        """套用說話者辨識"""
+    def _apply_diarization(self, audio_path: str, result: Dict, duration: float) -> Dict:
+        """
+        套用說話者辨識（根據長度決定是否分段）
+        """
         diarizer = self._get_diarizer()
         if not diarizer:
             return result
         
-        logger.info("執行說話者辨識...")
+        # 如果音檔超過 20 分鐘 (1200s)，使用分段 Diarization 以節省記憶體
+        if duration > 1200:
+            logger.info(f"偵測到長音檔 ({duration:.1f}s)，啟動分段說話者辨識模式...")
+            return self._apply_diarization_chunked(audio_path, result, duration)
+        else:
+            return self._apply_diarization_single(audio_path, result)
+
+    def _apply_diarization_single(self, audio_path: str, result: Dict) -> Dict:
+        """對完整音檔執行說話者辨識"""
+        diarizer = self._get_diarizer()
+        logger.info("執行單一階段說話者辨識...")
         
         try:
             diarization = diarizer(audio_path, num_speakers=None, min_speakers=1, max_speakers=5)
@@ -463,6 +488,109 @@ class FasterWhisperPipeline:
         
         return result
     
+    def _apply_diarization_chunked(self, audio_path: str, result: Dict, duration: float) -> Dict:
+        """
+        分段執行說話者辨識並對齊說話者標籤
+        
+        策略：
+        1. 切割成 15 分鐘片段，中間有 2 分鐘重疊
+        2. 每個片段獨立 Diarize
+        3. 利用重疊區域的說話者分佈進行標籤對齊
+        """
+        # 定義分段（較長的 15 分鐘以確保對齊品質）
+        CHUNK_SIZE = 900  # 15 mins
+        OVERLAP = 120     # 2 mins
+        
+        current_start = 0
+        all_speaker_segments = []
+        global_speaker_map = {} # 從「片段本地標籤」映射到「全域標籤」
+        global_speakers_count = 0
+        
+        while current_start < duration:
+            chunk_end = min(current_start + CHUNK_SIZE, duration)
+            logger.info(f"Diarize 片段: {current_start:.0f}s - {chunk_end:.0f}s")
+            
+            # 擷取片段
+            chunk_path = self._extract_chunk(audio_path, {"start": current_start, "duration": chunk_end - current_start})
+            
+            try:
+                diarizer = self._get_diarizer()
+                chunk_diarization = diarizer(chunk_path)
+                
+                # 取得當前片段的說話者片段
+                current_chunk_segments = []
+                current_chunk_speakers = set()
+                for turn, _, speaker in chunk_diarization.itertracks(yield_label=True):
+                    current_chunk_segments.append({
+                        "start": float(turn.start) + current_start,
+                        "end": float(turn.end) + current_start,
+                        "speaker": str(speaker)
+                    })
+                    current_chunk_speakers.add(str(speaker))
+                
+                # 對齊標籤
+                # 對於每個當前片段的說話者，看他在重疊區域是否與之前的某個說話者重合
+                for local_speaker in current_chunk_speakers:
+                    matched_global_speaker = None
+                    
+                    if current_start > 0: # 不是第一段，嘗試對齊
+                        # 找尋在 (current_start, current_start + OVERLAP) 範圍內的重合度
+                        max_overlap_duration = 0
+                        
+                        # 比較此 local_speaker 在重疊區的分佈
+                        local_speaker_intervals = [
+                            (s["start"], s["end"]) for s in current_chunk_segments 
+                            if s["speaker"] == local_speaker and s["start"] < current_start + OVERLAP
+                        ]
+                        
+                        # 與已存的全域片段比較
+                        for prev_seg in all_speaker_segments:
+                            if prev_seg["end"] > current_start: # 在重疊區內
+                                for l_start, l_end in local_speaker_intervals:
+                                    overlap = min(l_end, prev_seg["end"]) - max(l_start, prev_seg["start"])
+                                    if overlap > 0.5: # 超過 0.5s 重合則考慮
+                                        # 計算累積重合量
+                                        # 這邊簡化邏輯：直接取重合最多的那個全域說話者
+                                        matched_global_speaker = prev_seg["speaker"]
+                    
+                    if not matched_global_speaker:
+                        # 建立新的全域說話者標籤
+                        global_speakers_count += 1
+                        matched_global_speaker = f"Speaker_{global_speakers_count - 1}"
+                    
+                    # 儲存映射
+                    # 注意：這裡加上 chunk index 避免不同片段的本地標籤衝突
+                    global_speaker_map[f"{current_start}_{local_speaker}"] = matched_global_speaker
+                
+                # 將結果轉換為全域標籤並存入
+                for seg in current_chunk_segments:
+                    seg["speaker"] = global_speaker_map[f"{current_start}_{seg['speaker']}"]
+                    # 避免在重疊區重複添加同一個全域說話者的片段（簡化：只添加超過重疊區的部分或在第一段）
+                    if current_start == 0 or seg["start"] > current_start + (OVERLAP / 2):
+                        all_speaker_segments.append(seg)
+                
+            finally:
+                self._cleanup_file(chunk_path)
+                gc.collect() # 每次片段完畢強制回收
+            
+            if chunk_end >= duration:
+                break
+            current_start = chunk_end - OVERLAP
+
+        # 將對齊後的結果套用到轉錄段落
+        speakers_found = set()
+        for segment in result.get("segments", []):
+            segment["speaker"] = self._find_speaker(
+                segment["start"], 
+                segment["end"], 
+                all_speaker_segments
+            )
+            speakers_found.add(segment["speaker"])
+        
+        result["speakers"] = list(speakers_found)
+        result["speaker_segments"] = all_speaker_segments
+        return result
+
     def _find_speaker(self, start: float, end: float, timeline: List[Dict]) -> str:
         """根據時間範圍找出對應的說話者"""
         overlaps = []
