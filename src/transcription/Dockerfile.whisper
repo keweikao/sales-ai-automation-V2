@@ -17,10 +17,6 @@ WORKDIR /app
 COPY src/transcription/requirements.whisper.txt .
 RUN pip install --no-cache-dir -r requirements.whisper.txt
 
-# 接收 Hugging Face Token 用於下載模型
-ARG HUGGINGFACE_TOKEN
-ENV HUGGINGFACE_TOKEN=$HUGGINGFACE_TOKEN
-
 # 預下載 Whisper 模型到 image（加速冷啟動）
 # 這會增加 image 大小約 1.5GB，但冷啟動時不需要下載
 RUN python -c "from faster_whisper import WhisperModel; \
