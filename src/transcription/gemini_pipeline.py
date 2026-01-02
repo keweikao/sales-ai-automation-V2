@@ -40,8 +40,8 @@ class GeminiTranscriptionPipeline(TranscriptionPipeline):
         # Configure Google AI
         genai.configure(api_key=api_key)
         
-        # Load model - Using stable Gemini 2.5 Flash for reliable transcription
-        self.model_name = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+        # Load model - Using Gemini 1.5 Flash for reliable and cost-effective transcription
+        self.model_name = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
         self.model = genai.GenerativeModel(self.model_name)
         
         # Initialize chunker (10 min chunks, 2s overlap)
@@ -68,17 +68,12 @@ class GeminiTranscriptionPipeline(TranscriptionPipeline):
         full_text_parts = []
         
         # Regex to match: [MM:SS] Content (Speaker optional)
-        # Supports [MM:SS], [H:MM:SS], [MM:SS.ms]
+        # Supports [MM:SS], [H:MM:SS], [MM:SS.ms], [MM:SS] Speaker: Content
         pattern = re.compile(r'\[(\d{1,2}:\d{2}(?::\d{2})?(?:\.\d+)?)\]\s*(.*)')
         
         lines = response_text.strip().split('\n')
         
-        print(f"DEBUG: _parse_plain_text_response called with time_offset={time_offset}")
-        if lines:
-            print(f"DEBUG: First line of response: {lines[0]}")
-        
-        new_lines = []
-        
+        # Filter out lines that don't match the pattern to avoid garbage
         for line in lines:
             line = line.strip()
             if not line:
@@ -89,24 +84,23 @@ class GeminiTranscriptionPipeline(TranscriptionPipeline):
                 time_str, content_raw = match.groups()
                 
                 # Try to extract speaker if present (Speaker: Content)
-                speaker_match = re.match(r'([^:]+):\s*(.+)', content_raw)
+                speaker_match = re.match(r'^([^:]+):\s*(.+)', content_raw)
                 if speaker_match:
                     speaker = speaker_match.group(1)
                     content = speaker_match.group(2)
                 else:
-                    speaker = "Unknown Speaker"
+                    speaker = "Speaker"
                     content = content_raw
                 
                 # Parse timestamp to seconds
                 try:
                     parts = time_str.split(':')
                     if len(parts) == 2: # MM:SS
-                        seconds = int(parts[0]) * 60 + float(parts[1])
+                        seconds = float(parts[0]) * 60 + float(parts[1])
                     elif len(parts) == 3: # H:MM:SS
-                        seconds = int(parts[0]) * 3600 + int(parts[1]) * 60 + float(parts[2])
+                        seconds = float(parts[0]) * 3600 + float(parts[1]) * 60 + float(parts[2])
                     else:
-                        new_lines.append(line)
-                        continue # Invalid format
+                        continue 
                         
                     # Add offset
                     abs_start = seconds + time_offset
@@ -122,50 +116,29 @@ class GeminiTranscriptionPipeline(TranscriptionPipeline):
                         secs = int(abs_start % 60)
                         new_time_str = f"{minutes:02d}:{secs:02d}"
                     
-                    # Reconstruct line with new timestamp
-                    if speaker != "Unknown Speaker":
-                         new_line = f"[{new_time_str}] {speaker}: {content}"
-                    else:
-                         new_line = f"[{new_time_str}] {content}"
-                    
-                    new_lines.append(new_line)
-                    
-                    # Estimate end time (rough estimate based on char length, refined by next segment)
-                    # Assuming ~3 chars per second for speech
-                    duration_est = max(1.0, len(content) / 3.0)
-                    abs_end = abs_start + duration_est
-                    
+                    # Store segment
                     segments.append({
                         "start": round(abs_start, 2),
-                        "end": round(abs_end, 2), # Will be adjusted later
+                        "end": round(abs_start + 5.0, 2), # Default duration
                         "speaker": speaker.strip(),
                         "text": content.strip()
                     })
                     
-                    if speaker != "Unknown Speaker":
-                        speakers.add(speaker.strip())
-                    full_text_parts.append(content.strip())
+                    speakers.add(speaker.strip())
+                    full_text_parts.append(f"[{new_time_str}] {speaker.strip()}: {content.strip()}")
                     
                 except ValueError:
-                    logger.warning(f"Failed to parse timestamp: {time_str}")
-                    new_lines.append(line)
                     continue
-            else:
-                # Handle lines that might be continuation of previous speech
-                if segments:
-                    segments[-1]["text"] += " " + line
-                    full_text_parts.append(line)
-                new_lines.append(line)
         
         # Adjust end times based on next segment start
         for i in range(len(segments) - 1):
-            if segments[i]["end"] > segments[i+1]["start"]:
-                segments[i]["end"] = segments[i+1]["start"]
+            segments[i]["end"] = segments[i+1]["start"]
         
         return {
+            "success": True,
             "segments": segments,
             "speakers": list(speakers),
-            "text": "\n".join(new_lines) # Return the formatted text with CORRECTED timestamps
+            "text": "\n".join(full_text_parts)
         }
 
     def _split_audio(self, audio_path: str, chunk: Dict) -> str:
@@ -183,28 +156,20 @@ class GeminiTranscriptionPipeline(TranscriptionPipeline):
             "-i", str(audio_path),
             "-ss", str(start),
             "-t", str(duration),
-            "-c", "copy", # Fast copy without re-encoding
+            "-c:a", "aac",
+            "-b:a", "64k",
             str(output_path)
         ]
         
-        try:
-            subprocess.run(cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            return str(output_path)
-        except subprocess.CalledProcessError as e:
-            # If copy fails (e.g. inaccurate seek), try re-encoding
-            logger.warning(f"Fast copy failed for chunk {chunk_id}, trying re-encoding: {e}")
-            # cmd is: ["ffmpeg", "-y", "-i", path, "-ss", start, "-t", duration, "-c", "copy", output]
-            # index:   0         1     2     3     4      5      6     7         8     9       10
-            cmd[9] = "aac" # Re-encode to aac
-            subprocess.run(cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            return str(output_path)
+        subprocess.run(cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        return str(output_path)
 
     def transcribe(self, audio_path: str) -> Dict[str, Any]:
         """
-        Transcribe audio file using Gemini with CHUNKING.
+        Transcribe audio file using Gemini 1.5 Flash.
         """
         try:
-            logger.info(f"Starting Gemini transcription for: {audio_path}")
+            logger.info(f"Starting Gemini transcription (verbatim) for: {audio_path}")
             start_time = time.time()
             
             # 1. Get Audio Duration
@@ -214,9 +179,9 @@ class GeminiTranscriptionPipeline(TranscriptionPipeline):
             ]
             duration_str = subprocess.check_output(cmd).decode().strip()
             total_duration = float(duration_str)
-            logger.info(f"Audio duration: {total_duration:.2f}s")
             
-            # 2. Create Chunks
+            # 2. Create Chunks (Gemini 1.5 Flash can handle 1HR, but chunking helps with reliability and long context)
+            # Actually, for verbatim, chunking is BETTER because LLMs lose focus on long inputs.
             chunks = self.chunker.create_chunks(total_duration)
             
             all_segments = []
@@ -226,40 +191,28 @@ class GeminiTranscriptionPipeline(TranscriptionPipeline):
             # 3. Process Chunks
             for chunk in chunks:
                 chunk_path = self._split_audio(audio_path, chunk)
-                logger.info(f"Processing chunk {chunk['chunk_id']}: {chunk_path}")
                 
                 try:
                     # Upload chunk
-                    mime_type = "audio/mp4" # We force m4a/aac output
-                    audio_file = genai.upload_file(path=chunk_path, mime_type=mime_type)
+                    audio_file = genai.upload_file(path=chunk_path, mime_type="audio/mp4")
                     
                     # Wait for processing
                     while audio_file.state.name == "PROCESSING":
-                        time.sleep(1)
+                        time.sleep(2)
                         audio_file = genai.get_file(audio_file.name)
                     
-                    if audio_file.state.name == "FAILED":
-                        raise ValueError(f"File processing failed: {audio_file.state}")
-                    
-                    # Plain Text Prompt - 強調逐字轉錄，禁止幻覺
+                    # Detailed Prompt for Verbatim Transcription
                     prompt = """
-你是一位專業的逐字稿轉錄員。請將以下音頻檔案轉錄成繁體中文。
+你是一位專業的逐字稿轉錄員。請將音頻檔案「逐字」轉錄成繁體中文。
 
-【重要規則 - 務必遵守】
-1. 逐字轉錄：完全按照音頻中說的內容轉錄，一字不漏、一字不加
-2. 禁止幻覺：絕對不要添加音頻中沒有說過的內容
-3. 禁止改寫：不要修改、潤飾、或重新詮釋說話者的原話
-4. 保留原貌：包括口語化表達、語氣詞（嗯、啊、呃）、重複的詞語
-5. 聽不清楚：如果某段聽不清楚，用 [聽不清] 標記，不要猜測
-
-【輸出格式】
-[MM:SS] 說話者: 內容
-
-【範例】
-[00:10] 業務: 嗯，那個，請問您這邊是張經理嗎？
-[00:15] 客戶: 對對對，我是，請問您是？
-
-請嚴格遵守以上格式，不要輸出任何其他文字。
+【任務：逐字稿轉錄】
+1. 輸出格式：[MM:SS] 說話者: 內容
+2. 規則：
+   - 務必包含時間戳，每段交談或長句都要有 [MM:SS]。
+   - 務必標註說話者，若無法區分可使用「說話者1」、「說話者2」。
+   - 絕對禁止任何摘要、潤飾或刪減。
+   - 保留所有贅字，如「然後」、「那」、「就」、「嗯」、「啊」。
+   - 不要添加任何標題、前言或後記，只輸出轉錄內容。
                     """
                     
                     # Generate content with Retries
