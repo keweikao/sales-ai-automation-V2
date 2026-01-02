@@ -99,6 +99,8 @@ class FasterWhisperPipeline:
                 self.model_size,
                 device=self.device,
                 compute_type=self.compute_type,
+                cpu_threads=4,  # 限制執行緒以節省記憶體
+                num_workers=1
             )
             
             elapsed = time.time() - start_time
@@ -447,11 +449,14 @@ class FasterWhisperPipeline:
             logger.info(f"偵測到長音檔 ({duration:.1f}s)，啟動分段說話者辨識模式...")
             return self._apply_diarization_chunked(audio_path, result, duration)
         else:
-            return self._apply_diarization_single(audio_path, result)
+            # 只有在需要時才載入單一 Diarizer
+            diarizer = self._get_diarizer()
+            return self._apply_diarization_single(audio_path, result, diarizer)
 
-    def _apply_diarization_single(self, audio_path: str, result: Dict) -> Dict:
+    def _apply_diarization_single(self, audio_path: str, result: Dict, diarizer) -> Dict:
         """對完整音檔執行說話者辨識"""
-        diarizer = self._get_diarizer()
+        if not diarizer:
+            return result
         logger.info("執行單一階段說話者辨識...")
         
         try:
@@ -497,9 +502,9 @@ class FasterWhisperPipeline:
         2. 每個片段獨立 Diarize
         3. 利用重疊區域的說話者分佈進行標籤對齊
         """
-        # 定義分段（較長的 15 分鐘以確保對齊品質）
-        CHUNK_SIZE = 900  # 15 mins
-        OVERLAP = 120     # 2 mins
+        # 定義分段（縮小至 10 分鐘以極限節省記憶體）
+        CHUNK_SIZE = 600  # 10 mins
+        OVERLAP = 60      # 1 min
         
         current_start = 0
         all_speaker_segments = []
