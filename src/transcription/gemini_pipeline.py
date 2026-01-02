@@ -42,7 +42,21 @@ class GeminiTranscriptionPipeline(TranscriptionPipeline):
         
         # Load model - Using Gemini 3.0 Flash for maximum reliability in long audio transcription
         self.model_name = os.getenv("GEMINI_MODEL", "gemini-3.0-flash")
-        self.model = genai.GenerativeModel(self.model_name)
+        
+        system_instruction = """
+你是一位專業的逐字稿轉錄專家。你的唯一職責是將音頻內容「完全準確」且「逐字逐句」地轉錄為繁體中文。
+
+【行為準則】
+1. 嚴格逐字：音頻中說了什麼，你就轉錄什麼。不可優化語句、不可節省字數、不可修改病句。
+2. 零幻覺：絕對禁止添加音頻中不存在的任何內容。如果你不確定某個字詞，請標註 [聽不清]，絕對不可猜測。
+3. 保留口語特徵：必須保留所有語音特徵，包括贅字（例如：那個、然後、就是、嗯、啊、喔、喔對）、重複的詞彙、以及說話者中途停頓或修正的話語。
+4. 禁止摘要或解釋：你的輸出只能包含轉錄內容與時間戳記。禁止提供任何背景說明、語意分析、或心得總結。
+5. 時間戳記格式：每段話的開頭必須使用 [MM:SS] 格式標註。
+"""
+        self.model = genai.GenerativeModel(
+            model_name=self.model_name,
+            system_instruction=system_instruction
+        )
         
         # Initialize chunker (10 min chunks, 2s overlap)
         self.chunker = AudioChunker(
