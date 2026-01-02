@@ -181,49 +181,46 @@ class FasterWhisperPipeline:
         logger.info(f"開始轉錄: {audio_path}")
         start_time = time.time()
         
-        try:
-            # Step 1: 準備音檔（下載 + 轉換）
-            local_audio = self._prepare_audio(audio_path)
+        # 使用 TemporaryDirectory 確保所有暫存檔（包括原始下載、轉換後、片段）都會被清理
+        with tempfile.TemporaryDirectory() as temp_dir:
+            try:
+                # Step 1: 準備音檔（下載 + 轉換）
+                local_audio = self._prepare_audio_in_dir(audio_path, temp_dir)
             
-            # Step 2: 取得音檔長度
-            duration = self._get_duration(local_audio)
-            logger.info(f"音檔長度: {duration:.1f}s ({duration/60:.1f} min)")
-            
-            # Step 3: 決定是否需要分段
-            if duration > self.CHUNK_DURATION:
-                result = self._transcribe_chunked(local_audio, duration)
-            else:
-                result = self._transcribe_single(local_audio)
-            
-            # Step 4: 取得轉錄結果後，先釋放 Whisper 模型以騰出記憶體給 Diarization
-            if self.enable_diarization:
-                self._cleanup_whisper_model()
-                result = self._apply_diarization(local_audio, result, duration)
-            
-            # Step 5: 清理
-            self._cleanup_file(local_audio)
-            self._cleanup_models()
-            
-            elapsed = time.time() - start_time
-            
-            if result.get("success"):
-                result["processing_time"] = elapsed
-                result["speed_ratio"] = elapsed / duration if duration > 0 else 0
-                logger.info(
-                    f"轉錄完成: {len(result.get('text', ''))} 字, "
-                    f"耗時 {elapsed:.1f}s (x{result['speed_ratio']:.2f})"
-                )
-            
-            return result
-            
-        except Exception as e:
-            logger.error(f"轉錄失敗: {e}", exc_info=True)
-            return {"success": False, "error": str(e)}
+                # Step 2: 取得音檔長度
+                duration = self._get_duration(local_audio)
+                logger.info(f"音檔長度: {duration:.1f}s ({duration/60:.1f} min)")
+                
+                # Step 3: 決定是否需要分段
+                if duration > self.CHUNK_DURATION:
+                    result = self._transcribe_chunked(local_audio, duration)
+                else:
+                    result = self._transcribe_single(local_audio)
+                
+                # Step 4: 取得轉錄結果後，先釋放 Whisper 模型以騰出記憶體給 Diarization
+                if self.enable_diarization:
+                    self._cleanup_whisper_model()
+                    result = self._apply_diarization(local_audio, result, duration)
+                
+                elapsed = time.time() - start_time
+                if result.get("success"):
+                    result["processing_time"] = elapsed
+                    result["speed_ratio"] = elapsed / duration if duration > 0 else 0
+                    logger.info(
+                        f"轉錄完成: {len(result.get('text', ''))} 字, "
+                        f"耗時 {elapsed:.1f}s (x{result['speed_ratio']:.2f})"
+                    )
+                return result
+                
+            except Exception as e:
+                logger.error(f"轉錄失敗: {e}", exc_info=True)
+                return {"success": False, "error": str(e)}
+            finally:
+                # 確保模型在不需要時釋放
+                self._cleanup_models()
     
-    def _prepare_audio(self, audio_path: str) -> str:
-        """下載並轉換音檔為 mono MP3 16kHz"""
-        temp_dir = tempfile.mkdtemp()
-        
+    def _prepare_audio_in_dir(self, audio_path: str, temp_dir: str) -> str:
+        """下載並轉換音檔，指定暫存目錄"""
         # Download from GCS if needed
         if audio_path.startswith("gs://"):
             parts = audio_path.replace("gs://", "").split("/", 1)
@@ -234,9 +231,9 @@ class FasterWhisperPipeline:
             blob = bucket.blob(blob_path)
             
             original_ext = Path(blob_path).suffix.lower()
-            local_path = os.path.join(temp_dir, f"audio{original_ext}")
+            local_path = os.path.join(temp_dir, f"audio_original{original_ext}")
             blob.download_to_filename(local_path)
-            logger.info(f"從 GCS 下載: {audio_path}")
+            logger.info(f"從 GCS 下載至暫存: {audio_path}")
         else:
             local_path = audio_path
         
@@ -248,24 +245,13 @@ class FasterWhisperPipeline:
             "-ac", "1",       # Mono
             "-ar", "16000",   # 16kHz
             "-c:a", "libmp3lame",
-            "-b:a", "64k",    # 64kbps (smaller file)
+            "-b:a", "64k",
             "-loglevel", "error",
             output_path
         ]
         
-        result = subprocess.run(
-            cmd, 
-            stdout=subprocess.DEVNULL, 
-            stderr=subprocess.PIPE, 
-            text=True
-        )
-        
-        if result.returncode != 0:
-            logger.warning(f"FFmpeg 警告: {result.stderr[:500] if result.stderr else ''}")
-            if not os.path.exists(output_path) or os.path.getsize(output_path) == 0:
-                output_path = local_path
-        
-        logger.info(f"音檔準備完成: {output_path}")
+        subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+        logger.info(f"全音軌轉換完成: {output_path}")
         return output_path
     
     def _get_duration(self, audio_path: str) -> float:
@@ -286,8 +272,8 @@ class FasterWhisperPipeline:
         segments_iter, info = model.transcribe(
             audio_path,
             language=self.language,
-            beam_size=5,
-            word_timestamps=True,
+            beam_size=2,        # 降低 beam size 以節省記憶體
+            word_timestamps=False, # 停用單詞級時間戳以節省記憶體
             vad_filter=True,
             vad_parameters=dict(
                 min_speech_duration_ms=250,
@@ -378,7 +364,9 @@ class FasterWhisperPipeline:
     
     def _extract_chunk(self, audio_path: str, chunk: Dict) -> str:
         """擷取音檔片段"""
-        chunk_path = tempfile.mktemp(suffix=".mp3")
+        # 片段存在與 audio_path 相同的目錄中
+        temp_dir = os.path.dirname(audio_path)
+        chunk_path = os.path.join(temp_dir, f"chunk_{chunk['chunk_id']}.mp3")
         
         cmd = [
             "ffmpeg", "-y",
