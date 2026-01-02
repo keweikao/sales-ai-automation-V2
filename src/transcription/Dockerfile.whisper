@@ -35,7 +35,7 @@ EXPOSE 8080
 ENV PORT=8080
 ENV TRANSCRIPTION_ENGINE=faster_whisper
 ENV WHISPER_MODEL=large-v3-turbo
-ENV ENABLE_DIARIZATION=true
+ENV ENABLE_DIARIZATION=false
 
 # 使用 gunicorn 啟動
 # - 單一 worker（避免記憶體競爭）
