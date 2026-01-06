@@ -1860,7 +1860,7 @@ def handle_transcription_progress():
     file_id = payload.get("fileId")
     status = payload.get("status")
 
-    if not case_id or status not in ["transcribed", "batch_submitted"]:
+    if not case_id or status not in ["transcribing", "transcribed", "batch_submitted"]:
         logger.warning("Invalid transcription progress payload: %s", payload)
         return {"error": "Invalid payload"}, 400
 
@@ -1872,6 +1872,9 @@ def handle_transcription_progress():
     if status == "batch_submitted":
         progress_text = f"🚀 案件 `{case_id}` 已送往 STT 進行轉錄..."
         context_text = "狀態：已送出轉錄 🚀"
+    elif status == "transcribing":
+        progress_text = f"⏳ 案件 `{case_id}` 正在進行轉錄中..."
+        context_text = "狀態：轉錄中 ⏳"
     elif status == "transcribed":
         progress_text = f"✅ 案件 `{case_id}` 完成轉錄，正在進行分析中..."
         context_text = "狀態：完成轉錄・分析中 🔄"
