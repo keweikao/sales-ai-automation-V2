@@ -37,8 +37,14 @@ class GeminiTranscriptionPipeline(TranscriptionPipeline):
         # Configure Google AI
         genai.configure(api_key=api_key)
         
-        # Load model - Using Gemini 1.5 Flash for stability
+        # Load model - Using Gemini 1.5 Flash
         self.model_name = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
+        
+        try:
+            available_models = [m.name for m in genai.list_models()]
+            logger.info(f"Available Gemini models: {available_models}")
+        except Exception as e:
+            logger.warning(f"Could not list models: {e}")
         
         system_instruction = """
 你是一位專業的逐字稿轉錄專家。你的唯一職責是將音頻內容「完全準確」且「逐字逐句」地轉錄為繁體中文。
