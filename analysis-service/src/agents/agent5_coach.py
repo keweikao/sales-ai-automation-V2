@@ -108,7 +108,7 @@ class CoachAgent:
         # 初始化 Gemini (用於 Phase 2 對話)
         if GENAI_AVAILABLE and gemini_api_key:
             genai.configure(api_key=gemini_api_key)
-            self.gemini_model = genai.GenerativeModel("gemini-2.0-flash-exp")
+            self.gemini_model = genai.GenerativeModel("gemini-2.0-flash")
             logger.info("CoachAgent: Gemini initialized for conversation")
         else:
             self.gemini_model = None

@@ -51,9 +51,9 @@ flask_app = Flask(__name__)
 # Using stable Gemini 2.5 models for production reliability
 # - FAST: 2.5 Flash for simple/quick tasks (context extraction, summary)
 # - PRO: 2.5 Pro for complex reasoning (buyer analysis, seller coaching)
-GEMINI_MODEL_FAST = os.environ.get("GEMINI_MODEL_FAST", "gemini-2.5-flash")
-GEMINI_MODEL_PRO = os.environ.get("GEMINI_MODEL_PRO", "gemini-2.5-pro-preview-06-05")
-GEMINI_MODEL_DEFAULT = os.environ.get("GEMINI_MODEL_DEFAULT", "gemini-2.5-flash")
+GEMINI_MODEL_FAST = os.environ.get("GEMINI_MODEL_FAST", "gemini-2.0-flash")
+GEMINI_MODEL_PRO = os.environ.get("GEMINI_MODEL_PRO", "gemini-2.0-flash")
+GEMINI_MODEL_DEFAULT = os.environ.get("GEMINI_MODEL_DEFAULT", "gemini-2.0-flash")
 
 
 

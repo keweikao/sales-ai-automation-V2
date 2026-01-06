@@ -124,7 +124,7 @@ class MultiAgentOrchestrator:
 
     def __init__(
         self,
-        model_name: str = "gemini-2.5-flash",
+        model_name: str = "gemini-2.0-flash",
         temperature: float = 0.2,
         min_success_threshold: int = 3,
         enable_agent_retry: bool = True,

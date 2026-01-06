@@ -70,7 +70,7 @@ _base_logger = logging.getLogger(__name__)
 
 
 JSON_CONTENT_TYPE = "application/json"
-DEFAULT_MODEL_NAME = "gemini-2.5-flash"  # Stable default
+DEFAULT_MODEL_NAME = "gemini-2.0-flash"  # Stable default
 DEFAULT_TEMPERATURE = 0.2
 GCP_PROJECT = os.environ.get("GCP_PROJECT", "sales-ai-automation-v2")
 GCP_LOCATION = os.environ.get("GCP_LOCATION", "asia-east1")
@@ -465,12 +465,10 @@ class GeminiJSONAgent:
                         _base_logger.info(f"Falling back to genai SDK for model: {self.model_name}")
                         genai.configure(api_key=api_key)
                         model_mapping = {
-                            "gemini-3-flash-preview": "gemini-2.0-flash-exp",
-                            "gemini-2.0-flash-exp": "gemini-2.0-flash-exp",
-                            "gemini-2.5-flash": "gemini-2.0-flash-exp",
-                            "gemini-1.5-flash": "gemini-1.5-flash",
+                            "gemini-2.5-flash": "gemini-2.0-flash",
+                            "gemini-1.5-flash": "gemini-2.0-flash",
                         }
-                        fallback_model = model_mapping.get(self.model_name, self.model_name)
+                        fallback_model = model_mapping.get(self.model_name, "gemini-2.0-flash")
                         self._model = genai.GenerativeModel(fallback_model)
                         continue  # Retry with fallback model
                 
