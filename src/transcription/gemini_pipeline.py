@@ -37,8 +37,8 @@ class GeminiTranscriptionPipeline(TranscriptionPipeline):
         # Configure Google AI
         genai.configure(api_key=api_key)
         
-        # Load model - Using Gemini 3.0 Flash
-        self.model_name = os.getenv("GEMINI_MODEL", "gemini-3.0-flash")
+        # Load model - Using Gemini 1.5 Flash for stability
+        self.model_name = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
         
         system_instruction = """
 你是一位專業的逐字稿轉錄專家。你的唯一職責是將音頻內容「完全準確」且「逐字逐句」地轉錄為繁體中文。
@@ -177,7 +177,7 @@ class GeminiTranscriptionPipeline(TranscriptionPipeline):
                         
                         genai.delete_file(audio_file.name)
                     except Exception as e:
-                        logger.error(f"Error in chunk {chunk['chunk_id']}: {e}")
+                        logger.error(f"Error in chunk {chunk['chunk_id']}: {str(e)}", exc_info=True)
                         full_formatted_text.append(f"\n[ERROR: Chunk {chunk['chunk_id']} failed: {e}]\n")
 
                 return {
