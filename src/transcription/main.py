@@ -107,8 +107,8 @@ def notify_slack_progress(*, case_id: Optional[str], file_id: Optional[str], sta
         return
 
     payload = {
-        "case_id": case_id,
-        "file_id": file_id,
+        "caseId": case_id,
+        "fileId": file_id,
         "status": status,
     }
     headers = {"Content-Type": "application/json"}
