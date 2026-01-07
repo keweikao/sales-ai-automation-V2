@@ -574,32 +574,7 @@ def get_pipeline(engine: str = None, **kwargs):
     logger.info(f"Initializing Pipeline. Engine: '{engine}'")
     
     # Lazy import based on engine
-    if engine == "stt_v2" or engine == "stt_v2_sync":
-        # Speech-to-Text V2 with Chirp 2 - 10-min chunking (faster)
-        from .stt_v2_sync_pipeline import STTV2SyncPipeline
-        project_id = kwargs.get("project_id") or os.getenv("GCP_PROJECT_ID", "sales-ai-automation-v2")
-        location = kwargs.get("location") or os.getenv("GCP_LOCATION", "asia-southeast1")
-        result = STTV2SyncPipeline(project_id=project_id, location=location)
-        
-    elif engine == "stt_v2_batch":
-        # Speech-to-Text V2 with Chirp 3 - Batch API (slower, for very long audio)
-        from .stt_v2_pipeline import STTV2Pipeline
-        project_id = kwargs.get("project_id") or os.getenv("GCP_PROJECT_ID", "sales-ai-automation-v2")
-        location = kwargs.get("location") or os.getenv("GCP_LOCATION", "us")
-        result = STTV2Pipeline(project_id=project_id, location=location)
-        
-    elif engine == "stt_v1":
-        from .stt_v1_pipeline import STTV1Pipeline
-        language = os.getenv("TRANSCRIPTION_LANGUAGE", "cmn-Hant-TW")
-        result = STTV1Pipeline(language_code=language)
-        
-    elif engine == "stt_batch":
-        from .stt_batch_pipeline import STTBatchTranscriptionPipeline
-        project_id = kwargs.get("project_id") or os.getenv("GCP_PROJECT_ID", "sales-ai-automation-v2")
-        location = kwargs.get("location") or os.getenv("GCP_LOCATION", "asia-southeast1")
-        result = STTBatchTranscriptionPipeline(project_id=project_id, location=location)
-        
-    elif engine == "gemini":
+    if engine == "gemini":
         from .gemini_pipeline import GeminiTranscriptionPipeline
         api_key = os.getenv("GEMINI_API_KEY")
         if not api_key:
@@ -613,30 +588,14 @@ def get_pipeline(engine: str = None, **kwargs):
             raise ValueError("GROQ_API_KEY is required for Groq Whisper engine")
         result = GroqWhisperPipeline(api_key=api_key)
 
-    elif engine == "faster_whisper":
-        # Faster-Whisper with large-v3-turbo model
-        from .faster_whisper_pipeline import FasterWhisperPipeline
-        model_size = kwargs.get("model_size") or os.getenv("WHISPER_MODEL", "large-v3-turbo")
-        enable_diarization = os.getenv("ENABLE_DIARIZATION", "true").lower() == "true"
-        language = os.getenv("TRANSCRIPTION_LANGUAGE", "zh")
-        result = FasterWhisperPipeline(
-            model_size=model_size,
-            language=language,
-            enable_diarization=enable_diarization,
-        )
-        
     else:
-        # Fallback to faster_whisper as default
-        logger.warning(f"Unknown engine '{engine}', falling back to faster_whisper")
-        from .faster_whisper_pipeline import FasterWhisperPipeline
-        model_size = os.getenv("WHISPER_MODEL", "large-v3-turbo")
-        enable_diarization = os.getenv("ENABLE_DIARIZATION", "true").lower() == "true"
-        language = os.getenv("TRANSCRIPTION_LANGUAGE", "zh")
-        result = FasterWhisperPipeline(
-            model_size=model_size,
-            language=language,
-            enable_diarization=enable_diarization,
-        )
+        # Fallback to groq_whisper as default
+        logger.warning(f"Unknown engine '{engine}', falling back to groq_whisper")
+        from .groq_whisper_pipeline import GroqWhisperPipeline
+        api_key = os.getenv("GROQ_API_KEY")
+        if not api_key:
+            raise ValueError("GROQ_API_KEY is required for Groq Whisper engine (fallback)")
+        result = GroqWhisperPipeline(api_key=api_key)
     
     # Set global singleton if this was the first call
     if pipeline is None:

@@ -313,5 +313,72 @@ GroqWhisperPipeline initialized with model: whisper-large-v3-turbo
 
 ---
 
+## 🧹 專案清理總結 (2026-01-07 15:30)
+
+### 移除的檔案
+
+**舊轉錄引擎** (5 個檔案):
+- `src/transcription/faster_whisper_pipeline.py` - Faster-Whisper 實作（有 OOM 問題）
+- `src/transcription/stt_v1_pipeline.py` - Google STT V1（已棄用）
+- `src/transcription/stt_v2_pipeline.py` - Google STT V2 批次 API
+- `src/transcription/stt_batch_pipeline.py` - STT 批次轉錄
+- `src/transcription/stt_v2_sync_pipeline.py` - STT V2 同步 pipeline
+
+**舊文檔** (3 個檔案):
+- `PROJECT_README.md` - 舊版專案說明（已整合到新的 README.md）
+- `spec-driven.md` - Spec-Driven Development 方法論（與此專案無關）
+- `TOKEN_OPTIMIZATION_GUIDE.md` - Token 優化指南（已不適用）
+
+### 更新的檔案
+
+**src/transcription/pipeline.py**:
+- 移除所有 STT 引擎的 import 和初始化代碼（60+ 行）
+- 只保留 `gemini` 和 `groq_whisper` 兩個引擎
+- 將預設 fallback 從 `faster_whisper` 改為 `groq_whisper`
+
+**README.md**:
+- 完全重寫（280 行）
+- 反映 Groq Whisper 為主要轉錄引擎
+- 更新架構圖、成本估算、功能特色
+- 新增 6 個 Multi-Agent 的說明
+- 更新部署指南和快速開始步驟
+
+### 最終專案結構
+
+```
+sales-ai-automation-V2/
+├── README.md                    # 主要專案說明 ✨ 新版
+├── QUICK_START_FOR_AI.md        # AI 助理快速入門
+├── DEPLOYMENT_LOG.md            # 部署與清理日誌
+├── AI_ARCHITECTURE_ANALYSIS.md  # 架構分析與優化建議
+├── AGENTS.md                    # Multi-Agent 系統說明
+├── CHANGELOG.md                 # 變更日誌
+├── CLEANUP_SUMMARY.md           # 第一次清理摘要
+├── DEVELOPMENT_GUIDELINES.md    # 開發指南
+├── src/
+│   ├── slack_app/              # Slack 應用
+│   └── transcription/          # 轉錄服務
+│       ├── gemini_pipeline.py       # Gemini 轉錄（備援）
+│       ├── groq_whisper_pipeline.py # Groq Whisper（主要）✨
+│       └── pipeline.py              # Pipeline 工廠
+├── analysis-service/           # Multi-Agent 分析服務
+├── sms-service/                # SMS/Email 發送
+├── web-service/                # 摘要網頁服務
+└── docs/                       # 技術文檔
+    ├── GROQ_WHISPER_INTEGRATION.md   # Groq 整合指南 ✨
+    ├── GROQ_QUICKSTART.md            # Groq 快速開始 ✨
+    └── GROQ_IMPLEMENTATION_SUMMARY.md # Groq 實作摘要 ✨
+```
+
+### 清理效果
+
+- ✅ 移除 8 個過時或無關的檔案
+- ✅ 簡化 pipeline.py，減少 60+ 行無用代碼
+- ✅ 統一專案說明文件（README.md）
+- ✅ 保留所有必要的技術文檔和部署指南
+- ✅ 專案結構清晰，易於維護
+
+---
+
 *本文檔由 Claude AI Assistant 自動生成*
-*最後更新: 2026-01-07 14:59 (UTC+8)*
+*最後更新: 2026-01-07 15:30 (UTC+8)*
