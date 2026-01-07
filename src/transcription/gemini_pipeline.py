@@ -37,7 +37,9 @@ class GeminiTranscriptionPipeline(TranscriptionPipeline):
         # Configure Google AI
         genai.configure(api_key=api_key)
         
-        # Load model - Using Gemini 2.0 Flash (1.5 is remarkably missing from the list in this project)
+        # Load model - Using stable Gemini 2.0 Flash
+        # Note: gemini-2.0-flash is the stable production version
+        # Avoid using gemini-1.5-flash which caused 404 errors in v1beta API
         self.model_name = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
         
         system_instruction = """
