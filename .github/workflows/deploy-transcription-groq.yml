@@ -1,0 +1,116 @@
+name: Deploy Transcription Service (Groq Whisper)
+
+on:
+  workflow_dispatch:  # 手動觸發
+  push:
+    branches:
+      - main
+    paths:
+      - 'src/transcription/**'
+      - 'cloudbuild.transcription-groq.yaml'
+      - '.github/workflows/deploy-transcription-groq.yml'
+
+env:
+  PROJECT_ID: sales-ai-automation-v2
+  REGION: asia-east1
+  SERVICE_NAME: transcription-service
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Google Auth
+      id: auth
+      uses: google-github-actions/auth@v2
+      with:
+        credentials_json: '${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}'
+
+    - name: Set up Cloud SDK
+      uses: google-github-actions/setup-gcloud@v2
+      with:
+        project_id: ${{ env.PROJECT_ID }}
+
+    - name: Verify GROQ_API_KEY Secret
+      run: |
+        echo "Verifying GROQ_API_KEY exists in Secret Manager..."
+        gcloud secrets describe GROQ_API_KEY --project=${{ env.PROJECT_ID }} || {
+          echo "❌ ERROR: GROQ_API_KEY not found in Secret Manager"
+          echo "Please create it first:"
+          echo "  gcloud secrets create GROQ_API_KEY --data-file=- --project=${{ env.PROJECT_ID }}"
+          exit 1
+        }
+        echo "✓ GROQ_API_KEY found"
+
+    - name: Grant Service Account Access to GROQ_API_KEY
+      run: |
+        echo "Granting Service Account access to GROQ_API_KEY..."
+        gcloud secrets add-iam-policy-binding GROQ_API_KEY \
+          --member="serviceAccount:497329205771-compute@developer.gserviceaccount.com" \
+          --role="roles/secretmanager.secretAccessor" \
+          --project=${{ env.PROJECT_ID }} \
+          --condition=None || echo "⚠️ Permission may already exist"
+        echo "✓ Permission granted"
+
+    - name: Submit Cloud Build (Groq Whisper)
+      run: |
+        echo "Starting Cloud Build for Groq Whisper transcription service..."
+        gcloud builds submit \
+          --config=cloudbuild.transcription-groq.yaml \
+          --project=${{ env.PROJECT_ID }}
+
+    - name: Verify Deployment
+      run: |
+        echo "Verifying deployment..."
+        gcloud run services describe ${{ env.SERVICE_NAME }} \
+          --region=${{ env.REGION }} \
+          --project=${{ env.PROJECT_ID }} \
+          --format="value(status.url)"
+
+        echo ""
+        echo "✓ Deployment successful!"
+        echo ""
+        echo "Service URL:"
+        gcloud run services describe ${{ env.SERVICE_NAME }} \
+          --region=${{ env.REGION }} \
+          --project=${{ env.PROJECT_ID }} \
+          --format="value(status.url)"
+
+        echo ""
+        echo "Environment Variables:"
+        gcloud run services describe ${{ env.SERVICE_NAME }} \
+          --region=${{ env.REGION }} \
+          --project=${{ env.PROJECT_ID }} \
+          --format="yaml(spec.template.spec.containers[0].env)" \
+          | grep -A1 "TRANSCRIPTION_ENGINE"
+
+    - name: Deployment Summary
+      run: |
+        echo "═══════════════════════════════════════════════════════════"
+        echo "  Groq Whisper Transcription Service Deployed Successfully"
+        echo "═══════════════════════════════════════════════════════════"
+        echo ""
+        echo "Configuration:"
+        echo "  • Engine: groq_whisper"
+        echo "  • Model: whisper-large-v3-turbo"
+        echo "  • Speed: 228x realtime"
+        echo "  • Memory: 2Gi"
+        echo "  • Concurrency: 5"
+        echo ""
+        echo "Expected Performance:"
+        echo "  • 37.5 min audio → ~10 seconds processing"
+        echo "  • Accuracy: 95%+ (Traditional Chinese)"
+        echo "  • Cost: ~$7.50/month (300 files)"
+        echo ""
+        echo "Next Steps:"
+        echo "  1. Test with a sample audio file"
+        echo "  2. Monitor Groq API usage at https://console.groq.com/usage"
+        echo "  3. Check Cloud Run logs for any issues"
+        echo ""
+        echo "═══════════════════════════════════════════════════════════"

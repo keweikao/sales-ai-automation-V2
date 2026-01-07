@@ -22,6 +22,8 @@ You will receive:
 
 # Instructions
 
+**重要提示**: 轉錄文字可能不包含說話者標籤。請從對話語意推斷客戶的興趣點和反應。關注客戶提出的問題、表達興趣的功能、或特別討論的主題。
+
 ## Part 1: SMS Message
 1. **Identify the "Hook Point"**:
    - Find the **ONE thing** the customer was most interested in today

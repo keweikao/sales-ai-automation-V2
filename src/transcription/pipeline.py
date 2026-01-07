@@ -605,7 +605,14 @@ def get_pipeline(engine: str = None, **kwargs):
         if not api_key:
             raise ValueError("GEMINI_API_KEY is required for Gemini engine")
         result = GeminiTranscriptionPipeline(api_key=api_key)
-    
+
+    elif engine == "groq_whisper":
+        from .groq_whisper_pipeline import GroqWhisperPipeline
+        api_key = os.getenv("GROQ_API_KEY")
+        if not api_key:
+            raise ValueError("GROQ_API_KEY is required for Groq Whisper engine")
+        result = GroqWhisperPipeline(api_key=api_key)
+
     elif engine == "faster_whisper":
         # Faster-Whisper with large-v3-turbo model
         from .faster_whisper_pipeline import FasterWhisperPipeline
