@@ -92,6 +92,11 @@ SERVICE_ACCOUNT_EMAIL = os.environ.get(
 SLACK_PROGRESS_ENDPOINT = os.environ.get("SLACK_PROGRESS_ENDPOINT")
 SLACK_PROGRESS_TOKEN = os.environ.get("SLACK_PROGRESS_TOKEN")
 
+# --- Serial Processing Configuration ---
+# Key in Firestore to store pending transcription queue
+SERIAL_QUEUE_COLLECTION = "transcription_queue"
+SERIAL_QUEUE_DOC = "pending_cases"
+
 # --- Cloud Tasks Configuration for Transcription Queue ---
 TRANSCRIPTION_QUEUE = "transcription-queue"
 TRANSCRIPTION_LOCATION = "asia-east1"
@@ -278,34 +283,42 @@ def transcribe_audio():
 def transcribe_single():
     """
     Process a SINGLE transcription case. Called by Cloud Tasks.
-    Expects JSON body: { "caseId": "..." }
+    Expects JSON body: { "caseId": "...", "serial": true/false }
+
+    If "serial" is true, will trigger next case from the queue after completion.
     """
     if not db:
         return jsonify({"error": "Firestore not initialized"}), 500
-    
+
     data = request.get_json()
     case_id = data.get("caseId") if data else None
-    
+    is_serial = data.get("serial", False) if data else False
+
     if not case_id:
         return jsonify({"error": "Missing caseId"}), 400
-    
-    logger.info(f"Processing single case: {case_id}")
-    
+
+    logger.info(f"Processing single case: {case_id} (serial={is_serial})")
+
     # Fetch case from Firestore
     doc_ref = db.collection("cases").document(case_id)
     doc = doc_ref.get()
-    
+
     if not doc.exists:
+        # If serial mode, trigger next even if this case not found
+        if is_serial:
+            _trigger_next_transcription()
         return jsonify({"error": f"Case {case_id} not found"}), 404
-    
+
     case_data = doc.to_dict()
     gcs_uri = case_data.get("gcsUri")
-    
+
     if not gcs_uri:
+        if is_serial:
+            _trigger_next_transcription()
         return jsonify({"error": f"Case {case_id} has no gcsUri"}), 400
-    
+
     engine = os.getenv("TRANSCRIPTION_ENGINE", "groq_whisper").strip().lower()
-    
+
     try:
         # Update status to transcribing
         doc_ref.update({
@@ -313,17 +326,17 @@ def transcribe_single():
             "updatedAt": firestore.SERVER_TIMESTAMP
         })
         notify_slack_progress(case_id=case_id, file_id=None, status="transcribing")
-        
+
         # Use get_pipeline() to handle any engine (Faster-Whisper, STT V2, Gemini)
         current_pipeline = get_pipeline()
         result = current_pipeline.transcribe(gcs_uri)
-        
+
         if result.get("success"):
             # Normalize result structure for Firestore
             transcription_text = result.get("text") or result.get("full_text") or ""
             segments = result.get("segments", [])
             speakers = result.get("speakers", [])
-            
+
             doc_ref.update({
                 "status": "transcribed",
                 "transcription": {
@@ -336,11 +349,16 @@ def transcribe_single():
                 "updatedAt": firestore.SERVER_TIMESTAMP
             })
             notify_slack_progress(case_id=case_id, file_id=None, status="transcribed")
-            
+
             # Trigger analysis
             _trigger_analysis(case_id)
-            
+
             logger.info(f"Case {case_id} transcribed successfully using {engine}")
+
+            # If serial mode, trigger next case
+            if is_serial:
+                _trigger_next_transcription()
+
             return jsonify({"success": True, "caseId": case_id}), 200
         else:
             error_msg = result.get("error", "Unknown error")
@@ -351,8 +369,13 @@ def transcribe_single():
             })
             notify_slack_progress(case_id=case_id, file_id=None, status="transcription_failed")
             logger.error(f"Case {case_id} transcription failed: {error_msg}")
+
+            # If serial mode, trigger next case even on failure
+            if is_serial:
+                _trigger_next_transcription()
+
             return jsonify({"success": False, "error": error_msg}), 500
-            
+
     except Exception as e:
         logger.error(f"Error processing case {case_id}: {e}", exc_info=True)
         doc_ref.update({
@@ -361,7 +384,112 @@ def transcribe_single():
             "updatedAt": firestore.SERVER_TIMESTAMP
         })
         notify_slack_progress(case_id=case_id, file_id=None, status="transcription_failed")
+
+        # If serial mode, trigger next case even on exception
+        if is_serial:
+            _trigger_next_transcription()
+
         return jsonify({"error": str(e)}), 500
+
+
+@flask_app.route("/transcribe-serial", methods=["POST"])
+def transcribe_serial():
+    """
+    Start serial (one-by-one) transcription for a list of cases.
+    This avoids rate limits by processing one case at a time.
+
+    Expects JSON body: { "caseIds": ["202601-IC001", "202601-IC002", ...] }
+
+    The first case will be processed immediately, and each subsequent case
+    will be triggered after the previous one completes.
+    """
+    if not db:
+        return jsonify({"error": "Firestore not initialized"}), 500
+
+    if not tasks_client:
+        return jsonify({"error": "Cloud Tasks not initialized"}), 500
+
+    data = request.get_json()
+    case_ids = data.get("caseIds", []) if data else []
+
+    if not case_ids:
+        return jsonify({"error": "Missing or empty 'caseIds' array"}), 400
+
+    logger.info(f"Starting serial transcription for {len(case_ids)} cases")
+
+    # Store the queue in Firestore (excluding the first one which we'll process immediately)
+    queue_ref = db.collection(SERIAL_QUEUE_COLLECTION).document(SERIAL_QUEUE_DOC)
+
+    if len(case_ids) > 1:
+        queue_ref.set({
+            "pending": case_ids[1:],  # All except the first
+            "currentlyProcessing": case_ids[0],
+            "totalCount": len(case_ids),
+            "createdAt": firestore.SERVER_TIMESTAMP,
+            "updatedAt": firestore.SERVER_TIMESTAMP
+        })
+    else:
+        queue_ref.set({
+            "pending": [],
+            "currentlyProcessing": case_ids[0],
+            "totalCount": 1,
+            "createdAt": firestore.SERVER_TIMESTAMP,
+            "updatedAt": firestore.SERVER_TIMESTAMP
+        })
+
+    # Trigger the first case immediately with serial=True
+    first_case_id = case_ids[0]
+    queue_path = tasks_client.queue_path(GCP_PROJECT_ID, TRANSCRIPTION_LOCATION, TRANSCRIPTION_QUEUE)
+    task = {
+        "http_request": {
+            "http_method": tasks_v2.HttpMethod.POST,
+            "url": f"{TRANSCRIPTION_SERVICE_URL}/transcribe-single",
+            "headers": {"Content-Type": "application/json"},
+            "body": json.dumps({"caseId": first_case_id, "serial": True}).encode(),
+        }
+    }
+    tasks_client.create_task(parent=queue_path, task=task)
+
+    logger.info(f"Serial transcription started. First case: {first_case_id}, Queue size: {len(case_ids) - 1}")
+
+    return jsonify({
+        "success": True,
+        "message": f"Serial transcription started for {len(case_ids)} cases",
+        "firstCase": first_case_id,
+        "queueSize": len(case_ids) - 1
+    }), 200
+
+
+@flask_app.route("/transcribe-serial-status", methods=["GET"])
+def transcribe_serial_status():
+    """Get the current status of the serial transcription queue."""
+    if not db:
+        return jsonify({"error": "Firestore not initialized"}), 500
+
+    queue_ref = db.collection(SERIAL_QUEUE_COLLECTION).document(SERIAL_QUEUE_DOC)
+    queue_doc = queue_ref.get()
+
+    if not queue_doc.exists:
+        return jsonify({
+            "status": "idle",
+            "message": "No serial transcription queue active"
+        }), 200
+
+    queue_data = queue_doc.to_dict()
+    pending = queue_data.get("pending", [])
+    currently_processing = queue_data.get("currentlyProcessing")
+    total_count = queue_data.get("totalCount", 0)
+
+    completed_count = total_count - len(pending) - (1 if currently_processing else 0)
+
+    return jsonify({
+        "status": "processing",
+        "currentlyProcessing": currently_processing,
+        "pendingCount": len(pending),
+        "completedCount": completed_count,
+        "totalCount": total_count,
+        "pendingCases": pending[:5]  # Show first 5 pending
+    }), 200
 
 
 @flask_app.route("/process-queue", methods=["POST"])
@@ -564,6 +692,68 @@ def _trigger_analysis(case_id):
             logger.info(f"Analysis triggered for {case_id}")
         except Exception as e:
             logger.error(f"Failed to trigger analysis: {e}")
+
+
+def _trigger_next_transcription():
+    """
+    Trigger the next case in the serial transcription queue.
+    This enables one-by-one processing to avoid rate limits.
+    """
+    if not db or not tasks_client:
+        logger.warning("Cannot trigger next transcription: db or tasks_client not initialized")
+        return
+
+    try:
+        # Get the queue document
+        queue_ref = db.collection(SERIAL_QUEUE_COLLECTION).document(SERIAL_QUEUE_DOC)
+        queue_doc = queue_ref.get()
+
+        if not queue_doc.exists:
+            logger.info("No serial transcription queue found")
+            return
+
+        queue_data = queue_doc.to_dict()
+        pending_cases = queue_data.get("pending", [])
+
+        if not pending_cases:
+            logger.info("Serial transcription queue is empty")
+            # Clean up the queue document
+            queue_ref.delete()
+            return
+
+        # Pop the first case from the queue
+        next_case_id = pending_cases[0]
+        remaining_cases = pending_cases[1:]
+
+        # Update the queue
+        if remaining_cases:
+            queue_ref.update({
+                "pending": remaining_cases,
+                "currentlyProcessing": next_case_id,
+                "updatedAt": firestore.SERVER_TIMESTAMP
+            })
+        else:
+            queue_ref.update({
+                "pending": [],
+                "currentlyProcessing": next_case_id,
+                "updatedAt": firestore.SERVER_TIMESTAMP
+            })
+
+        # Create Cloud Task for the next case
+        queue_path = tasks_client.queue_path(GCP_PROJECT_ID, TRANSCRIPTION_LOCATION, TRANSCRIPTION_QUEUE)
+        task = {
+            "http_request": {
+                "http_method": tasks_v2.HttpMethod.POST,
+                "url": f"{TRANSCRIPTION_SERVICE_URL}/transcribe-single",
+                "headers": {"Content-Type": "application/json"},
+                "body": json.dumps({"caseId": next_case_id, "serial": True}).encode(),
+            }
+        }
+        tasks_client.create_task(parent=queue_path, task=task)
+        logger.info(f"Triggered next transcription: {next_case_id} (remaining: {len(remaining_cases)})")
+
+    except Exception as e:
+        logger.error(f"Failed to trigger next transcription: {e}", exc_info=True)
 
 @flask_app.route("/health", methods=["GET"])
 def health_check():

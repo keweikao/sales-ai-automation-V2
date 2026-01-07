@@ -116,7 +116,7 @@ class GroqWhisperPipeline(TranscriptionPipeline):
         logger.info(f"Split audio into {num_chunks} chunks (avg {chunk_duration:.1f}s each)")
         return chunks
 
-    def _transcribe_chunk(self, audio_path: str, language: str = "zh") -> str:
+    def _transcribe_chunk(self, audio_path: str, language: str = "zh") -> Dict[str, Any]:
         """
         Transcribe a single audio chunk using Groq Whisper API.
 
@@ -125,7 +125,7 @@ class GroqWhisperPipeline(TranscriptionPipeline):
             language: Language code (default: "zh" for Chinese)
 
         Returns:
-            Transcription text
+            Dict with text and segments
         """
         max_retries = 3
 
@@ -140,8 +140,22 @@ class GroqWhisperPipeline(TranscriptionPipeline):
                         temperature=0.0
                     )
 
-                # Groq returns a detailed response with text and segments
-                return transcription.text
+                # Groq returns verbose_json with text and segments
+                # Extract segments with timestamps
+                segments = []
+                if hasattr(transcription, 'segments') and transcription.segments:
+                    for seg in transcription.segments:
+                        segments.append({
+                            "start": seg.get("start", 0) if isinstance(seg, dict) else getattr(seg, "start", 0),
+                            "end": seg.get("end", 0) if isinstance(seg, dict) else getattr(seg, "end", 0),
+                            "text": seg.get("text", "") if isinstance(seg, dict) else getattr(seg, "text", ""),
+                            "speaker": "Speaker"  # Groq doesn't provide speaker info
+                        })
+
+                return {
+                    "text": transcription.text,
+                    "segments": segments
+                }
 
             except Exception as e:
                 logger.warning(f"Groq API attempt {attempt + 1} failed: {e}")
@@ -187,12 +201,22 @@ class GroqWhisperPipeline(TranscriptionPipeline):
 
                 # Transcribe each chunk
                 full_text_parts = []
+                all_segments = []
 
                 for i, chunk in enumerate(chunks):
                     logger.info(f"Transcribing chunk {i+1}/{len(chunks)}...")
 
                     try:
-                        chunk_text = self._transcribe_chunk(chunk["path"])
+                        chunk_result = self._transcribe_chunk(chunk["path"])
+                        chunk_text = chunk_result["text"]
+                        chunk_segments = chunk_result["segments"]
+
+                        # Adjust segment timestamps for chunk offset
+                        chunk_offset = chunk["start"]
+                        for seg in chunk_segments:
+                            seg["start"] += chunk_offset
+                            seg["end"] += chunk_offset
+                            all_segments.append(seg)
 
                         # Add time context for multi-chunk files
                         if len(chunks) > 1:
@@ -215,14 +239,15 @@ class GroqWhisperPipeline(TranscriptionPipeline):
                 logger.info(
                     f"Transcription complete: {total_duration:.1f}s audio "
                     f"processed in {processing_time:.1f}s "
-                    f"({total_duration/processing_time:.1f}x realtime)"
+                    f"({total_duration/processing_time:.1f}x realtime), "
+                    f"{len(all_segments)} segments"
                 )
 
                 return {
                     "success": True,
                     "full_text": full_text,
-                    "segments": [],  # Groq doesn't provide speaker-segmented output
-                    "speakers": [],  # No speaker diarization
+                    "segments": all_segments,
+                    "speakers": ["Speaker"],  # Single speaker placeholder
                     "audio_info": {
                         "duration": total_duration,
                         "processing_time": processing_time,
