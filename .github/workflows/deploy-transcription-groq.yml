@@ -37,26 +37,17 @@ jobs:
       with:
         project_id: ${{ env.PROJECT_ID }}
 
-    - name: Verify GROQ_API_KEY Secret
+    - name: Prepare for Deployment
       run: |
-        echo "Verifying GROQ_API_KEY exists in Secret Manager..."
-        gcloud secrets describe GROQ_API_KEY --project=${{ env.PROJECT_ID }} || {
-          echo "❌ ERROR: GROQ_API_KEY not found in Secret Manager"
-          echo "Please create it first:"
-          echo "  gcloud secrets create GROQ_API_KEY --data-file=- --project=${{ env.PROJECT_ID }}"
-          exit 1
-        }
-        echo "✓ GROQ_API_KEY found"
-
-    - name: Grant Service Account Access to GROQ_API_KEY
-      run: |
-        echo "Granting Service Account access to GROQ_API_KEY..."
-        gcloud secrets add-iam-policy-binding GROQ_API_KEY \
-          --member="serviceAccount:497329205771-compute@developer.gserviceaccount.com" \
-          --role="roles/secretmanager.secretAccessor" \
-          --project=${{ env.PROJECT_ID }} \
-          --condition=None || echo "⚠️ Permission may already exist"
-        echo "✓ Permission granted"
+        echo "📦 Preparing Groq Whisper deployment..."
+        echo "   • Project: ${{ env.PROJECT_ID }}"
+        echo "   • Region: ${{ env.REGION }}"
+        echo "   • Service: ${{ env.SERVICE_NAME }}"
+        echo "   • Engine: groq_whisper"
+        echo ""
+        echo "Note: GROQ_API_KEY must exist in Secret Manager"
+        echo "      with proper Service Account permissions."
+        echo ""
 
     - name: Submit Cloud Build (Groq Whisper)
       run: |
