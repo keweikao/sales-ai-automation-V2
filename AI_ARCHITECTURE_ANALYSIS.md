@@ -28,7 +28,7 @@
 
 ### 1. 系統架構概覽
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────┐
 │                         Slack Interface                          │
 │                    (使用者互動入口)                               │
@@ -80,7 +80,7 @@
 │  • Cloud Storage (音檔儲存)                                       │
 │  • Cloud Tasks (非同步任務)                                       │
 └─────────────────────────────────────────────────────────────────┘
-```
+```text
 
 ### 2. 技術棧分析
 
@@ -108,7 +108,7 @@ class AnalysisState:
     buyer_data: Optional[Dict] = None
     seller_data: Optional[Dict] = None
     # ...
-```
+```text
 
 **優點**:
 1. **狀態共享機制**: 使用 `AnalysisState` 作為共享狀態物件，清晰且易於追蹤
@@ -122,7 +122,7 @@ class AnalysisState:
    ```python
    GEMINI_MODEL_FAST = os.environ.get("GEMINI_MODEL_FAST", "gemini-2.0-flash")
    GEMINI_MODEL_PRO = os.environ.get("GEMINI_MODEL_PRO", "gemini-2.0-flash")
-   ```
+```python
    - ❌ 缺乏動態模型選擇機制
    - ❌ 無法根據工作負載自動調整
    - ❌ 沒有成本與效能的即時平衡
@@ -138,7 +138,7 @@ class AnalysisState:
        # ...
    else:
        return jsonify({...}), 500
-   ```
+```yaml
    - ❌ 簡單的 success/failure 二元判斷
    - ❌ 缺乏細粒度的錯誤分類與處理策略
 
@@ -175,7 +175,7 @@ paths:
         deadline: 300.0  # 5 minutes
       security:
         - api_key: []
-```
+```text
 
 **預期效益**:
 - ✅ 統一的認證與授權
@@ -226,7 +226,7 @@ def analyze_transcript():
             analysis_result = await orchestrator.analyze_transcript(...)
 
         # ...
-```
+```python
 
 **追蹤關鍵指標**:
 ```python
@@ -253,7 +253,7 @@ agent_success_rate = Counter(
     'Total agent executions',
     ['agent_name', 'status']  # status: success/failed/retried
 )
-```
+```python
 
 ---
 
@@ -356,7 +356,7 @@ class ContextAgent:
         # 使用選定的模型
         result = await self._call_gemini(model, prompt)
         return result
-```
+```python
 
 **預期效益**:
 - 💰 成本降低 30-40%（簡單任務使用低成本模型）
@@ -467,10 +467,10 @@ class ContextAgent:
     async def analyze(self, state: AnalysisState) -> Dict[str, Any]:
         # 實際分析邏輯
         ...
-```
+```text
 
 **快取架構**:
-```
+```text
 ┌──────────────────────────────────────────────────────┐
 │                 Application Layer                     │
 └────────────────┬─────────────────────────────────────┘
@@ -494,7 +494,7 @@ class ContextAgent:
 │          L3: Firestore (Persistent)                  │
 │          • 永久儲存分析結果                            │
 └──────────────────────────────────────────────────────┘
-```
+```python
 
 ---
 
@@ -575,7 +575,7 @@ class AnalysisService:
                 "timestamp": str(datetime.utcnow())
             }
         )
-```
+```python
 
 **事件訂閱者範例**:
 ```python
@@ -600,7 +600,7 @@ subscription_path = subscriber.subscription_path(
 streaming_pull_future = subscriber.subscribe(
     subscription_path, callback=callback
 )
-```
+```python
 
 ---
 
@@ -683,7 +683,7 @@ class AnalysisUser(HttpUser):
     def generate_id(self):
         import uuid
         return str(uuid.uuid4())[:8]
-```
+```python
 
 **測試覆蓋目標**:
 - 單元測試: 80% 覆蓋率
@@ -770,7 +770,7 @@ class ExperimentTracker:
             'metrics': metrics,
             'timestamp': firestore.SERVER_TIMESTAMP
         })
-```
+```python
 
 ---
 
@@ -842,7 +842,7 @@ class AIBudgetController:
             }
 
         return {"action": "maintain", "message": "Budget utilization healthy"}
-```
+```yaml
 
 ---
 
@@ -881,7 +881,7 @@ recovery_procedures:
     - name: transcription-service
       priority: 2
       fallback: queue-for-retry
-```
+```text
 
 ---
 
@@ -996,7 +996,7 @@ class BuyerAgent:
         """
 
         return await self._analyze_with_context(enhanced_prompt)
-```
+```python
 
 ### 2. 實施 Agent 評分機制
 建立自動化的 Agent 品質評估系統：
@@ -1035,7 +1035,7 @@ class AgentQualityScorer:
             score += accuracy * 40
 
         return score
-```
+```text
 
 ---
 
