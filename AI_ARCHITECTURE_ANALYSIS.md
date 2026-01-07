@@ -114,6 +114,7 @@ class AnalysisState:
 ```
 
 **優點**:
+
 1. **狀態共享機制**: 使用 `AnalysisState` 作為共享狀態物件，清晰且易於追蹤
 2. **階段性執行**: 分階段並行執行 Agents，平衡速度與成本
 3. **自我修正能力**: 實現 Reflexion 模式，提升分析品質
@@ -122,26 +123,31 @@ class AnalysisState:
 #### 3.2 架構瓶頸
 
 1. **硬編碼模型配置**
+
    ```python
    GEMINI_MODEL_FAST = os.environ.get("GEMINI_MODEL_FAST", "gemini-2.0-flash")
    GEMINI_MODEL_PRO = os.environ.get("GEMINI_MODEL_PRO", "gemini-2.0-flash")
-```
+   ```
+
    - ❌ 缺乏動態模型選擇機制
    - ❌ 無法根據工作負載自動調整
    - ❌ 沒有成本與效能的即時平衡
 
 2. **缺乏 Agent 可觀測性**
+
    - ❌ Agent 執行時間未追蹤
    - ❌ Token 使用量未監控
    - ❌ 錯誤率與重試次數未統計
 
 3. **有限的錯誤處理**
+
    ```python
    if analysis_result.success:
        # ...
    else:
        return jsonify({...}), 500
-```
+   ```
+
    - ❌ 簡單的 success/failure 二元判斷
    - ❌ 缺乏細粒度的錯誤分類與處理策略
 
@@ -181,6 +187,7 @@ paths:
 ```
 
 **預期效益**:
+
 - ✅ 統一的認證與授權
 - ✅ 速率限制與配額管理
 - ✅ 請求日誌與追蹤
