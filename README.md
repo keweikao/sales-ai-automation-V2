@@ -109,6 +109,7 @@ graph TD
 | **總計** | **~$15.50 / 月** |
 
 **與舊架構比較**:
+
 - 轉錄成本降低 90% (Groq vs Gemini Audio)
 - 總體成本降低 50%
 - 記憶體使用降低 50% (2Gi vs 4Gi)
@@ -131,6 +132,7 @@ graph TD
 **核心步驟**:
 
 1. **設定 Secrets**
+
    ```bash
    # Groq API Key
    echo -n "YOUR_GROQ_API_KEY" | gcloud secrets create GROQ_API_KEY --data-file=-
@@ -143,6 +145,7 @@ graph TD
    ```
 
 2. **部署服務**
+
    ```bash
    # 部署 Transcription Service (Groq Whisper)
    gcloud builds submit --config cloudbuild.transcription-groq.yaml
@@ -155,6 +158,7 @@ graph TD
    ```
 
 3. **驗證部署**
+
    ```bash
    # 檢查服務狀態
    gcloud run services list
@@ -206,6 +210,7 @@ sales-ai-automation-V2/
 ### 2. 語意推斷說話者
 
 Agent 從對話內容自動推斷說話者角色，無需額外的 speaker diarization：
+
 - 客戶：詢問價格、功能、表達顧慮
 - 業務：介紹產品、詢問需求、提供方案
 
@@ -228,6 +233,7 @@ Agent 從對話內容自動推斷說話者角色，無需額外的 speaker diari
 ### 回滾策略
 
 如需回滾到 Gemini 轉錄：
+
 ```bash
 gcloud run services update transcription-service \
   --set-env-vars=TRANSCRIPTION_ENGINE=gemini \
@@ -241,9 +247,11 @@ gcloud run services update transcription-service \
 參考 [AI_ARCHITECTURE_ANALYSIS.md](AI_ARCHITECTURE_ANALYSIS.md) 的完整優化建議：
 
 **Phase 1 (已完成)**:
+
 - [x] Groq Whisper 整合 (2026-01-07)
 
 **Phase 2 (規劃中)**:
+
 - [ ] API Gateway 統一入口
 - [ ] 全鏈路追蹤 (OpenTelemetry)
 - [ ] Redis 快取層
@@ -256,6 +264,7 @@ gcloud run services update transcription-service \
 詳細變更記錄請參考 [CHANGELOG.md](CHANGELOG.md)。
 
 **最新更新 (2026-01-07)**:
+
 - ✅ Groq Whisper API 整合
 - ✅ 移除 Faster-Whisper 和 STT pipelines
 - ✅ Agent prompts 優化（語意推斷說話者）

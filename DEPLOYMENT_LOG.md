@@ -271,12 +271,14 @@ gcloud builds submit \
 **Service URL**: `https://transcription-service-acv3ye2faq-de.a.run.app`
 
 **環境變數**:
+
 - ✅ `TRANSCRIPTION_ENGINE=groq_whisper`
 - ✅ `TRANSCRIPTION_LANGUAGE=zh`
 - ✅ `GCP_LOCATION=asia-southeast1`
 - ✅ `GROQ_API_KEY` 從 Secret Manager 正確載入
 
 **服務日誌**:
+
 ```
 GroqWhisperPipeline initialized with model: whisper-large-v3-turbo
 ```
@@ -297,6 +299,7 @@ GroqWhisperPipeline initialized with model: whisper-large-v3-turbo
 ### 1. 基礎功能測試
 
 上傳測試音檔到 Slack，填寫 Demo 表單，驗證：
+
 - 轉錄速度是否符合預期 (< 30 秒處理 37.5 分鐘音檔)
 - 轉錄文字準確度
 - Agent 分析品質
@@ -318,6 +321,7 @@ GroqWhisperPipeline initialized with model: whisper-large-v3-turbo
 ### 移除的檔案
 
 **舊轉錄引擎** (5 個檔案):
+
 - `src/transcription/faster_whisper_pipeline.py` - Faster-Whisper 實作（有 OOM 問題）
 - `src/transcription/stt_v1_pipeline.py` - Google STT V1（已棄用）
 - `src/transcription/stt_v2_pipeline.py` - Google STT V2 批次 API
@@ -325,6 +329,7 @@ GroqWhisperPipeline initialized with model: whisper-large-v3-turbo
 - `src/transcription/stt_v2_sync_pipeline.py` - STT V2 同步 pipeline
 
 **舊文檔** (3 個檔案):
+
 - `PROJECT_README.md` - 舊版專案說明（已整合到新的 README.md）
 - `spec-driven.md` - Spec-Driven Development 方法論（與此專案無關）
 - `TOKEN_OPTIMIZATION_GUIDE.md` - Token 優化指南（已不適用）
@@ -332,11 +337,13 @@ GroqWhisperPipeline initialized with model: whisper-large-v3-turbo
 ### 更新的檔案
 
 **src/transcription/pipeline.py**:
+
 - 移除所有 STT 引擎的 import 和初始化代碼（60+ 行）
 - 只保留 `gemini` 和 `groq_whisper` 兩個引擎
 - 將預設 fallback 從 `faster_whisper` 改為 `groq_whisper`
 
 **README.md**:
+
 - 完全重寫（280 行）
 - 反映 Groq Whisper 為主要轉錄引擎
 - 更新架構圖、成本估算、功能特色
