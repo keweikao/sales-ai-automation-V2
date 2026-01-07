@@ -27,7 +27,6 @@ from utils.case_management import (
 )
 from utils.file_pipeline import (
     download_slack_file,
-    convert_audio,
     enqueue_transcription_task,
     upload_to_gcs,
 )
@@ -803,24 +802,9 @@ def _process_modal_submission(
         logger.info("File downloaded to: %s", local_path)
         sys.stdout.flush()
 
-        # Convert audio to 16k MP3
-        try:
-            converted_path = convert_audio(Path(local_path))
-            local_path = str(converted_path)
-            logger.info("Audio converted to: %s", local_path)
-        except Exception as conv_error:
-            logger.error("Audio conversion failed: %s", conv_error)
-            # Fallback to original file if conversion fails? 
-            # Or fail hard? User wants conversion to fix error, so maybe fail hard or log warning.
-            # Let's log warning and try original, but likely it will fail transcription again.
-            # Actually, let's proceed with converted path if successful.
-            pass
-
+        # Upload original file directly to GCS
+        # Audio conversion (if needed) will be handled by transcription service
         safe_name = re.sub(r'\s+', '_', file_metadata["name"])
-        # Update extension in destination blob if converted
-        if local_path.endswith(".mp3"):
-             safe_name = Path(safe_name).with_suffix(".mp3").name
-
         destination_blob = f"slack/{case_id}/{safe_name}"
         logger.info("Uploading to GCS: %s", destination_blob)
         sys.stdout.flush()
