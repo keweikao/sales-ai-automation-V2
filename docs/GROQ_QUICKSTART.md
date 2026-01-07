@@ -50,6 +50,7 @@ curl -X POST https://transcription-service-497329205771.asia-east1.run.app/trans
 ## 📊 預期結果
 
 ### 效能指標
+
 - ⚡ **速度**: 228x realtime (~10 秒處理 37.5 分鐘音檔)
 - 💰 **成本**: ~$7.50/月 (300 檔)
 - 🎯 **準確度**: 95%+ (繁體中文)
@@ -87,6 +88,7 @@ gcloud run services describe transcription-service \
 ```
 
 預期輸出：
+
 ```
 Environment Variables:
   TRANSCRIPTION_ENGINE: groq_whisper
@@ -106,6 +108,7 @@ gcloud logging read \
 ```
 
 預期看到：
+
 ```
 GroqWhisperPipeline initialized with model: whisper-large-v3-turbo
 ```
@@ -113,6 +116,7 @@ GroqWhisperPipeline initialized with model: whisper-large-v3-turbo
 ### 3. 測試完整流程
 
 使用 Slack 發起 Demo：
+
 1. 上傳音檔到 Slack
 2. 填寫 Demo 表單
 3. 等待轉錄完成 (應 < 30 秒)
@@ -171,10 +175,12 @@ gsutil ls -l gs://YOUR_BUCKET/audio.mp3
 ### 效能優化
 
 **如果速度不夠快**:
+
 - 檢查 Cloud Run concurrency 設定 (建議 5)
 - 增加 max-instances (建議 10)
 
 **如果成本過高**:
+
 - 檢查是否有重複轉錄
 - 確認音檔不會過長 (> 60 分鐘建議分段)
 

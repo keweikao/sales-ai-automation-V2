@@ -9,6 +9,7 @@
 ### 1. 核心實作
 
 #### ✅ `src/transcription/groq_whisper_pipeline.py`
+
 - 實作 `GroqWhisperPipeline` 類別
 - 支援 GCS 音檔下載
 - 自動音檔分段 (> 24MB 或 > 10 min)
@@ -17,6 +18,7 @@
 - 完整錯誤處理
 
 **關鍵特性**:
+
 ```python
 class GroqWhisperPipeline(TranscriptionPipeline):
     def __init__(self, api_key: str):
@@ -27,6 +29,7 @@ class GroqWhisperPipeline(TranscriptionPipeline):
 ```
 
 #### ✅ `src/transcription/pipeline.py`
+
 - 新增 `groq_whisper` engine 支援
 - 整合到 `get_pipeline()` factory
 - 環境變數配置: `TRANSCRIPTION_ENGINE=groq_whisper`
@@ -45,39 +48,46 @@ elif engine == "groq_whisper":
 所有 6 個 Agent prompts 已更新，加入**語意推斷說話者**的指示：
 
 #### ✅ `agent1-context.md` (會議背景分析)
+
 ```markdown
 **重要提示**: 轉錄文字可能不包含說話者標籤。請從對話語意、語氣、問答模式推斷誰是業務、誰是客戶。
 ```
 
 #### ✅ `agent2-buyer.md` (客戶洞察)
+
 ```markdown
 **重要提示**: 轉錄文字可能不包含說話者標籤。請從對話內容推斷客戶的發言。
 通常客戶會：詢問價格、功能、表達顧慮、擔憂、提出需求、問題...
 ```
 
 #### ✅ `agent3-seller.md` (業務教練)
+
 ```markdown
 **重要提示**: 轉錄文字可能不包含說話者標籤。請從對話內容推斷業務的發言。
 通常業務會：介紹產品、功能、詢問客戶需求、痛點...
 ```
 
 #### ✅ `agent4-summary.md` (行動推手)
+
 ```markdown
 **重要提示**: 轉錄文字可能不包含說話者標籤。請從對話語意推斷客戶的興趣點和反應。
 ```
 
 #### ✅ `agent6-crm-extractor.md` (CRM 擷取)
+
 ```markdown
 **重要提示**: 轉錄文字可能不包含說話者標籤。請從對話整體內容推斷銷售階段、預算、決策者等資訊。
 ```
 
 **影響評估**:
+
 - Agent 1, 4, 6: **無影響** (不依賴 speaker labels)
 - Agent 2, 3: **輕微影響** (可從語意推斷，準確度 85-90%)
 
 ### 3. 部署配置
 
 #### ✅ `cloudbuild.transcription-groq.yaml`
+
 - Docker image build & push
 - Cloud Run 部署配置
 - 環境變數: `TRANSCRIPTION_ENGINE=groq_whisper`
@@ -85,19 +95,23 @@ elif engine == "groq_whisper":
 - 資源配置: 2Gi memory, 1 CPU, concurrency 5
 
 **優勢**:
+
 - 記憶體需求降低 50% (2Gi vs 4Gi Gemini)
 - 支援更高並發 (5 vs 1)
 - 成本更低 ($7.50/月 vs Gemini 變動成本)
 
 #### ✅ `.env.example`
+
 - 新增 `GROQ_API_KEY` 環境變數
 
 #### ✅ `requirements.txt`
+
 - 新增 `groq>=0.4.0` 依賴
 
 ### 4. 測試
 
 #### ✅ `tests/test_groq_whisper.py`
+
 - Unit tests (mocked)
 - Integration tests (需 real API key)
 - 測試覆蓋:
@@ -111,6 +125,7 @@ elif engine == "groq_whisper":
 ### 5. 文檔
 
 #### ✅ `docs/GROQ_WHISPER_INTEGRATION.md` (完整文檔)
+
 - 架構設計說明
 - 詳細配置指南
 - Agent prompts 優化說明
@@ -119,6 +134,7 @@ elif engine == "groq_whisper":
 - 回滾方案
 
 #### ✅ `docs/GROQ_QUICKSTART.md` (快速開始)
+
 - 3 步驟部署指南
 - 預期結果與驗證
 - 常見問題 FAQ
@@ -187,6 +203,7 @@ elif engine == "groq_whisper":
 ### 部署步驟
 
 1. **設定 GROQ_API_KEY**
+
    ```bash
    echo -n "YOUR_KEY" | gcloud secrets create GROQ_API_KEY --data-file=-
    gcloud secrets add-iam-policy-binding GROQ_API_KEY \
@@ -195,16 +212,19 @@ elif engine == "groq_whisper":
    ```
 
 2. **部署服務**
+
    ```bash
    gcloud builds submit --config cloudbuild.transcription-groq.yaml
    ```
 
 3. **驗證部署**
+
    ```bash
    gcloud run services describe transcription-service --region=asia-east1
    ```
 
 4. **測試端點**
+
    ```bash
    curl -X POST https://transcription-service-xxx.run.app/transcribe \
      -H "Content-Type: application/json" \
@@ -280,6 +300,7 @@ elif engine == "groq_whisper":
 ### 不建議的優化
 
 ❌ **不需要實作 speaker inference**
+
 - Agent 已經能從語意推斷
 - 額外步驟增加複雜度和成本
 - 效益不明顯 (< 5% 準確度提升)
@@ -289,10 +310,12 @@ elif engine == "groq_whisper":
 ## 📚 相關檔案
 
 ### 核心程式碼
+
 - [src/transcription/groq_whisper_pipeline.py](../src/transcription/groq_whisper_pipeline.py)
 - [src/transcription/pipeline.py](../src/transcription/pipeline.py)
 
 ### Agent Prompts
+
 - [analysis-service/src/agents/prompts/agent1-context.md](../analysis-service/src/agents/prompts/agent1-context.md)
 - [analysis-service/src/agents/prompts/agent2-buyer.md](../analysis-service/src/agents/prompts/agent2-buyer.md)
 - [analysis-service/src/agents/prompts/agent3-seller.md](../analysis-service/src/agents/prompts/agent3-seller.md)
@@ -300,14 +323,17 @@ elif engine == "groq_whisper":
 - [analysis-service/src/agents/prompts/agent6-crm-extractor.md](../analysis-service/src/agents/prompts/agent6-crm-extractor.md)
 
 ### 配置檔案
+
 - [cloudbuild.transcription-groq.yaml](../cloudbuild.transcription-groq.yaml)
 - [.env.example](../.env.example)
 - [src/transcription/requirements.txt](../src/transcription/requirements.txt)
 
 ### 測試
+
 - [src/transcription/tests/test_groq_whisper.py](../src/transcription/tests/test_groq_whisper.py)
 
 ### 文檔
+
 - [docs/GROQ_WHISPER_INTEGRATION.md](GROQ_WHISPER_INTEGRATION.md) - 完整整合指南
 - [docs/GROQ_QUICKSTART.md](GROQ_QUICKSTART.md) - 快速開始指南
 

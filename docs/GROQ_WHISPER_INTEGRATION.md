@@ -7,10 +7,12 @@
 ## 🎯 為什麼選擇 Groq Whisper？
 
 ### 現有問題
+
 - **Gemini**: 不穩定、容易產生幻覺、難以驗證準確度
 - **Faster-Whisper**: 在 Cloud Run 上容易 OOM (記憶體不足)
 
 ### Groq Whisper 優勢
+
 - ✅ **高速**: 228x realtime (37.5 分鐘音檔 < 10 秒處理)
 - ✅ **穩定**: Groq LPU 架構穩定，無 OOM 風險
 - ✅ **準確**: Whisper Large v3 Turbo 業界領先
@@ -19,6 +21,7 @@
 - ✅ **易驗證**: 純文字轉錄比分析式輸出更易驗證
 
 ### Trade-off
+
 - ⚠️ **無 Speaker Diarization**: Groq 不提供說話者辨識
 - ✅ **Agent 自動推斷**: Multi-Agent 系統已優化，可從語意推斷說話者
 
@@ -42,7 +45,7 @@ Plain Text Transcript (無 speaker labels)
 
 ### 1. 取得 Groq API Key
 
-1. 前往 https://console.groq.com/
+1. 前往 <https://console.groq.com/>
 2. 註冊帳號並建立 API Key
 3. 複製 API Key
 
@@ -268,6 +271,7 @@ curl -X POST https://transcription-service-497329205771.asia-east1.run.app/trans
 **原因**: Secret Manager 中未設定 GROQ_API_KEY 或 Service Account 無權限
 
 **解決方案**:
+
 ```bash
 # 1. 確認 secret 存在
 gcloud secrets describe GROQ_API_KEY --project=sales-ai-automation-v2
@@ -287,6 +291,7 @@ gcloud builds submit --config cloudbuild.transcription-groq.yaml
 **原因**: Groq SDK 未安裝
 
 **解決方案**:
+
 ```bash
 # 確認 requirements.txt 包含 groq
 grep "groq" src/transcription/requirements.txt
@@ -303,8 +308,10 @@ gcloud builds submit --config cloudbuild.transcription-groq.yaml
 **原因**: 可能是音訊品質問題
 
 **解決方案**:
+
 1. 檢查原始音檔品質
 2. 考慮使用 `whisper-large-v3` (較慢但更準確)
+
    ```bash
    # 更新環境變數
    --set-env-vars=GROQ_WHISPER_MODEL=whisper-large-v3
@@ -315,6 +322,7 @@ gcloud builds submit --config cloudbuild.transcription-groq.yaml
 **原因**: Groq 有 API 速率限制
 
 **解決方案**:
+
 1. 檢查 Groq 帳號的 quota
 2. 調整 Cloud Run concurrency 設定
 3. 實作 retry 機制 (已內建在 pipeline 中)
@@ -324,6 +332,7 @@ gcloud builds submit --config cloudbuild.transcription-groq.yaml
 **原因**: 無 speaker labels 導致角色混淆
 
 **解決方案**:
+
 1. Agent prompts 已優化處理無 speaker labels 情況
 2. 如果特定 case 仍有問題，可檢查轉錄文字是否足夠清晰
 3. 考慮在 transcript 中加入時間標記來輔助理解
