@@ -5,6 +5,7 @@
 ## 背景
 
 2026-01-06 我們遇到了因模型版本錯誤導致的系統故障:
+
 - 使用 `gemini-1.5-flash` 在 v1beta API 中返回 404 錯誤
 - Circuit breaker 被觸發,導致所有後續請求被阻擋
 - 最近 10 個 cases 全部失敗
@@ -50,6 +51,7 @@ python tools/gemini_model_manager.py validate
 ```
 
 輸出範例:
+
 ```
 🔍 Scanning codebase for Gemini model usages...
 
@@ -87,11 +89,13 @@ python tools/gemini_model_manager.py list-available
 #### 4. 自動更新
 
 預覽更新 (dry-run):
+
 ```bash
 python tools/gemini_model_manager.py update --dry-run
 ```
 
 執行更新:
+
 ```bash
 python tools/gemini_model_manager.py update
 ```
@@ -115,6 +119,7 @@ python tools/gemini_model_manager.py migration-plan > migration.json
 ### 當發現棄用模型時
 
 系統會自動:
+
 1. 驗證失敗,標記 PR 或建立 Issue
 2. 生成遷移計劃並上傳為 artifact
 3. 如果是定期檢查,自動建立 Issue 通知團隊
@@ -122,6 +127,7 @@ python tools/gemini_model_manager.py migration-plan > migration.json
 ### 配置
 
 在 GitHub repo 設定中添加 secret:
+
 ```
 GEMINI_API_KEY=your-api-key
 ```
@@ -133,11 +139,13 @@ GEMINI_API_KEY=your-api-key
 #### 1. 使用環境變數
 
 ✅ **推薦**:
+
 ```python
 model_name = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
 ```
 
 ❌ **不推薦**:
+
 ```python
 model_name = "gemini-1.5-flash"  # 硬編碼
 ```
@@ -168,6 +176,7 @@ def get_model(preferred: str = "gemini-2.0-flash"):
 ### 轉錄服務
 
 在 `cloudbuild.transcription.yaml`:
+
 ```yaml
 --set-env-vars=GEMINI_MODEL=gemini-2.0-flash
 ```
@@ -175,6 +184,7 @@ def get_model(preferred: str = "gemini-2.0-flash"):
 ### 分析服務
 
 在 `analysis-service/src/main.py`:
+
 ```python
 GEMINI_MODEL_DEFAULT = os.environ.get("GEMINI_MODEL_DEFAULT", "gemini-2.0-flash")
 ```
@@ -205,16 +215,19 @@ GEMINI_MODEL_DEFAULT = os.environ.get("GEMINI_MODEL_DEFAULT", "gemini-2.0-flash"
 ### 如果遇到 404 錯誤
 
 1. **檢查模型名稱**:
+
 ```bash
 python tools/gemini_model_manager.py validate
 ```
 
 2. **測試替代模型**:
+
 ```bash
 python tools/gemini_model_manager.py test --model gemini-2.0-flash
 ```
 
 3. **快速修復** - 更新環境變數:
+
 ```bash
 gcloud run services update transcription-service \
   --region=asia-east1 \
@@ -226,6 +239,7 @@ gcloud run services update transcription-service \
 Circuit breaker 會在 30 秒後自動嘗試恢復 (HALF_OPEN 狀態)。
 
 手動重置 (需要部署代碼):
+
 ```python
 from src.resilience import reset_circuit
 reset_circuit("gemini_api")

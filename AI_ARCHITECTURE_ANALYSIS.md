@@ -194,6 +194,7 @@ paths:
 - ✅ API 版本控制
 
 **實施步驟**:
+
 1. 設計 API 規範 (OpenAPI 3.0)
 2. 配置 Cloud API Gateway
 3. 遷移現有服務端點
@@ -239,6 +240,7 @@ def analyze_transcript():
 ```
 
 **追蹤關鍵指標**:
+
 ```python
 # analysis-service/src/metrics_v2.py
 from prometheus_client import Counter, Histogram, Gauge
@@ -369,6 +371,7 @@ class ContextAgent:
 ```
 
 **預期效益**:
+
 - 💰 成本降低 30-40%（簡單任務使用低成本模型）
 - ⚡ 平均延遲降低 20%（避免過度使用高延遲模型）
 - 📊 靈活的成本控制機制
@@ -449,6 +452,7 @@ class AnalysisCacheManager:
 ```
 
 **快取裝飾器**:
+
 ```python
 def cache_analysis(agent_name: str):
     """快取 Agent 分析結果的裝飾器"""
@@ -482,6 +486,7 @@ class ContextAgent:
 ```
 
 **快取架構**:
+
 ```text
 ┌──────────────────────────────────────────────────────┐
 │                 Application Layer                     │
@@ -590,6 +595,7 @@ class AnalysisService:
 ```
 
 **事件訂閱者範例**:
+
 ```python
 # slack-service/event_subscriber.py
 from google.cloud import pubsub_v1
@@ -698,6 +704,7 @@ class AnalysisUser(HttpUser):
 ```
 
 **測試覆蓋目標**:
+
 - 單元測試: 80% 覆蓋率
 - 整合測試: 關鍵流程 100% 覆蓋
 - 負載測試: 支援 100 併發請求
@@ -766,6 +773,7 @@ class PromptRegistry:
 ```
 
 **實驗追蹤**:
+
 ```python
 # mlops/experiment_tracking.py
 class ExperimentTracker:
@@ -903,19 +911,23 @@ recovery_procedures:
 ## 📊 預期效益總結
 
 ### 成本優化
+
 - 🎯 **轉錄成本降低 ~90%**: Groq Whisper ($7.50/月) 已取代 Gemini Audio API
 - 🎯 **分析成本可降低 35%**: 透過模型路由與快取（待實施）
 - 🎯 **總體 AI 成本可降低 50-60%**: Groq 整合 + 模型優化 + 快取策略
 
 ### 效能提升
+
 - ⚡ **端對端延遲降低 40%**: 從 2 分鐘降至 1.2 分鐘
 - ⚡ **系統吞吐量提升 3x**: 支援 300 cases/hour
 
 ### 可靠性增強
+
 - 🛡️ **可用性提升至 99.9%**: 透過錯誤處理與重試機制
 - 🛡️ **平均恢復時間 < 5 分鐘**: 透過自動化故障轉移
 
 ### 開發效率
+
 - 🚀 **部署週期縮短 50%**: 透過 CI/CD 自動化
 - 🚀 **Bug 修復時間降低 60%**: 透過監控與追蹤
 
@@ -924,6 +936,7 @@ recovery_procedures:
 ## 🗺️ 實施路線圖
 
 ### Phase 1: 基礎強化 (Month 1-2)
+
 - [x] ✅ Groq Whisper 整合與部署 (已完成 2026-01-07)
 - [ ] Groq 轉錄品質驗證與 A/B 測試
 - [ ] 建立 API Gateway
@@ -932,12 +945,14 @@ recovery_procedures:
 - [ ] 建立基礎測試框架
 
 ### Phase 2: 智能優化 (Month 3-4)
+
 - [ ] 實施模型路由器
 - [ ] 部署 Redis 快取層
 - [ ] 遷移至事件驅動架構
 - [ ] 完善自動化測試
 
 ### Phase 3: 進階功能 (Month 5-6)
+
 - [ ] 建立 MLOps 流程
 - [ ] 實施成本控制系統
 - [ ] 建立災難恢復機制
@@ -948,6 +963,7 @@ recovery_procedures:
 ## 🎓 技術債務清單
 
 ### 高優先級
+
 1. **Groq Whisper 效能驗證**: 收集實際轉錄資料，驗證準確度 > 95%
 2. **Agent 語意推斷能力評估**: 測試無 speaker labels 對分析品質的影響
 3. **Flask 版本升級**: 從 2.2.5 升級至 3.x
@@ -955,11 +971,13 @@ recovery_procedures:
 5. **日誌結構化**: 遷移至 JSON 格式日誌
 
 ### 中優先級
+
 6. **程式碼重構**: 減少重複程式碼，提高可維護性
 7. **文檔完善**: API 文檔、架構圖、運維手冊
 8. **依賴管理**: 建立統一的依賴版本管理
 
 ### 低優先級
+
 9. **型別檢查**: 引入 mypy 進行靜態型別檢查
 10. **程式碼風格**: 統一 linting 規則 (black, flake8)
 
@@ -968,6 +986,7 @@ recovery_procedures:
 ## 💡 創新建議
 
 ### 1. 引入 RAG (Retrieval-Augmented Generation)
+
 為 Agent 提供領域知識庫，提升分析準確度：
 
 ```python
@@ -1019,6 +1038,7 @@ class BuyerAgent:
 ```
 
 ### 2. 實施 Agent 評分機制
+
 建立自動化的 Agent 品質評估系統：
 
 ```python
@@ -1062,12 +1082,14 @@ class AgentQualityScorer:
 ## 📚 參考架構與最佳實踐
 
 ### 推薦閱讀
+
 1. **Google Cloud Architecture Center**: Cloud Run 最佳實踐
 2. **The Twelve-Factor App**: 現代應用程式設計原則
 3. **Building Microservices (O'Reilly)**: 微服務架構指南
 4. **Designing Data-Intensive Applications**: 資料系統設計
 
 ### 工具推薦
+
 - **Monitoring**: Prometheus + Grafana + Cloud Monitoring
 - **Tracing**: OpenTelemetry + Cloud Trace
 - **Logging**: Structured logging + Cloud Logging
@@ -1081,6 +1103,7 @@ class AgentQualityScorer:
 本專案已建立了堅實的 AI 驅動架構基礎，Multi-Agent 設計模式清晰且具備良好的擴展性。通過實施本報告提出的優化建議，系統將在**成本效益、效能、可靠性、可維護性**等方面獲得全面提升。
 
 **關鍵下一步**:
+
 1. ✅ 立即實施 P0 優化項目（API Gateway + 追蹤 + 模型路由）
 2. ✅ 建立監控與告警體系
 3. ✅ 完善自動化測試
