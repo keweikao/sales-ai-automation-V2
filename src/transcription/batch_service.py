@@ -26,7 +26,7 @@ class BatchTranscriptionService:
         
         # Initialize Gemini
         genai.configure(api_key=api_key)
-        self.model_name = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
+        self.model_name = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
         
         logger.info(f"BatchTranscriptionService: google-generativeai version: {genai.__version__}")
         logger.info(f"BatchTranscriptionService: genai attributes: {dir(genai)}")

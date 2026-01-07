@@ -29,7 +29,7 @@ def test_vertex_ai_gemini():
         vertexai.init(project=project_id, location=location)
         
         # 載入模型
-        model_name = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
+        model_name = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
         logger.info(f"載入模型: {model_name}")
         model = GenerativeModel(model_name)
         

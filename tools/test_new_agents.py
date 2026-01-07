@@ -65,7 +65,7 @@ async def main():
     # Initialize without DB to skip persistence
     # Testing gemini-1.5-flash in us-central1
     orchestrator = MultiAgentOrchestrator(
-        model_name="gemini-1.5-flash",
+        model_name="gemini-2.0-flash",
         db_client=None 
     )
     

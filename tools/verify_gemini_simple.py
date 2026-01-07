@@ -39,7 +39,7 @@ def transcribe_file(file_path):
 
         # 3. 發送 Prompt
         print("🤖 正在請求 Gemini 轉錄 (模型: gemini-1.5-flash)...")
-        model = genai.GenerativeModel("gemini-1.5-flash")
+        model = genai.GenerativeModel("gemini-2.0-flash")
         
         prompt = "請將這段音訊轉錄為繁體中文逐字稿。請直接輸出內容，不要加任何開場白。"
         

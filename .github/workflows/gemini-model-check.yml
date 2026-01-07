@@ -1,0 +1,70 @@
+name: Gemini Model Version Check
+
+on:
+  schedule:
+    # Run every Monday at 9:00 AM UTC
+    - cron: '0 9 * * 1'
+  workflow_dispatch:  # Allow manual trigger
+  pull_request:
+    paths:
+      - '**/*.py'
+      - '**/*.yaml'
+
+jobs:
+  check-models:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install google-generativeai
+
+      - name: Validate Gemini models
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          python tools/gemini_model_manager.py validate
+
+      - name: List available models
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          python tools/gemini_model_manager.py list-available
+
+      - name: Generate migration plan
+        if: failure()
+        run: |
+          python tools/gemini_model_manager.py migration-plan > migration-plan.json
+
+      - name: Upload migration plan
+        if: failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: migration-plan
+          path: migration-plan.json
+
+      - name: Create issue for deprecated models
+        if: failure() && github.event_name == 'schedule'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            const plan = JSON.parse(fs.readFileSync('migration-plan.json', 'utf8'));
+
+            if (plan.migrations && plan.migrations.length > 0) {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: '⚠️ Deprecated Gemini Models Detected',
+                body: `## Deprecated Gemini Models Found\n\nThe following models need to be updated:\n\n${plan.migrations.map(m => `- \`${m.file}:${m.line}\`: ${m.old_model} → ${m.new_model}`).join('\n')}\n\n### Action Required\n\nRun the following command to update:\n\`\`\`bash\npython tools/gemini_model_manager.py update\n\`\`\`\n\nOr review the migration plan manually: [Download artifact](${context.payload.repository.html_url}/actions/runs/${context.runId})`,
+                labels: ['tech-debt', 'dependencies', 'urgent']
+              });
+            }
