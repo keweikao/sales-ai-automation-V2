@@ -32,6 +32,7 @@ dashboard/
 ```
 
 ### 技術選擇
+
 - **Runtime**: Bun
 - **Monorepo**: Turborepo
 - **Framework**: React (或 Better-T Stack 預設)
@@ -323,6 +324,7 @@ bun run dev  # 啟動所有 apps
 ## 聯繫
 
 如有問題，請參考：
+
 - `docs/BETTER-T-STACK-INTEGRATION-PLAN.md` - 完整整合計劃
 - `api-gateway/main.py` - API 入口
 - `.claude/plans/streamed-churning-koala.md` - 開發計劃

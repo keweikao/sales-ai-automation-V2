@@ -5,11 +5,13 @@
 ## 專案狀態
 
 ### 已完成
+
 - **Phase 0**: P0 阻塞問題已修復
 - **Phase 1**: API Gateway + 前端基礎
 - **Phase 2**: Dashboard 開發完成
 
 ### 本階段目標
+
 完成 Module 04-07 的業務邏輯實作。
 
 ---
@@ -57,6 +59,7 @@ class WeeklyReportGenerator:
 ```
 
 **實作需求**：
+
 - 查詢指定週期內的對話 (`ConversationRepository.list_by_date_range`)
 - 聚合指標：總對話數、已分析數、平均 MEDDIC 分數
 - 按業務員分組統計
@@ -695,21 +698,25 @@ GET  /api/v1/customers/upsell-opportunities
 ## 驗收標準
 
 ### P4-1 Analytics
+
 - [ ] `WeeklyReportGenerator.generate()` 返回真實數據
 - [ ] `RepPerformanceAnalyzer.analyze()` 可計算業務員績效
 - [ ] 週報可透過 Slack 發送
 
 ### P4-2 Ops Automation
+
 - [ ] `HealthChecker.check_all()` 可檢查所有服務
 - [ ] `AutoRetryService` 可自動重試失敗任務
 - [ ] 錯誤通知實際發送到 Slack
 
 ### P4-3 Deal Onboarding
+
 - [ ] 可建立入職清單
 - [ ] 可追蹤清單進度
 - [ ] 可產生交接文件並通知 CS
 
 ### P4-4 Customer Success
+
 - [ ] 可計算客戶健康分數
 - [ ] 可預測續約可能性
 - [ ] 可偵測增購機會
