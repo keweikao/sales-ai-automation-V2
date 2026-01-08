@@ -14,7 +14,7 @@ const queryClient = new QueryClient({
   },
 });
 
-export const router = createRouter({
+const router = createRouter({
   routeTree,
   context: {
     queryClient,
@@ -22,6 +22,12 @@ export const router = createRouter({
   defaultPreload: 'intent',
   defaultPreloadStaleTime: 0,
 });
+
+declare module '@tanstack/react-router' {
+  interface Register {
+    router: typeof router;
+  }
+}
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
