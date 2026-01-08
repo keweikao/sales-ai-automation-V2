@@ -1,0 +1,47 @@
+name: Weekly Metrics Report
+
+on:
+  schedule:
+    # 每週一早上 9:00 台灣時間 (UTC+8) = 週日 01:00 UTC
+    - cron: '0 1 * * 1'
+  workflow_dispatch:  # 允許手動觸發
+
+jobs:
+  send-weekly-report:
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install google-cloud-firestore slack_sdk aiohttp
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Send Weekly Metrics Report
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          GOOGLE_CLOUD_PROJECT: sales-ai-automation-v2
+          TARGET_CHANNEL: ${{ vars.SLACK_REPORT_CHANNEL || 'C0A7C2HUXRR' }}
+        run: |
+          python tools/send_weekly_metrics_report.py
+
+      - name: Send Weekly Upload Report
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          GOOGLE_CLOUD_PROJECT: sales-ai-automation-v2
+          TARGET_CHANNEL: ${{ vars.SLACK_REPORT_CHANNEL || 'C0A7C2HUXRR' }}
+        run: |
+          python tools/test_weekly_upload_report.py "$TARGET_CHANNEL"
