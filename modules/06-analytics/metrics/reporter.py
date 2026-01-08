@@ -270,47 +270,38 @@ class MetricsReporter:
         """Format report as human-readable text."""
         lines = [
             "=" * 60,
-            "Sales AI Automation - 服務價值報告",
+            "Sales AI Automation - 運作報告",
             "=" * 60,
             f"報告期間: {report.period_start[:10]} ~ {report.period_end[:10]}",
             f"產生時間: {report.generated_at[:19]}",
             "",
-            "📊 處理量",
+            "🎯 本期成果",
             "-" * 40,
-            f"  總案件數:     {report.total_cases}",
-            f"  已完成:       {report.completed_cases}",
-            f"  失敗:         {report.failed_cases}",
-            f"  處理中:       {report.in_progress_cases}",
-            f"  成功率:       {report.success_rate_percent:.1f}%",
+            f"  轉錄語音時數:   {report.total_audio_minutes / 60:.1f} 小時 ({report.total_audio_minutes:.0f} 分鐘)",
+            f"  完成對話分析:   {report.completed_cases} 通",
+            f"  成功率:         {report.success_rate_percent:.1f}%",
             "",
             "⏱️ 處理效率",
             "-" * 40,
             f"  平均轉錄時間:   {report.avg_transcription_seconds:.1f} 秒",
             f"  平均分析時間:   {report.avg_analysis_seconds:.1f} 秒",
-            f"  平均總處理時間: {report.avg_total_processing_seconds:.1f} 秒",
+            f"  平均總處理時間: {report.avg_total_processing_seconds:.1f} 秒 ({report.avg_total_processing_seconds/60:.1f} 分鐘)",
             "",
             "🎵 音檔統計",
             "-" * 40,
             f"  總音檔長度:   {report.total_audio_minutes:.1f} 分鐘",
             f"  平均音檔長度: {report.avg_audio_minutes:.1f} 分鐘",
             "",
-            "👁️ 使用情況",
+            "👁️ 摘要使用情況",
             "-" * 40,
             f"  摘要總瀏覽次數: {report.total_summary_views}",
             f"  有被瀏覽的案件: {report.cases_with_views}",
             f"  瀏覽率:         {report.view_rate_percent:.1f}%",
             "",
-            "💡 節省時間估算",
+            "💰 成本",
             "-" * 40,
-            f"  基準假設: 人工分析每通電話 {report.manual_minutes_per_case:.0f} 分鐘",
-            f"  AI 處理 + 主管審閱: {report.avg_total_processing_seconds/60 + report.ai_review_minutes_per_case:.1f} 分鐘/通",
-            f"  估計節省時間: {report.estimated_time_saved_hours:.1f} 小時",
-            f"  相當於 FTE:   {report.estimated_fte_equivalent:.2f} 人",
-            "",
-            "💰 成本估算",
-            "-" * 40,
-            f"  總成本:     ${report.estimated_cost_usd:.2f} USD",
-            f"  每通成本:   ${report.cost_per_case_usd:.4f} USD",
+            f"  本期總成本:   ${report.estimated_cost_usd:.2f} USD",
+            f"  每通成本:     ${report.cost_per_case_usd:.4f} USD",
             "",
         ]
 
@@ -333,40 +324,33 @@ class MetricsReporter:
 
     def format_report_markdown(self, report: PeriodReport) -> str:
         """Format report as Markdown for easy sharing."""
-        return f"""# Sales AI Automation 服務價值報告
+        return f"""# Sales AI Automation 運作報告
 
 **報告期間**: {report.period_start[:10]} ~ {report.period_end[:10]}
 **產生時間**: {report.generated_at[:19]}
 
 ---
 
-## 📊 本期關鍵數字
+## 🎯 本期成果
 
 | 指標 | 數值 |
 |-----|------|
-| 處理通話數 | **{report.completed_cases}** |
+| 轉錄語音時數 | **{report.total_audio_minutes / 60:.1f} 小時** |
+| 完成對話分析 | **{report.completed_cases} 通** |
 | 成功率 | **{report.success_rate_percent:.1f}%** |
 | 平均處理時間 | **{report.avg_total_processing_seconds:.0f} 秒** |
-| 節省時間 | **{report.estimated_time_saved_hours:.0f} 小時** |
 
 ---
 
-## 💡 價值說明
+## 💡 這代表什麼？
 
-**Before (人工分析)**:
-- 每通電話需要 {report.manual_minutes_per_case:.0f} 分鐘（聽錄音 + 筆記 + 回饋）
-- {report.completed_cases} 通 × {report.manual_minutes_per_case:.0f} 分鐘 = {report.completed_cases * report.manual_minutes_per_case / 60:.0f} 小時
-
-**After (AI 自動化)**:
-- AI 處理: {report.avg_total_processing_seconds:.0f} 秒
-- 主管審閱: {report.ai_review_minutes_per_case:.0f} 分鐘
-- {report.completed_cases} 通 × {(report.avg_total_processing_seconds/60 + report.ai_review_minutes_per_case):.1f} 分鐘 = {report.completed_cases * (report.avg_total_processing_seconds/60 + report.ai_review_minutes_per_case) / 60:.0f} 小時
-
-**節省時間**: {report.estimated_time_saved_hours:.0f} 小時 ≈ **{report.estimated_fte_equivalent:.1f} FTE**
+- 本期共轉錄 **{report.total_audio_minutes:.0f} 分鐘** 的銷售對話
+- 每通對話都經過 AI 分析，產出教練建議和客戶摘要
+- 平均每通電話從上傳到分析完成僅需 **{report.avg_total_processing_seconds/60:.1f} 分鐘**
 
 ---
 
-## 💰 成本效益
+## 💰 成本
 
 | 項目 | 金額 |
 |-----|------|
