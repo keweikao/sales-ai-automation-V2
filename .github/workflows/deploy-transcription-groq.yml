@@ -1,13 +1,14 @@
 name: Deploy Transcription Service (Groq Whisper)
 
 on:
-  workflow_dispatch:  # 手動觸發
+  workflow_dispatch:  # Manual trigger
   push:
     branches:
       - main
     paths:
-      - 'src/transcription/**'
-      - 'cloudbuild.transcription-groq.yaml'
+      - 'infrastructure/services/transcription/**'
+      - 'infrastructure/cloudbuild/transcription.yaml'
+      - 'infrastructure/docker/Dockerfile.transcription'
       - '.github/workflows/deploy-transcription-groq.yml'
 
 env:
@@ -39,11 +40,11 @@ jobs:
 
     - name: Prepare for Deployment
       run: |
-        echo "📦 Preparing Groq Whisper deployment..."
-        echo "   • Project: ${{ env.PROJECT_ID }}"
-        echo "   • Region: ${{ env.REGION }}"
-        echo "   • Service: ${{ env.SERVICE_NAME }}"
-        echo "   • Engine: groq_whisper"
+        echo "Preparing Groq Whisper deployment..."
+        echo "   Project: ${{ env.PROJECT_ID }}"
+        echo "   Region: ${{ env.REGION }}"
+        echo "   Service: ${{ env.SERVICE_NAME }}"
+        echo "   Engine: groq_whisper"
         echo ""
         echo "Note: GROQ_API_KEY must exist in Secret Manager"
         echo "      with proper Service Account permissions."
@@ -53,7 +54,7 @@ jobs:
       run: |
         echo "Starting Cloud Build for Groq Whisper transcription service..."
         gcloud builds submit \
-          --config=cloudbuild.transcription-groq.yaml \
+          --config=infrastructure/cloudbuild/transcription.yaml \
           --project=${{ env.PROJECT_ID }}
 
     - name: Verify Deployment
@@ -65,43 +66,16 @@ jobs:
           --format="value(status.url)"
 
         echo ""
-        echo "✓ Deployment successful!"
-        echo ""
-        echo "Service URL:"
-        gcloud run services describe ${{ env.SERVICE_NAME }} \
-          --region=${{ env.REGION }} \
-          --project=${{ env.PROJECT_ID }} \
-          --format="value(status.url)"
-
-        echo ""
-        echo "Environment Variables:"
-        gcloud run services describe ${{ env.SERVICE_NAME }} \
-          --region=${{ env.REGION }} \
-          --project=${{ env.PROJECT_ID }} \
-          --format="yaml(spec.template.spec.containers[0].env)" \
-          | grep -A1 "TRANSCRIPTION_ENGINE"
+        echo "Deployment successful!"
 
     - name: Deployment Summary
       run: |
-        echo "═══════════════════════════════════════════════════════════"
-        echo "  Groq Whisper Transcription Service Deployed Successfully"
-        echo "═══════════════════════════════════════════════════════════"
+        echo "=========================================="
+        echo "  Groq Whisper Transcription Deployed"
+        echo "=========================================="
         echo ""
         echo "Configuration:"
-        echo "  • Engine: groq_whisper"
-        echo "  • Model: whisper-large-v3-turbo"
-        echo "  • Speed: 228x realtime"
-        echo "  • Memory: 2Gi"
-        echo "  • Concurrency: 5"
+        echo "  Engine: groq_whisper"
+        echo "  Model: whisper-large-v3-turbo"
+        echo "  Speed: 228x realtime"
         echo ""
-        echo "Expected Performance:"
-        echo "  • 37.5 min audio → ~10 seconds processing"
-        echo "  • Accuracy: 95%+ (Traditional Chinese)"
-        echo "  • Cost: ~$7.50/month (300 files)"
-        echo ""
-        echo "Next Steps:"
-        echo "  1. Test with a sample audio file"
-        echo "  2. Monitor Groq API usage at https://console.groq.com/usage"
-        echo "  3. Check Cloud Run logs for any issues"
-        echo ""
-        echo "═══════════════════════════════════════════════════════════"
