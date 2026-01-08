@@ -2,7 +2,7 @@
 
 ## 核心理念：從分析到學習的閉環
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                        LEARNING AGENT SYSTEM                            │
 ├─────────────────────────────────────────────────────────────────────────┤
@@ -22,7 +22,9 @@
 ## Layer 1: Outcome Tracking (結果追蹤層)
 
 ### 問題
+
 目前系統只記錄「分析結果」，不追蹤「真實結果」：
+
 - Agent 預測 MEDDIC 分數 85 分，但案子最後成交了嗎？
 - Coach 建議「現在 close」，業務有執行嗎？結果如何？
 
@@ -60,6 +62,7 @@ class DealOutcome(BaseModel):
 ```
 
 ### 資料來源
+
 1. **Salesforce Sync** - 定期同步 Opportunity 狀態
 2. **Slack Interactions** - 追蹤業務對建議的回應
 3. **Summary Edits** - 業務修改摘要 = 隱性回饋
@@ -70,7 +73,7 @@ class DealOutcome(BaseModel):
 
 ### 三種記憶類型
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────┐
 │                      AGENT MEMORY SYSTEM                        │
 ├─────────────────────────────────────────────────────────────────┤
@@ -172,25 +175,25 @@ that align with proven success patterns.
 
 ### 三種回饋類型
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────┐
 │                      FEEDBACK TAXONOMY                          │
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                 │
 │  1. EXPLICIT FEEDBACK (顯性回饋)                                │
-│     ├── 👍/👎 對 Coach 建議的反應                               │
-│     ├── 業務編輯/修正摘要內容                                   │
-│     └── Manager 對分析的評分                                    │
+│     - 對 Coach 建議的反應 (接受/拒絕)                           │
+│     - 業務編輯/修正摘要內容                                     │
+│     - Manager 對分析的評分                                      │
 │                                                                 │
 │  2. IMPLICIT FEEDBACK (隱性回饋)                                │
-│     ├── 建議被執行 → 正向訊號                                   │
-│     ├── 建議被忽略 → 負向訊號                                   │
-│     └── 回覆速度/頻率 → 緊急程度                                │
+│     - 建議被執行 = 正向訊號                                     │
+│     - 建議被忽略 = 負向訊號                                     │
+│     - 回覆速度/頻率 = 緊急程度                                  │
 │                                                                 │
 │  3. OUTCOME FEEDBACK (結果回饋)                                 │
-│     ├── Deal Closed Won → 驗證分析正確                         │
-│     ├── Deal Closed Lost → 分析哪裡出錯？                       │
-│     └── 預測 vs 實際的差異 → 校正模型                           │
+│     - Deal Closed Won = 驗證分析正確                            │
+│     - Deal Closed Lost = 分析哪裡出錯？                         │
+│     - 預測 vs 實際的差異 = 校正模型                             │
 │                                                                 │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -219,7 +222,6 @@ class FeedbackCollector:
             original_content=original,
             corrected_content=edited,
             correction_categories=classify_corrections(diff),
-            # 例如: ["tone_too_formal", "missing_next_steps", "wrong_customer_name"]
             editor_id=editor,
             timestamp=datetime.utcnow()
         )
@@ -332,34 +334,34 @@ class AgentEvaluator:
 
 ### 學習策略
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────┐
 │                    ADAPTIVE LEARNING STRATEGIES                 │
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                 │
 │  Strategy 1: PROMPT EVOLUTION (提示詞進化)                      │
-│  ─────────────────────────────────────────────────────────────  │
-│  • A/B 測試不同 prompt 版本                                     │
-│  • 基於回饋自動調整 prompt                                      │
-│  • 保留表現最佳的版本                                           │
+│  -----------------------------------------------------------   │
+│  - A/B 測試不同 prompt 版本                                     │
+│  - 基於回饋自動調整 prompt                                      │
+│  - 保留表現最佳的版本                                           │
 │                                                                 │
 │  Strategy 2: FEW-SHOT LEARNING (少樣本學習)                     │
-│  ─────────────────────────────────────────────────────────────  │
-│  • 動態選擇最相關的成功案例作為 examples                        │
-│  • 根據案例類型調整 example 選擇策略                            │
-│  • 持續更新 example pool                                        │
+│  -----------------------------------------------------------   │
+│  - 動態選擇最相關的成功案例作為 examples                        │
+│  - 根據案例類型調整 example 選擇策略                            │
+│  - 持續更新 example pool                                        │
 │                                                                 │
 │  Strategy 3: PERSONALIZATION (個人化)                           │
-│  ─────────────────────────────────────────────────────────────  │
-│  • 學習每位業務的風格偏好                                       │
-│  • 根據業務經驗調整建議深度                                     │
-│  • 追蹤個人成功模式                                             │
+│  -----------------------------------------------------------   │
+│  - 學習每位業務的風格偏好                                       │
+│  - 根據業務經驗調整建議深度                                     │
+│  - 追蹤個人成功模式                                             │
 │                                                                 │
 │  Strategy 4: STRATEGY POOL (策略池)                             │
-│  ─────────────────────────────────────────────────────────────  │
-│  • 維護一個經過驗證的銷售策略庫                                 │
-│  • 根據情境匹配最佳策略                                         │
-│  • 淘汰無效策略，發掘新策略                                     │
+│  -----------------------------------------------------------   │
+│  - 維護一個經過驗證的銷售策略庫                                 │
+│  - 根據情境匹配最佳策略                                         │
+│  - 淘汰無效策略，發掘新策略                                     │
 │                                                                 │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -507,16 +509,16 @@ class AdaptiveCoachAgent(CoachAgent):
 
 ### 完整的學習循環
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                     SELF-IMPROVEMENT PIPELINE                           │
 ├─────────────────────────────────────────────────────────────────────────┤
 │                                                                         │
 │   ┌─────────┐     ┌─────────┐     ┌─────────┐     ┌─────────┐         │
-│   │ COLLECT │ ──▶ │ ANALYZE │ ──▶ │  LEARN  │ ──▶ │  APPLY  │         │
+│   │ COLLECT │ --> │ ANALYZE │ --> │  LEARN  │ --> │  APPLY  │         │
 │   └─────────┘     └─────────┘     └─────────┘     └─────────┘         │
 │        │               │               │               │               │
-│        ▼               ▼               ▼               ▼               │
+│        v               v               v               v               │
 │   ┌─────────┐     ┌─────────┐     ┌─────────┐     ┌─────────┐         │
 │   │Outcomes │     │Patterns │     │Insights │     │Updates  │         │
 │   │Feedback │     │Anomalies│     │New Rules│     │Prompts  │         │
@@ -601,7 +603,7 @@ class SelfImprovementPipeline:
         for pattern in rejection_patterns:
             learnings.append(Learning(
                 type="suggestion_rejection",
-                insight=f"'{pattern.suggestion_type}' suggestions often rejected: {pattern.common_reason}",
+                insight=f"'{pattern.suggestion_type}' often rejected: {pattern.common_reason}",
                 action=f"Revise prompt to address: {pattern.common_reason}",
                 confidence=pattern.confidence
             ))
@@ -656,37 +658,33 @@ class SelfImprovementPipeline:
 
 ## 實作路線圖
 
-### Phase 1: Foundation (2-3 週)
-```
-□ 建立 Outcome Tracking Schema
-□ 實作 Salesforce Outcome Sync
-□ 建立 Feedback Collection System
-□ 設置 BigQuery 資料倉儲
-```
+### Phase 1: Foundation
 
-### Phase 2: Memory (2-3 週)
-```
-□ 整合 Vector Database (Pinecone/Weaviate)
-□ 實作 Case Memory Service
-□ 建立 Example Pool 管理
-□ 實作相似案例檢索
-```
+- 建立 Outcome Tracking Schema
+- 實作 Salesforce Outcome Sync
+- 建立 Feedback Collection System
+- 設置 BigQuery 資料倉儲
 
-### Phase 3: Evaluation (1-2 週)
-```
-□ 定義 Agent Performance Metrics
-□ 實作 Weekly Evaluation Job
-□ 建立 Dashboard 視覺化
-□ 設置 Alert 機制
-```
+### Phase 2: Memory
 
-### Phase 4: Adaptation (2-3 週)
-```
-□ 實作 Prompt A/B Testing
-□ 建立 Personalization Layer
-□ 實作 Strategy Pool
-□ 整合 Self-Improvement Pipeline
-```
+- 整合 Vector Database (Pinecone/Weaviate)
+- 實作 Case Memory Service
+- 建立 Example Pool 管理
+- 實作相似案例檢索
+
+### Phase 3: Evaluation
+
+- 定義 Agent Performance Metrics
+- 實作 Weekly Evaluation Job
+- 建立 Dashboard 視覺化
+- 設置 Alert 機制
+
+### Phase 4: Adaptation
+
+- 實作 Prompt A/B Testing
+- 建立 Personalization Layer
+- 實作 Strategy Pool
+- 整合 Self-Improvement Pipeline
 
 ---
 
