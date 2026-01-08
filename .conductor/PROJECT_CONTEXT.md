@@ -28,8 +28,15 @@
 
 ## 多 Agent 架構
 
-| Agent | 檔案 | Prompt | 說明 |
-|-------|------|--------|------|
+| Agent | 角色 | Prompt 檔案 |
+|-------|------|-------------|
+| Agent 1 | Context Analyzer (會議背景分析師) | `meddic/agents/prompts/agent1-context.md` |
+| Agent 2 | Buyer Analyzer (客戶洞察分析師) | `meddic/agents/prompts/agent2-buyer.md` |
+| Agent 3 | Seller Coach (業務教練) | `meddic/agents/prompts/agent3-seller.md` |
+| Agent 4 | Summary Generator (跟進摘要專家) | `meddic/agents/prompts/agent4-summary.md` |
+| Agent 6 | CRM Extractor (Salesforce 欄位擷取) | `meddic/agents/prompts/agent6-crm-extractor.md` |
+
+> Agent 位於 `modules/03-sales-conversation/` 目錄下
 
 ## 執行流程 (orchestrator.py)
 
