@@ -28,6 +28,10 @@ jobs:
       id-token: 'write'
       issues: 'read'
       pull-requests: 'read'
+    env:
+      GEMINI_API_KEY: '${{ secrets.GEMINI_API_KEY }}'
+      GOOGLE_GENAI_USE_VERTEXAI: '${{ vars.GOOGLE_GENAI_USE_VERTEXAI }}'
+      GOOGLE_GENAI_USE_GCA: '${{ vars.GOOGLE_GENAI_USE_GCA }}'
     steps:
       - name: 'Get repository labels'
         id: 'get_labels'
