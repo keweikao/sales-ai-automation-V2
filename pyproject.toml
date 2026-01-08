@@ -28,5 +28,13 @@ pythonpath = [
     "src",
     "analysis-service",
     "analysis-service/tests",
+    "api-gateway",
+    "infrastructure",
+]
+testpaths = ["tests"]
+markers = [
+    "p0: P0 priority tests (must pass)",
+    "p1: P1 priority tests (important but not blocking)",
+    "integration: Integration tests with real services",
 ]
 

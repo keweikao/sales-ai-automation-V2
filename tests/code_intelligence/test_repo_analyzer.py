@@ -58,22 +58,22 @@ class TestSalesAIRepoAnalyzer:
     
     def test_get_file_tree_subdirectory(self, analyzer):
         """測試獲取子目錄的檔案樹"""
-        result = analyzer.get_file_tree(subdirectory="src")
-        
+        result = analyzer.get_file_tree(subdirectory="modules")
+
         assert result["status"] == "success"
         assert "tree" in result
-    
+
     def test_extract_symbols(self, analyzer):
         """測試提取符號"""
-        # 提取特定檔案的符號
+        # 提取特定檔案的符號 (使用現有檔案)
         symbols = analyzer.extract_symbols(
-            file_path="src/transcription/main.py"
+            file_path="modules/03-sales-conversation/transcript_analyzer/orchestrator.py"
         )
-        
+
         assert isinstance(symbols, list)
         # 應該至少有一些函數或類別
         assert len(symbols) > 0
-        
+
         # 檢查符號結構
         if symbols:
             symbol = symbols[0]

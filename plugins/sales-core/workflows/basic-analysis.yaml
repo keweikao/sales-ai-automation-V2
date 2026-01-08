@@ -1,0 +1,81 @@
+# Basic Sales Conversation Analysis Workflow
+#
+# A minimal workflow that extracts key information from a sales conversation.
+# Use this as a starting point or for simple analysis needs.
+
+metadata:
+  id: sales-core.basic-analysis
+  name: Basic Sales Analysis
+  version: "1.0.0"
+  description: Extract essential information from a sales conversation
+  tags:
+    - sales
+    - basic
+    - fast
+
+triggers:
+  - type: manual
+    config: {}
+  - type: event
+    config:
+      event_type: transcript.ready
+
+phases:
+  - id: extraction
+    name: Information Extraction
+    description: Extract key information from the conversation
+    execution_mode: sequential
+    steps:
+      - id: context
+        name: Context Extraction
+        skill_id: meddic.context-analysis
+        inputs:
+          - source: trigger
+            key: transcript_segments
+            target: transcript_segments
+        outputs:
+          - key: context_insights
+            type: object
+        retry:
+          max_attempts: 2
+          delay_seconds: 1.0
+
+  - id: output
+    name: Output Generation
+    description: Generate summary and CRM fields
+    execution_mode: parallel
+    depends_on:
+      - extraction
+    steps:
+      - id: summary
+        name: Summary Generation
+        skill_id: meddic.summary-generation
+        inputs:
+          - source: trigger
+            key: transcript_segments
+            target: transcript_segments
+          - source: state
+            key: context_insights
+            target: context_insights
+        outputs:
+          - key: summary
+            type: object
+
+      - id: crm
+        name: CRM Extraction
+        skill_id: meddic.crm-extraction
+        inputs:
+          - source: trigger
+            key: transcript_segments
+            target: transcript_segments
+          - source: state
+            key: context_insights
+            target: context_insights
+        outputs:
+          - key: crm_fields
+            type: object
+
+timeout_seconds: 120
+
+initial_state:
+  language: zh-TW

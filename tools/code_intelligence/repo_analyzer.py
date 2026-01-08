@@ -140,15 +140,24 @@ class SalesAIRepoAnalyzer:
     def get_file_tree(self, subdirectory: Optional[str] = None) -> Dict:
         """
         獲取檔案樹結構
-        
+
         Args:
             subdirectory: 可選的子目錄
-            
+
         Returns:
             檔案樹結構
         """
         try:
-            tree = self.repo.get_file_tree(subdirectory=subdirectory)
+            # kit-ai API 返回字典列表，每個字典有 path 屬性
+            tree = self.repo.get_file_tree()
+            if subdirectory:
+                # 過濾只保留指定子目錄的內容
+                filtered_tree = [
+                    item for item in tree
+                    if item.get("path", "").startswith(subdirectory + "/")
+                    or item.get("path", "") == subdirectory
+                ]
+                tree = filtered_tree
             return {
                 "status": "success",
                 "tree": tree

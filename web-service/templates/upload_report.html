@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>音檔上傳週報</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}" />
+  <style>
+    .report-header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 2rem;
+      border-radius: 12px;
+      margin-bottom: 2rem;
+    }
+    .report-header h1 {
+      margin: 0 0 0.5rem 0;
+      font-size: 1.75rem;
+    }
+    .report-header .meta {
+      opacity: 0.9;
+      font-size: 0.9rem;
+    }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+    .stat-card {
+      background: white;
+      border-radius: 8px;
+      padding: 1.5rem;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      text-align: center;
+    }
+    .stat-card .number {
+      font-size: 2.5rem;
+      font-weight: bold;
+      color: #667eea;
+    }
+    .stat-card .label {
+      color: #666;
+      font-size: 0.9rem;
+    }
+    .rep-section {
+      background: white;
+      border-radius: 8px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .rep-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 1rem;
+      margin-bottom: 1rem;
+    }
+    .rep-header h3 {
+      margin: 0;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .rep-stats {
+      display: flex;
+      gap: 1rem;
+      font-size: 0.9rem;
+      color: #666;
+    }
+    .rep-stats span {
+      background: #f5f5f5;
+      padding: 0.25rem 0.75rem;
+      border-radius: 4px;
+    }
+    .customer-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .customer-table th,
+    .customer-table td {
+      padding: 0.75rem;
+      text-align: left;
+      border-bottom: 1px solid #eee;
+    }
+    .customer-table th {
+      background: #f9f9f9;
+      font-weight: 600;
+      font-size: 0.85rem;
+      color: #666;
+    }
+    .customer-table tr:hover {
+      background: #fafafa;
+    }
+    .customer-id {
+      font-family: monospace;
+      background: #f0f0f0;
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.85rem;
+    }
+    .badge {
+      display: inline-block;
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    .badge-gold { background: #ffd700; color: #333; }
+    .badge-silver { background: #c0c0c0; color: #333; }
+    .badge-bronze { background: #cd7f32; color: white; }
+    .download-section {
+      text-align: center;
+      padding: 2rem;
+    }
+    .btn-download {
+      display: inline-block;
+      background: #667eea;
+      color: white;
+      padding: 0.75rem 1.5rem;
+      border-radius: 6px;
+      text-decoration: none;
+      font-weight: 500;
+    }
+    .btn-download:hover {
+      background: #5a6fd6;
+    }
+    .search-box {
+      margin-bottom: 1rem;
+    }
+    .search-box input {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 1rem;
+    }
+    .footer {
+      text-align: center;
+      padding: 2rem;
+      color: #888;
+      font-size: 0.85rem;
+    }
+    /* Focus Customers Styles */
+    .focus-section {
+      background: white;
+      border-radius: 8px;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .focus-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      border-bottom: 2px solid #667eea;
+      padding-bottom: 1rem;
+    }
+    .focus-header h2 {
+      margin: 0;
+      color: #333;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .view-toggle {
+      display: flex;
+      gap: 0.5rem;
+    }
+    .view-toggle button {
+      padding: 0.5rem 1rem;
+      border: 1px solid #667eea;
+      background: white;
+      color: #667eea;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.9rem;
+    }
+    .view-toggle button.active {
+      background: #667eea;
+      color: white;
+    }
+    .filter-controls {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .filter-controls select {
+      padding: 0.5rem;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+    .focus-card {
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+      overflow: hidden;
+    }
+    .focus-card.hidden {
+      display: none;
+    }
+    .focus-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem;
+      background: #f9f9f9;
+      border-bottom: 1px solid #e0e0e0;
+    }
+    .focus-card-header .rank {
+      font-size: 1.5rem;
+      font-weight: bold;
+      color: #667eea;
+      width: 40px;
+    }
+    .focus-card-header .customer-info {
+      flex: 1;
+    }
+    .focus-card-header .customer-info h3 {
+      margin: 0 0 0.25rem 0;
+      color: #333;
+    }
+    .focus-card-header .customer-meta {
+      display: flex;
+      gap: 1rem;
+      font-size: 0.85rem;
+      color: #666;
+    }
+    .focus-card-header .rep-badge {
+      background: #e3e9ff;
+      color: #667eea;
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      font-weight: 500;
+    }
+    .score-badge {
+      font-size: 1.5rem;
+      font-weight: bold;
+      padding: 0.5rem 1rem;
+      border-radius: 8px;
+    }
+    .score-high { background: #d4edda; color: #155724; }
+    .score-medium { background: #fff3cd; color: #856404; }
+    .score-low { background: #f8d7da; color: #721c24; }
+    .focus-card-body {
+      padding: 1rem;
+    }
+    .summary-text {
+      background: #f5f7ff;
+      padding: 1rem;
+      border-radius: 6px;
+      margin-bottom: 1rem;
+      border-left: 4px solid #667eea;
+    }
+    .indicators {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+    }
+    .indicator {
+      padding: 0.25rem 0.75rem;
+      border-radius: 4px;
+      font-size: 0.85rem;
+    }
+    .urgency-high, .urgency-高 { background: #f8d7da; color: #721c24; }
+    .urgency-medium, .urgency-中 { background: #fff3cd; color: #856404; }
+    .urgency-low, .urgency-低 { background: #d4edda; color: #155724; }
+    .decision-confirmed { background: #d4edda; color: #155724; }
+    .decision-unconfirmed { background: #fff3cd; color: #856404; }
+    .manager-questions, .next-steps, .risk-alerts {
+      margin-top: 1rem;
+    }
+    .manager-questions h4, .next-steps h4, .risk-alerts h4 {
+      margin: 0 0 0.5rem 0;
+      color: #333;
+      font-size: 0.95rem;
+    }
+    .question-item {
+      background: #fff8e1;
+      padding: 0.75rem;
+      border-radius: 6px;
+      margin-bottom: 0.5rem;
+    }
+    .question-item .question {
+      margin: 0 0 0.25rem 0;
+      font-weight: 500;
+      color: #333;
+    }
+    .question-item .context {
+      margin: 0;
+      font-size: 0.85rem;
+      color: #666;
+    }
+    .next-steps ul, .risk-alerts ul {
+      margin: 0;
+      padding-left: 1.5rem;
+    }
+    .next-steps li { color: #333; margin-bottom: 0.25rem; }
+    .risk-alerts ul { padding-left: 0; list-style: none; }
+    .risk-alerts li {
+      background: #fff5f5;
+      padding: 0.5rem 0.75rem;
+      border-radius: 4px;
+      margin-bottom: 0.25rem;
+      border-left: 3px solid #dc3545;
+      color: #721c24;
+    }
+    .by-rep-view { display: none; }
+    .by-rep-group {
+      margin-bottom: 1.5rem;
+    }
+    .by-rep-group h3 {
+      color: #667eea;
+      border-bottom: 2px solid #667eea;
+      padding-bottom: 0.5rem;
+      margin-bottom: 1rem;
+    }
+    .no-focus-customers {
+      text-align: center;
+      padding: 2rem;
+      color: #888;
+    }
+  </style>
+</head>
+
+<body>
+  <main class="content" style="max-width: 1000px; margin: 0 auto; padding: 2rem;">
+    <!-- Header -->
+    <div class="report-header">
+      <h1>音檔上傳週報</h1>
+      <p class="meta">
+        報表期間：{{ report.mtd_start[:10] }} ~ {{ report.mtd_end[:10] }}
+        | 產生時間：{{ report.generated_at[:19].replace('T', ' ') }}
+      </p>
+    </div>
+
+    <!-- Stats Grid -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="number">{{ report.mtd_total_uploads }}</div>
+        <div class="label">MTD 上傳總數</div>
+      </div>
+      <div class="stat-card">
+        <div class="number">{{ report.weekly_total_uploads }}</div>
+        <div class="label">本週上傳</div>
+      </div>
+      <div class="stat-card">
+        <div class="number">{{ report.by_rep | length }}</div>
+        <div class="label">業務人數</div>
+      </div>
+    </div>
+
+    <!-- Focus Customers Section -->
+    {% if report.focus_customers %}
+    <div class="focus-section" id="focus">
+      <div class="focus-header">
+        <h2>🎯 關注客戶</h2>
+        <div class="view-toggle">
+          <button onclick="toggleFocusView('unified')" class="active" id="btn-unified">統一排名</button>
+          <button onclick="toggleFocusView('by-rep')" id="btn-by-rep">按業務分組</button>
+        </div>
+        <div class="filter-controls">
+          <label>最低分數：</label>
+          <select id="minScoreFilter" onchange="filterFocusCustomers()">
+            <option value="0">全部</option>
+            <option value="50">≥ 50</option>
+            <option value="70">≥ 70</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Unified View -->
+      <div id="unified-view" class="unified-view">
+        {% for customer in report.focus_customers %}
+        <div class="focus-card" data-rep="{{ customer.rep_name }}" data-score="{{ customer.meddic_score }}">
+          <div class="focus-card-header">
+            <span class="rank">{{ loop.index }}</span>
+            <div class="customer-info">
+              <h3>{{ customer.customer_name }}</h3>
+              <div class="customer-meta">
+                <span class="customer-id">{{ customer.customer_id }}</span>
+                <span class="rep-badge">{{ customer.rep_name }}</span>
+              </div>
+            </div>
+            <div class="score-badge {% if customer.meddic_score >= 70 %}score-high{% elif customer.meddic_score >= 50 %}score-medium{% else %}score-low{% endif %}">
+              {{ customer.meddic_score }}
+            </div>
+          </div>
+          <div class="focus-card-body">
+            {% if customer.executive_summary %}
+            <div class="summary-text">
+              {{ customer.executive_summary }}
+            </div>
+            {% endif %}
+
+            <div class="indicators">
+              <span class="indicator urgency-{{ customer.urgency_level }}">急迫性: {{ customer.urgency_level }}</span>
+              <span class="indicator {% if customer.decision_maker_confirmed %}decision-confirmed{% else %}decision-unconfirmed{% endif %}">
+                決策者: {% if customer.decision_maker_confirmed %}✓ 已確認{% else %}⚠ 未確認{% endif %}
+              </span>
+            </div>
+
+            {% if customer.manager_questions %}
+            <div class="manager-questions">
+              <h4>💬 建議詢問問題</h4>
+              {% for q in customer.manager_questions %}
+              <div class="question-item">
+                <p class="question">{{ q.question }}</p>
+                <p class="context">{{ q.context }}</p>
+              </div>
+              {% endfor %}
+            </div>
+            {% endif %}
+
+            {% if customer.next_steps %}
+            <div class="next-steps">
+              <h4>📋 後續跟進建議</h4>
+              <ul>
+                {% for step in customer.next_steps %}
+                <li>{{ step }}</li>
+                {% endfor %}
+              </ul>
+            </div>
+            {% endif %}
+
+            {% if customer.risk_alerts %}
+            <div class="risk-alerts">
+              <h4>⚠️ 風險提醒</h4>
+              <ul>
+                {% for risk in customer.risk_alerts %}
+                <li>{{ risk }}</li>
+                {% endfor %}
+              </ul>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+
+      <!-- By Rep View -->
+      <div id="by-rep-view" class="by-rep-view"></div>
+    </div>
+    {% endif %}
+
+    <!-- Search -->
+    <div class="search-box">
+      <input type="text" id="searchInput" placeholder="搜尋客戶編號或名稱..." onkeyup="filterTable()">
+    </div>
+
+    <!-- Rep Sections -->
+    {% for rep in report.by_rep %}
+    <div class="rep-section" data-rep="{{ rep.rep_name }}">
+      <div class="rep-header">
+        <h3>
+          {% if loop.index == 1 %}
+          <span class="badge badge-gold">1</span>
+          {% elif loop.index == 2 %}
+          <span class="badge badge-silver">2</span>
+          {% elif loop.index == 3 %}
+          <span class="badge badge-bronze">3</span>
+          {% else %}
+          <span class="badge">{{ loop.index }}</span>
+          {% endif %}
+          {{ rep.rep_name }}
+        </h3>
+        <div class="rep-stats">
+          <span>MTD: {{ rep.mtd_upload_count }} 筆</span>
+          <span>本週: {{ rep.weekly_upload_count }} 筆</span>
+        </div>
+      </div>
+
+      {% if rep.customer_details %}
+      <table class="customer-table">
+        <thead>
+          <tr>
+            <th>客戶編號</th>
+            <th>客戶名稱</th>
+            <th>案件 ID</th>
+            <th>上傳日期</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for detail in rep.customer_details %}
+          <tr class="customer-row">
+            <td><span class="customer-id">{{ detail.customer_id }}</span></td>
+            <td>{{ detail.customer_name }}</td>
+            <td>{{ detail.case_id }}</td>
+            <td>{{ detail.created_at[:10] if detail.created_at is string else detail.created_at.strftime('%Y-%m-%d') }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p style="color: #888; text-align: center;">暫無客戶上傳記錄</p>
+      {% endif %}
+    </div>
+    {% endfor %}
+
+    <!-- Download Section -->
+    <div class="download-section">
+      <a href="#" class="btn-download" onclick="downloadCSV()">下載 CSV</a>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+      Sales AI Automation | 自動產生報表
+    </div>
+  </main>
+
+  <script>
+    function filterTable() {
+      const input = document.getElementById('searchInput');
+      const filter = input.value.toLowerCase();
+      const rows = document.querySelectorAll('.customer-row');
+
+      rows.forEach(row => {
+        const text = row.textContent.toLowerCase();
+        row.style.display = text.includes(filter) ? '' : 'none';
+      });
+    }
+
+    function downloadCSV() {
+      const report = {{ report | tojson | safe }};
+      let csv = '業務,客戶編號,客戶名稱,案件ID,上傳日期\n';
+
+      report.by_rep.forEach(rep => {
+        (rep.customer_details || []).forEach(detail => {
+          const date = typeof detail.created_at === 'string'
+            ? detail.created_at.substring(0, 10)
+            : new Date(detail.created_at).toISOString().substring(0, 10);
+          csv += `"${rep.rep_name}","${detail.customer_id}","${detail.customer_name}","${detail.case_id}","${date}"\n`;
+        });
+      });
+
+      const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `upload_report_${report.mtd_start.substring(0, 7)}.csv`;
+      link.click();
+    }
+
+    // Focus Customers Functions
+    function toggleFocusView(view) {
+      const unifiedView = document.getElementById('unified-view');
+      const byRepView = document.getElementById('by-rep-view');
+      const btnUnified = document.getElementById('btn-unified');
+      const btnByRep = document.getElementById('btn-by-rep');
+
+      if (view === 'unified') {
+        unifiedView.style.display = 'block';
+        byRepView.style.display = 'none';
+        btnUnified.classList.add('active');
+        btnByRep.classList.remove('active');
+      } else {
+        unifiedView.style.display = 'none';
+        byRepView.style.display = 'block';
+        btnUnified.classList.remove('active');
+        btnByRep.classList.add('active');
+        buildByRepView();
+      }
+      filterFocusCustomers();
+    }
+
+    function buildByRepView() {
+      const byRepView = document.getElementById('by-rep-view');
+      if (byRepView.innerHTML) return; // Already built
+
+      const report = {{ report | tojson | safe }};
+      const focusCustomers = report.focus_customers || [];
+
+      // Group by rep
+      const byRep = {};
+      focusCustomers.forEach(c => {
+        if (!byRep[c.rep_name]) byRep[c.rep_name] = [];
+        byRep[c.rep_name].push(c);
+      });
+
+      // Build HTML
+      let html = '';
+      Object.keys(byRep).sort().forEach(repName => {
+        html += `<div class="by-rep-group" data-rep="${repName}">`;
+        html += `<h3>${repName} (${byRep[repName].length} 位客戶)</h3>`;
+
+        byRep[repName].forEach((customer, idx) => {
+          const scoreClass = customer.meddic_score >= 70 ? 'score-high' :
+                             customer.meddic_score >= 50 ? 'score-medium' : 'score-low';
+          const decisionClass = customer.decision_maker_confirmed ? 'decision-confirmed' : 'decision-unconfirmed';
+          const decisionText = customer.decision_maker_confirmed ? '✓ 已確認' : '⚠ 未確認';
+
+          html += `<div class="focus-card" data-rep="${customer.rep_name}" data-score="${customer.meddic_score}">`;
+          html += `<div class="focus-card-header">`;
+          html += `<span class="rank">${idx + 1}</span>`;
+          html += `<div class="customer-info">`;
+          html += `<h3>${customer.customer_name}</h3>`;
+          html += `<div class="customer-meta">`;
+          html += `<span class="customer-id">${customer.customer_id}</span>`;
+          html += `</div></div>`;
+          html += `<div class="score-badge ${scoreClass}">${customer.meddic_score}</div>`;
+          html += `</div>`;
+
+          html += `<div class="focus-card-body">`;
+          if (customer.executive_summary) {
+            html += `<div class="summary-text">${customer.executive_summary}</div>`;
+          }
+
+          html += `<div class="indicators">`;
+          html += `<span class="indicator urgency-${customer.urgency_level}">急迫性: ${customer.urgency_level}</span>`;
+          html += `<span class="indicator ${decisionClass}">決策者: ${decisionText}</span>`;
+          html += `</div>`;
+
+          if (customer.manager_questions && customer.manager_questions.length) {
+            html += `<div class="manager-questions"><h4>💬 建議詢問問題</h4>`;
+            customer.manager_questions.forEach(q => {
+              html += `<div class="question-item">`;
+              html += `<p class="question">${q.question}</p>`;
+              html += `<p class="context">${q.context}</p>`;
+              html += `</div>`;
+            });
+            html += `</div>`;
+          }
+
+          if (customer.next_steps && customer.next_steps.length) {
+            html += `<div class="next-steps"><h4>📋 後續跟進建議</h4><ul>`;
+            customer.next_steps.forEach(step => {
+              html += `<li>${step}</li>`;
+            });
+            html += `</ul></div>`;
+          }
+
+          if (customer.risk_alerts && customer.risk_alerts.length) {
+            html += `<div class="risk-alerts"><h4>⚠️ 風險提醒</h4><ul>`;
+            customer.risk_alerts.forEach(risk => {
+              html += `<li>${risk}</li>`;
+            });
+            html += `</ul></div>`;
+          }
+
+          html += `</div></div>`;
+        });
+
+        html += `</div>`;
+      });
+
+      byRepView.innerHTML = html || '<p class="no-focus-customers">暫無關注客戶</p>';
+    }
+
+    function filterFocusCustomers() {
+      const minScore = parseInt(document.getElementById('minScoreFilter').value) || 0;
+      const cards = document.querySelectorAll('.focus-card');
+
+      cards.forEach(card => {
+        const score = parseInt(card.dataset.score) || 0;
+        card.classList.toggle('hidden', score < minScore);
+      });
+    }
+  </script>
+</body>
+
+</html>

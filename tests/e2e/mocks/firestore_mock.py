@@ -100,8 +100,184 @@ class MockDocumentReference:
 
     def collection(self, collection_id: str):
         """Get subcollection"""
-        # Subcollections not implemented for now
-        raise NotImplementedError("Subcollections not supported in mock")
+        subcollection_path = f"{self.path}/{collection_id}"
+        return MockSubcollectionReference(
+            self._firestore,
+            subcollection_path,
+            parent_doc=self,
+        )
+
+
+class MockSubcollectionReference:
+    """Mock Firestore Subcollection Reference"""
+
+    def __init__(self, firestore, path: str, parent_doc: MockDocumentReference):
+        self._firestore = firestore
+        self.path = path
+        self.id = path.split("/")[-1]
+        self.parent_doc = parent_doc
+
+    def document(self, document_id: Optional[str] = None) -> "MockSubcollectionDocumentReference":
+        """Get document reference in subcollection"""
+        if document_id is None:
+            document_id = f"auto_{datetime.now().timestamp()}"
+        return MockSubcollectionDocumentReference(self, document_id)
+
+    def add(self, data: Dict[str, Any]) -> tuple:
+        """Add document with auto-generated ID"""
+        doc_ref = self.document()
+        doc_ref.set(data)
+        return (datetime.now(), doc_ref)
+
+    def stream(self):
+        """Stream all documents in subcollection"""
+        documents = self._firestore._get_collection(self.path)
+        return [MockDocumentSnapshot(doc_id, data) for doc_id, data in documents.items()]
+
+    def where(self, field: str, op: str, value: Any):
+        """Simple where query"""
+        return self
+
+    def limit(self, count: int):
+        """Limit query results"""
+        return self
+
+    def order_by(self, field: str, direction: str = "ASCENDING"):
+        """Order query results"""
+        return self
+
+
+class MockSubcollectionDocumentReference:
+    """Mock Firestore Subcollection Document Reference"""
+
+    def __init__(self, collection_ref: MockSubcollectionReference, document_id: str):
+        self.collection_ref = collection_ref
+        self.id = document_id
+        self.path = f"{collection_ref.path}/{document_id}"
+        self._firestore = collection_ref._firestore
+
+    def get(self) -> MockDocumentSnapshot:
+        """Get document snapshot"""
+        data = self._firestore._get_document(self.collection_ref.path, self.id)
+        return MockDocumentSnapshot(self.id, data)
+
+    def set(self, data: Dict[str, Any], merge: bool = False):
+        """Set document data"""
+        if merge:
+            existing = self._firestore._get_document(self.collection_ref.path, self.id)
+            if existing:
+                merged_data = {**existing, **data}
+                self._firestore._set_document(self.collection_ref.path, self.id, merged_data)
+            else:
+                self._firestore._set_document(self.collection_ref.path, self.id, data)
+        else:
+            self._firestore._set_document(self.collection_ref.path, self.id, data)
+        return self
+
+    def update(self, updates: Dict[str, Any]):
+        """Update document fields"""
+        existing = self._firestore._get_document(self.collection_ref.path, self.id)
+        if not existing:
+            raise Exception(f"Document {self.path} does not exist")
+        updated_data = copy.deepcopy(existing)
+        for key, value in updates.items():
+            if "." in key:
+                keys = key.split(".")
+                target = updated_data
+                for k in keys[:-1]:
+                    if k not in target:
+                        target[k] = {}
+                    target = target[k]
+                target[keys[-1]] = value
+            else:
+                updated_data[key] = value
+        self._firestore._set_document(self.collection_ref.path, self.id, updated_data)
+        return self
+
+    def delete(self):
+        """Delete document"""
+        self._firestore._delete_document(self.collection_ref.path, self.id)
+        return self
+
+
+class MockQuery:
+    """Mock Firestore Query for filtering support"""
+
+    def __init__(self, collection_ref, filters=None, limit_count=None):
+        self._collection_ref = collection_ref
+        self._firestore = collection_ref._firestore
+        self._filters = filters or []
+        self._limit_count = limit_count
+
+    def where(self, field: str, op: str, value: Any):
+        """Add where filter"""
+        new_filters = self._filters + [(field, op, value)]
+        return MockQuery(self._collection_ref, new_filters, self._limit_count)
+
+    def limit(self, count: int):
+        """Set limit"""
+        return MockQuery(self._collection_ref, self._filters, count)
+
+    def order_by(self, field: str, direction: str = "ASCENDING"):
+        """Order query results (not fully implemented)"""
+        return self
+
+    def stream(self):
+        """Stream filtered documents"""
+        documents = self._firestore._get_collection(self._collection_ref.id)
+        results = []
+
+        for doc_id, data in documents.items():
+            if self._matches_filters(data):
+                results.append(MockDocumentSnapshot(doc_id, data))
+
+            if self._limit_count and len(results) >= self._limit_count:
+                break
+
+        return results
+
+    def _matches_filters(self, data: Dict[str, Any]) -> bool:
+        """Check if document matches all filters"""
+        for field, op, value in self._filters:
+            field_value = self._get_field_value(data, field)
+
+            if op == "==":
+                if field_value != value:
+                    return False
+            elif op == "!=":
+                if field_value == value:
+                    return False
+            elif op == ">":
+                if field_value is None or field_value <= value:
+                    return False
+            elif op == ">=":
+                if field_value is None or field_value < value:
+                    return False
+            elif op == "<":
+                if field_value is None or field_value >= value:
+                    return False
+            elif op == "<=":
+                if field_value is None or field_value > value:
+                    return False
+            elif op == "in":
+                if field_value not in value:
+                    return False
+            elif op == "array-contains":
+                if not isinstance(field_value, list) or value not in field_value:
+                    return False
+
+        return True
+
+    def _get_field_value(self, data: Dict[str, Any], field: str) -> Any:
+        """Get nested field value using dot notation"""
+        keys = field.split(".")
+        value = data
+        for key in keys:
+            if isinstance(value, dict) and key in value:
+                value = value[key]
+            else:
+                return None
+        return value
 
 
 class MockCollectionReference:
@@ -131,19 +307,16 @@ class MockCollectionReference:
         return [MockDocumentSnapshot(doc_id, data) for doc_id, data in documents.items()]
 
     def where(self, field: str, op: str, value: Any):
-        """Simple where query (basic implementation)"""
-        # For now, just return all documents - implement filtering if needed
-        return self
+        """Create query with where filter"""
+        return MockQuery(self, [(field, op, value)])
 
     def limit(self, count: int):
-        """Limit query results"""
-        # Not implemented - just return self for chaining
-        return self
+        """Create query with limit"""
+        return MockQuery(self, limit_count=count)
 
     def order_by(self, field: str, direction: str = "ASCENDING"):
-        """Order query results"""
-        # Not implemented - just return self for chaining
-        return self
+        """Create query with ordering"""
+        return MockQuery(self)
 
 
 class MockTransaction:
