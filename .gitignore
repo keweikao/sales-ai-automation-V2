@@ -20,6 +20,10 @@ wheels/
 .installed.cfg
 *.egg
 
+# Allow dashboard UI source utilities (was being ignored by the generic `lib/` rule above)
+!dashboard/packages/ui/src/lib/
+!dashboard/packages/ui/src/lib/**
+
 # Virtual environments
 venv/
 ENV/
