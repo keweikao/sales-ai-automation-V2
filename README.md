@@ -347,6 +347,7 @@ API Gateway 提供以下端點：
 | `/api/v1/analytics` | GET | 數據分析 |
 
 **互動式文檔**:
+
 - Swagger UI: `http://localhost:8000/api/docs`
 - ReDoc: `http://localhost:8000/api/redoc`
 - OpenAPI Spec: `http://localhost:8000/api/openapi.json`
@@ -367,6 +368,7 @@ API Gateway 提供以下端點：
 | **總計** | **~$15.50 / 月** |
 
 **成本優化成果**:
+
 - 轉錄成本降低 90% (Groq vs Gemini Audio)
 - 總體成本降低 50%
 - 記憶體使用降低 50% (2Gi → 1Gi)
@@ -441,16 +443,19 @@ gcloud run services update SERVICE_NAME \
 參考 [AI_ARCHITECTURE_ANALYSIS.md](AI_ARCHITECTURE_ANALYSIS.md) 的完整優化建議：
 
 **Phase 1** ✅ 已完成:
+
 - [x] Groq Whisper 整合
 - [x] 專案結構重組
 - [x] API Gateway 建置
 
 **Phase 2** 🔧 進行中:
+
 - [ ] 全鏈路追蹤 (OpenTelemetry)
 - [ ] Dashboard 前端開發
 - [ ] 完整模組實作
 
 **Phase 3** 📋 規劃中:
+
 - [ ] Redis 快取層
 - [ ] 智能模型路由器
 - [ ] A/B 測試框架
