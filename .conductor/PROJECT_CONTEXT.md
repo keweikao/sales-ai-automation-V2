@@ -1,7 +1,7 @@
 # Sales AI Automation V2 - Project Context
 
 > 🤖 此文檔由 `.conductor/generate_context.py` 自動生成
-> 最後更新：2026-01-08 08:43
+> 最後更新：2026-01-08 13:05
 
 ## 專案概述
 
@@ -9,7 +9,7 @@
 業務人員透過 Slack 上傳通話錄音，系統自動轉錄並使用多 Agent 架構分析通話內容，
 最後產生客戶摘要報告。
 
-- **程式碼行數**：~20,714 行 Python
+- **程式碼行數**：~32,915 行 Python
 - **服務數量**：5 個 Cloud Run 服務
 
 ## 技術架構
@@ -28,15 +28,8 @@
 
 ## 多 Agent 架構
 
-| Agent | 角色 | Prompt 檔案 |
-|-------|------|-------------|
-| Agent 1 | Context Analyzer (會議背景分析師) | `meddic/agents/prompts/agent1-context.md` |
-| Agent 2 | Buyer Analyzer (客戶洞察分析師) | `meddic/agents/prompts/agent2-buyer.md` |
-| Agent 3 | Seller Coach (業務教練) | `meddic/agents/prompts/agent3-seller.md` |
-| Agent 4 | Summary Generator (跟進摘要專家) | `meddic/agents/prompts/agent4-summary.md` |
-| Agent 6 | CRM Extractor (Salesforce 欄位擷取) | `meddic/agents/prompts/agent6-crm-extractor.md` |
-
-> Agent 位於 `modules/03-sales-conversation/` 目錄下
+| Agent | 檔案 | Prompt | 說明 |
+|-------|------|--------|------|
 
 ## 執行流程 (orchestrator.py)
 
@@ -73,7 +66,9 @@ cases/{caseId} = {
 ## 關鍵檔案
 
 - `modules/03-sales-conversation/transcript_analyzer/orchestrator.py`
+- `api-gateway/main.py`
 - `web-service/src/main.py`
+- `api-gateway/requirements.txt`
 - `tools/code_intelligence/requirements.txt`
 - `web-service/requirements.txt`
 - `web-service/Dockerfile`
