@@ -48,3 +48,21 @@ jobs:
           # Run tests that exist in V2 architecture
           pytest tests/ -v --ignore=tests/cross_module || true
           pytest web-service/tests -v || true
+
+      # TypeScript Dashboard Checks
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dashboard dependencies
+        working-directory: dashboard
+        run: bun install
+
+      - name: TypeScript type check
+        working-directory: dashboard
+        run: bun run typecheck
+
+      - name: ESLint check
+        working-directory: dashboard
+        run: bun run lint

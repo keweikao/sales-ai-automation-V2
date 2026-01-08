@@ -7,7 +7,8 @@
   "scripts": {
     "build": "tsc",
     "typecheck": "tsc --noEmit",
-    "generate": "bun run scripts/generate.ts"
+    "generate": "bun run scripts/generate.ts",
+    "lint": "eslint src"
   },
   "dependencies": {
     "openapi-fetch": "^0.9.0"

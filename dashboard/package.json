@@ -13,8 +13,12 @@
     "generate:api-client": "turbo run generate --filter=@sales-ai/api-client"
   },
   "devDependencies": {
+    "@eslint/js": "^9.0.0",
+    "eslint": "^9.0.0",
+    "globals": "^15.0.0",
     "turbo": "^2.0.0",
-    "typescript": "^5.3.0"
+    "typescript": "^5.3.0",
+    "typescript-eslint": "^8.0.0"
   },
   "packageManager": "bun@1.0.0"
 }
