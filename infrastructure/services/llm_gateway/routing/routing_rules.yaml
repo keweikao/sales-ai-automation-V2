@@ -1,0 +1,64 @@
+# LLM Routing Rules
+# Maps task types to model configurations
+
+# Task-specific routing
+tasks:
+  # MEDDIC Analysis - needs high accuracy
+  meddic_analysis:
+    provider: google
+    model: gemini-2.0-flash
+    temperature: 0.3
+    max_tokens: 8192
+    priority: high
+
+  # Summary generation - slightly creative
+  summary_generation:
+    provider: google
+    model: gemini-2.0-flash
+    temperature: 0.5
+    max_tokens: 4096
+    priority: normal
+
+  # Coaching recommendations
+  coaching:
+    provider: google
+    model: gemini-2.0-flash
+    temperature: 0.4
+    max_tokens: 4096
+    priority: normal
+
+  # CRM field extraction - structured output
+  crm_extraction:
+    provider: google
+    model: gemini-2.0-flash
+    temperature: 0.1
+    max_tokens: 2048
+    priority: normal
+
+  # Quick classification
+  classification:
+    provider: google
+    model: gemini-2.0-flash
+    temperature: 0.0
+    max_tokens: 256
+    priority: low
+
+# Default fallback
+default:
+  provider: google
+  model: gemini-2.0-flash
+  temperature: 0.3
+  max_tokens: 4096
+  priority: normal
+
+# Rate limits per model
+rate_limits:
+  gemini-2.0-flash:
+    requests_per_minute: 60
+    tokens_per_minute: 100000
+
+# Cost tracking (USD per 1M tokens)
+costs:
+  gemini-2.0-flash:
+    input: 0.075
+    output: 0.30

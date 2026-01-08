@@ -1,0 +1,40 @@
+# Development environment configuration
+# Inherits from base.yaml
+
+environment: development
+
+# Use emulators in development
+emulators:
+  firestore:
+    enabled: true
+    host: localhost:8080
+  cloud_tasks:
+    enabled: true
+    host: localhost:8123
+  storage:
+    enabled: true
+    host: http://localhost:4443
+
+# Relaxed rate limits for testing
+llm:
+  rate_limits:
+    requests_per_minute: 120
+    tokens_per_minute: 200000
+
+# Debug logging
+logging:
+  level: DEBUG
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+
+# Disable external integrations
+notification:
+  channels:
+    slack:
+      enabled: true
+      dry_run: true  # Don't actually send messages
+    sms:
+      enabled: false
+
+salesforce:
+  enabled: false
+  sandbox: true

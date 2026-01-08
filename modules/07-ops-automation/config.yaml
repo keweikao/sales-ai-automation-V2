@@ -1,0 +1,46 @@
+# 07-Ops-Automation Module Configuration
+
+module:
+  name: ops-automation
+  version: "0.1.0"
+  status: partial  # Only error notifications implemented
+
+# Error notifications
+monitoring:
+  error_notifier:
+    enabled: true
+    channel: "#sales-ai-alerts"
+
+    # Error severity levels
+    levels:
+      critical:
+        notify_immediately: true
+        include_pagerduty: false  # Future
+
+      error:
+        notify_immediately: true
+        batch_window_minutes: 0
+
+      warning:
+        notify_immediately: false
+        batch_window_minutes: 15
+
+    # Error categories to monitor
+    categories:
+      - transcription_failed
+      - analysis_failed
+      - notification_failed
+      - salesforce_sync_failed
+
+# Health checks (future)
+health_checks:
+  enabled: false
+  endpoints:
+    - name: transcription
+      url: /health
+    - name: analysis
+      url: /health
+
+# Auto-remediation (future)
+remediation:
+  enabled: false

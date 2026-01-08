@@ -1,0 +1,35 @@
+# Notification Recipients Directory
+# Maps roles and identifiers to actual contact information
+
+roles:
+  sales_manager:
+    slack_channels:
+      - "#sales-leadership"
+    users:
+      - id: "U12345"
+        name: "Manager Name"
+        slack_id: "U12345"
+        email: "manager@company.com"
+
+  sales_rep:
+    slack_channels:
+      - "#sales-team"
+
+  ops:
+    slack_channels:
+      - "#sales-ai-alerts"
+
+# Individual user directory
+users:
+  # Populated from Slack workspace or HR system
+  # Example:
+  # alice:
+  #   slack_id: "U11111"
+  #   email: "alice@company.com"
+  #   phone: "+886912345678"
+
+# Channel mappings
+channels:
+  sales_updates: "#sales-updates"
+  alerts: "#sales-ai-alerts"
+  leadership: "#sales-leadership"
