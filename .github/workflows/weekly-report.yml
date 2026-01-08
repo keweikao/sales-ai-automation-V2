@@ -34,7 +34,7 @@ jobs:
         env:
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
           GOOGLE_CLOUD_PROJECT: sales-ai-automation-v2
-          TARGET_CHANNEL: ${{ vars.SLACK_REPORT_CHANNEL || 'C0A7C2HUXRR' }}
+          TARGET_CHANNEL: C0A7C2HUXRR
         run: |
           python tools/send_weekly_metrics_report.py
 
@@ -42,6 +42,6 @@ jobs:
         env:
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
           GOOGLE_CLOUD_PROJECT: sales-ai-automation-v2
-          TARGET_CHANNEL: ${{ vars.SLACK_REPORT_CHANNEL || 'C0A7C2HUXRR' }}
+          TARGET_CHANNEL: C0A4F762FE0
         run: |
           python tools/test_weekly_upload_report.py "$TARGET_CHANNEL"
