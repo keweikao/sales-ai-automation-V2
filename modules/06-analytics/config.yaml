@@ -1,0 +1,42 @@
+# 06-Analytics Module Configuration
+
+module:
+  name: analytics
+  version: "0.1.0"
+  status: partial  # Only weekly reports implemented
+
+# Weekly reports
+weekly_reports:
+  enabled: true
+  schedule:
+    day: monday
+    time: "09:00"
+    timezone: Asia/Taipei
+
+  # Report sections
+  sections:
+    - summary
+    - per_rep_breakdown
+    - meddic_trends
+    - top_performers
+    - coaching_highlights
+
+  # Delivery
+  delivery:
+    channel: slack
+    recipients:
+      - sales_manager
+      - "#sales-leadership"
+
+# Rep performance (future)
+rep_performance:
+  enabled: false
+  metrics:
+    - conversation_count
+    - avg_meddic_score
+    - coaching_adoption
+    - follow_up_rate
+
+# Trend analysis (future)
+trends:
+  enabled: false

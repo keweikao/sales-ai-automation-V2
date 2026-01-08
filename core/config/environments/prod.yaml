@@ -1,0 +1,49 @@
+# Production environment configuration
+# Inherits from base.yaml
+
+environment: production
+
+# GCP Configuration
+gcp:
+  project: your-gcp-project-id
+  region: asia-east1
+  services:
+    transcription: transcription-service
+    analysis: analysis-service
+    slack: slack-app
+    web: summary-web-service
+
+# Stricter rate limits
+llm:
+  rate_limits:
+    requests_per_minute: 60
+    tokens_per_minute: 100000
+  retry:
+    max_attempts: 3
+    backoff_multiplier: 2
+
+# Production logging
+logging:
+  level: INFO
+  format: json
+  structured: true
+
+# All channels enabled
+notification:
+  channels:
+    slack:
+      enabled: true
+      dry_run: false
+    sms:
+      enabled: true
+
+# Salesforce production
+salesforce:
+  enabled: true
+  sandbox: false
+
+# Monitoring
+monitoring:
+  error_notifications: true
+  slack_channel: "#sales-ai-alerts"
+  pagerduty_enabled: false

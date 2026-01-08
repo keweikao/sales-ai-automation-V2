@@ -1,0 +1,158 @@
+# iCHEF Product Catalog
+# 產品功能目錄 - 供 Agent 參考使用
+
+version: "2024-12"
+last_updated: "2024-12-16"
+
+# ============================================
+# Core Features (核心功能)
+# ============================================
+
+features:
+  # --- POS 基礎功能 ---
+  - id: pos_basic
+    name: "POS 點餐收銀"
+    category: "core"
+    description: "iPad 點餐、收銀、電子發票"
+    pain_points_solved:
+      - "手寫單據容易出錯"
+      - "結帳速度慢"
+      - "發票管理麻煩"
+    store_type_fit: ["all"]
+
+  - id: table_management
+    name: "智慧訂位 / 桌況管理"
+    category: "core"
+    description: "線上訂位、桌況即時顯示、翻桌率提升"
+    pain_points_solved:
+      - "訂位電話接不完"
+      - "不知道哪桌可以坐"
+      - "翻桌率低"
+    store_type_fit: ["餐酒館", "火鍋", "燒肉", "餐廳"]
+    not_fit: ["外帶為主", "小吃攤"]
+
+  - id: kitchen_display
+    name: "廚房顯示系統 (KDS)"
+    category: "core"
+    description: "即時出單、備餐進度追蹤"
+    pain_points_solved:
+      - "出餐順序混亂"
+      - "漏單"
+      - "廚房與外場溝通不良"
+    store_type_fit: ["all"]
+
+  # --- 線上點餐 ---
+  - id: online_ordering
+    name: "線上點餐"
+    category: "growth"
+    description: "掃碼點餐、外帶預購"
+    pain_points_solved:
+      - "人手不足點餐慢"
+      - "客人等太久"
+      - "外帶訂單混亂"
+    store_type_fit: ["咖啡廳", "飲料店", "小吃", "速食"]
+
+  - id: qr_ordering
+    name: "掃碼點餐 (桌邊)"
+    category: "growth"
+    description: "客人掃 QR Code 自助點餐"
+    pain_points_solved:
+      - "外場人力不足"
+      - "點餐等待時間長"
+      - "客人加點不方便"
+    store_type_fit: ["咖啡廳", "餐廳", "居酒屋"]
+
+  # --- 會員與行銷 ---
+  - id: membership
+    name: "會員系統"
+    category: "growth"
+    description: "會員累積、儲值、生日優惠"
+    pain_points_solved:
+      - "客人來了不認識"
+      - "沒辦法做回購行銷"
+      - "儲值管理混亂"
+    store_type_fit: ["all"]
+
+  - id: marketing_tools
+    name: "行銷工具"
+    category: "growth"
+    description: "折扣券、點數、推播通知"
+    pain_points_solved:
+      - "不知道怎麼做促銷"
+      - "優惠券發出去沒人用"
+    store_type_fit: ["all"]
+
+  # --- 報表分析 ---
+  - id: analytics
+    name: "營業報表"
+    category: "management"
+    description: "營收分析、熱銷品項、時段分析"
+    pain_points_solved:
+      - "不知道哪個品項賺錢"
+      - "人力排班沒依據"
+      - "成本算不清楚"
+    store_type_fit: ["all"]
+
+  - id: inventory
+    name: "庫存管理"
+    category: "management"
+    description: "食材進銷存、低庫存警示"
+    pain_points_solved:
+      - "食材浪費"
+      - "缺貨才發現"
+      - "成本控制困難"
+    store_type_fit: ["all"]
+
+# ============================================
+# Competitor Comparison (競品比較 - 簡版)
+# ============================================
+
+competitors:
+  - id: dudu
+    name: "肚肚"
+    strength: "價格較便宜"
+    weakness: "功能較簡單、無訂位"
+    ichef_advantage: "完整功能整合、穩定性高"
+
+  - id: ipass
+    name: "iPass / 愛評"
+    strength: "餐廳曝光"
+    weakness: "非 POS 系統"
+    ichef_advantage: "POS + 訂位整合"
+
+  - id: inline
+    name: "inline"
+    strength: "訂位專精"
+    weakness: "需另外搭配 POS"
+    ichef_advantage: "一站式解決方案"
+
+  - id: eztable
+    name: "EZTABLE"
+    strength: "高餐廳用戶"
+    weakness: "抽成模式"
+    ichef_advantage: "月費制、成本透明"
+
+# ============================================
+# Store Type Recommendations
+# ============================================
+
+store_type_recommendations:
+  咖啡廳:
+    primary_features: ["pos_basic", "online_ordering", "membership"]
+    pitch_focus: "外帶效率、回購率"
+
+  火鍋:
+    primary_features: ["pos_basic", "table_management", "kitchen_display"]
+    pitch_focus: "翻桌率、出餐順序"
+
+  小吃:
+    primary_features: ["pos_basic", "online_ordering"]
+    pitch_focus: "快速結帳、外帶預購"
+
+  餐酒館:
+    primary_features: ["pos_basic", "table_management", "membership"]
+    pitch_focus: "訂位管理、VIP 會員"
+
+  飲料店:
+    primary_features: ["pos_basic", "online_ordering", "marketing_tools"]
+    pitch_focus: "尖峰消化、集點行銷"
