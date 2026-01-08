@@ -1,4 +1,5 @@
 # Sales AI V2 架構重構計劃
+
 ## 參考 Looplia Core 設計模式
 
 > 本計劃將由三個 AI Agent 並行開發，分別負責三個 Phase
@@ -13,7 +14,7 @@
 | Phase 2 | Agent B | Skills Registry 系統 | 3-4 週 | 無 (可並行) |
 | Phase 3 | Agent C | Plugin 架構分離 | 4-6 週 | Phase 1 + 2 完成後 |
 
-```
+```text
 時間軸：
 Week 1-3:  [====Agent A====] [====Agent B====]  (並行開發)
 Week 4-7:  [====Agent B====]                    (Agent B 繼續)
@@ -22,19 +23,21 @@ Week 8-12:                   [======Agent C======] (依賴前兩者)
 
 ---
 
-# Agent A: Phase 1 - Markdown Workflow 定義
+## Agent A: Phase 1 - Markdown Workflow 定義
 
-## 任務概述
+### 任務概述
+
 將現有 `orchestrator.py` 中寫死的流程邏輯抽取為 Markdown + YAML 格式的宣告式工作流定義。
 
-## 目標
+### 目標
+
 - 非工程師（銷售主管）可以閱讀和理解工作流
 - 工作流變更不需要修改 Python 程式碼
 - 版本控制友善，PR review 更容易
 
-## 關鍵輸入檔案
+### 關鍵輸入檔案
 
-```
+```text
 modules/03-sales-conversation/
 ├── transcript_analyzer/
 │   └── orchestrator.py              # 820+ 行，核心流程邏輯
@@ -49,10 +52,11 @@ modules/03-sales-conversation/
 └── config.yaml                       # 現有配置
 ```
 
-## 預期輸出
+### 預期輸出
 
-### 1. 新增目錄結構
-```
+#### 1. 新增目錄結構
+
+```text
 modules/03-sales-conversation/
 ├── workflows/                        # 新增
 │   ├── meddic-analysis.md           # 主要工作流定義
@@ -64,7 +68,7 @@ modules/03-sales-conversation/
 │   └── workflow_loader.py           # 新增：解析 workflow 檔案
 ```
 
-### 2. Workflow 定義格式 (meddic-analysis.md)
+#### 2. Workflow 定義格式 (meddic-analysis.md)
 
 ```markdown
 ---
@@ -201,24 +205,16 @@ conditions:
 
 ### 執行流程
 
-```
 Phase 1: [Context] + [Buyer] 平行執行
-           ↓
 Phase 2: [Buyer] 品質檢查 (最多 2 次修正)
-           ↓
 Phase 3: [Competitor] 條件執行 (若偵測到競爭對手)
-           ↓
 Phase 4: [Seller] 綜合分析
-           ↓
 Phase 5: [Summary] 產出摘要
-           ↓
 Phase 6: [CRM] 欄位擷取
-           ↓
 Phase 7: [Coach] 教練評估
 ```
-```
 
-### 3. Workflow Loader (workflow_loader.py)
+#### 3. Workflow Loader (workflow_loader.py)
 
 ```python
 """
@@ -339,36 +335,41 @@ class WorkflowLoader:
         )
 ```
 
-## 實施步驟
+### 實施步驟
 
-### Step 1: 建立 Workflow Schema (Day 1-2)
+#### Step 1: 建立 Workflow Schema (Day 1-2)
+
 - [ ] 設計 workflow YAML schema
 - [ ] 建立 JSON Schema 驗證檔
 - [ ] 撰寫 schema 文件
 
-### Step 2: 建立 Workflow Loader (Day 3-5)
+#### Step 2: 建立 Workflow Loader (Day 3-5)
+
 - [ ] 實作 `workflow_loader.py`
 - [ ] 支援 YAML frontmatter 解析
 - [ ] 支援變數引用 (`$inputs.xxx`, `$phases.xxx.output`)
 - [ ] 撰寫單元測試
 
-### Step 3: 撰寫第一個 Workflow (Day 6-8)
+#### Step 3: 撰寫第一個 Workflow (Day 6-8)
+
 - [ ] 將 `orchestrator.py` 流程轉換為 `meddic-analysis.md`
 - [ ] 驗證所有 phase 和 condition 正確
 - [ ] 確保向後相容
 
-### Step 4: 重構 Orchestrator (Day 9-12)
+#### Step 4: 重構 Orchestrator (Day 9-12)
+
 - [ ] 修改 `orchestrator.py` 讀取 workflow 定義
 - [ ] 實作 phase 執行引擎
 - [ ] 實作 condition 評估器
 - [ ] 保留 legacy 模式作為 fallback
 
-### Step 5: 整合測試 (Day 13-15)
+#### Step 5: 整合測試 (Day 13-15)
+
 - [ ] 端對端測試 (E2E)
 - [ ] 效能比較 (重構前後)
 - [ ] 文件更新
 
-## 驗收標準
+### 驗收標準
 
 1. **功能完整性**
    - [ ] 新舊模式產出相同結果
@@ -385,19 +386,21 @@ class WorkflowLoader:
 
 ---
 
-# Agent B: Phase 2 - Skills Registry 系統
+## Agent B: Phase 2 - Skills Registry 系統
 
-## 任務概述
+### 任務概述
+
 建立 Skills Registry 系統，讓 Agent 可以動態註冊、載入和執行。
 
-## 目標
+### 目標
+
 - Agent 抽象化為可重用的 Skill
 - 支援動態載入（不需重啟服務）
 - 為未來 Marketplace 機制奠定基礎
 
-## 關鍵輸入檔案
+### 關鍵輸入檔案
 
-```
+```text
 modules/03-sales-conversation/meddic/agents/
 ├── base.py                          # GeminiJSONAgent 基類
 ├── context_agent.py                 # 需抽象為 Skill
@@ -415,10 +418,11 @@ modules/03-sales-conversation/meddic/agents/
     └── global-context.md
 ```
 
-## 預期輸出
+### 預期輸出
 
-### 1. 新增目錄結構
-```
+#### 1. 新增目錄結構
+
+```text
 core/
 ├── skills/                           # 新增
 │   ├── __init__.py
@@ -449,7 +453,7 @@ modules/03-sales-conversation/
 │       └── ...
 ```
 
-### 2. Skill 定義格式 (skill.yaml)
+#### 2. Skill 定義格式 (skill.yaml)
 
 ```yaml
 # modules/03-sales-conversation/skills/buyer-agent/skill.yaml
@@ -540,9 +544,10 @@ dependencies:
 prompt_file: prompt.md
 ```
 
-### 3. Core Skills Module
+#### 3. Core Skills Module
 
-#### base.py - Skill 抽象基類
+##### base.py - Skill 抽象基類
+
 ```python
 """
 core/skills/base.py - Skill 抽象基類
@@ -677,7 +682,8 @@ class Skill(ABC):
         raise NotImplementedError("This skill does not support refinement")
 ```
 
-#### registry.py - Skills Registry
+##### registry.py - Skills Registry
+
 ```python
 """
 core/skills/registry.py - Skills Registry
@@ -823,7 +829,8 @@ class SkillRegistry:
         }
 ```
 
-#### loader.py - Skill Loader
+##### loader.py - Skill Loader
+
 ```python
 """
 core/skills/loader.py - Skill Loader
@@ -949,21 +956,24 @@ class SkillLoader:
         return None
 ```
 
-## 實施步驟
+### 實施步驟
 
-### Step 1: 建立 Core Skills 模組 (Day 1-3)
+#### Step 1: 建立 Core Skills 模組 (Day 1-3)
+
 - [ ] 建立 `core/skills/` 目錄結構
 - [ ] 實作 `base.py` - Skill 抽象基類
 - [ ] 實作 `schema.py` - 資料結構定義
 - [ ] 撰寫單元測試
 
-### Step 2: 實作 Registry 和 Loader (Day 4-7)
+#### Step 2: 實作 Registry 和 Loader (Day 4-7)
+
 - [ ] 實作 `registry.py` - Skills Registry
 - [ ] 實作 `loader.py` - Skill Loader
 - [ ] 支援動態發現和載入
 - [ ] 撰寫整合測試
 
-### Step 3: 遷移現有 Agents (Day 8-14)
+#### Step 3: 遷移現有 Agents (Day 8-14)
+
 - [ ] 建立 `modules/03-sales-conversation/skills/` 目錄
 - [ ] 遷移 Context Agent → `context-agent/`
 - [ ] 遷移 Buyer Agent → `buyer-agent/`
@@ -972,17 +982,19 @@ class SkillLoader:
 - [ ] 遷移 Coach Agent → `coach-agent/`
 - [ ] 遷移 CRM Agent → `crm-agent/`
 
-### Step 4: 整合 Orchestrator (Day 15-18)
+#### Step 4: 整合 Orchestrator (Day 15-18)
+
 - [ ] 修改 `orchestrator.py` 使用 SkillRegistry
 - [ ] 確保向後相容
 - [ ] 效能測試
 
-### Step 5: 文件和測試 (Day 19-21)
+#### Step 5: 文件和測試 (Day 19-21)
+
 - [ ] 撰寫 Skills 開發指南
 - [ ] E2E 測試
 - [ ] API 文件
 
-## 驗收標準
+### 驗收標準
 
 1. **功能完整性**
    - [ ] 所有 6 個 Agent 成功遷移為 Skills
@@ -999,25 +1011,28 @@ class SkillLoader:
 
 ---
 
-# Agent C: Phase 3 - Plugin 架構分離
+## Agent C: Phase 3 - Plugin 架構分離
 
-## 任務概述
+### 任務概述
+
 將系統重構為 Plugin 架構，分離基礎設施和業務邏輯。
 
-## 目標
+### 目標
+
 - 基礎設施（transcription, notification, llm-gateway）與業務邏輯（MEDDIC 分析）分離
 - 支援未來多租戶、多方法論
 - 獨立部署、獨立測試
 
-## 依賴
-> ⚠️ **重要**：此 Phase 依賴 Phase 1 和 Phase 2 完成
+### 依賴
+
+> **重要**：此 Phase 依賴 Phase 1 和 Phase 2 完成
 
 - Phase 1: Workflow 定義格式
 - Phase 2: Skills Registry 系統
 
-## 關鍵輸入
+### 關鍵輸入
 
-```
+```text
 # Phase 1 輸出
 modules/03-sales-conversation/workflows/
 modules/03-sales-conversation/transcript_analyzer/workflow_loader.py
@@ -1027,10 +1042,11 @@ core/skills/
 modules/03-sales-conversation/skills/
 ```
 
-## 預期輸出
+### 預期輸出
 
-### 1. 新增目錄結構
-```
+#### 1. 新增目錄結構
+
+```text
 plugins/                              # 新增：Plugin 根目錄
 ├── README.md
 ├── sales-core/                       # 基礎設施 Plugin
@@ -1066,7 +1082,7 @@ plugins/                              # 新增：Plugin 根目錄
     └── tests/
 ```
 
-### 2. Plugin 定義格式 (plugin.yaml)
+#### 2. Plugin 定義格式 (plugin.yaml)
 
 ```yaml
 # plugins/sales-meddic/plugin.yaml
@@ -1114,7 +1130,7 @@ hooks:
   on_disable: scripts/disable.py
 ```
 
-### 3. Core Plugin Manager
+#### 3. Core Plugin Manager
 
 ```python
 """
@@ -1281,39 +1297,44 @@ class PluginManager:
         ]
 ```
 
-## 實施步驟
+### 實施步驟
 
-### Step 1: 建立 Plugin 基礎架構 (Day 1-5)
+#### Step 1: 建立 Plugin 基礎架構 (Day 1-5)
+
 - [ ] 建立 `plugins/` 目錄結構
 - [ ] 實作 `core/plugins/manager.py`
 - [ ] 設計 plugin.yaml schema
 - [ ] 撰寫單元測試
 
-### Step 2: 建立 sales-core Plugin (Day 6-12)
+#### Step 2: 建立 sales-core Plugin (Day 6-12)
+
 - [ ] 遷移 `infrastructure/services/transcription/`
 - [ ] 遷移 `infrastructure/services/notification/`
 - [ ] 遷移 `infrastructure/services/llm_gateway/`
 - [ ] 建立 plugin.yaml
 - [ ] 整合測試
 
-### Step 3: 建立 sales-meddic Plugin (Day 13-20)
+#### Step 3: 建立 sales-meddic Plugin (Day 13-20)
+
 - [ ] 遷移 Phase 2 的 Skills
 - [ ] 遷移 Phase 1 的 Workflows
 - [ ] 建立 plugin.yaml
 - [ ] 整合測試
 
-### Step 4: 建立 sales-ichef Plugin (Day 21-25) [可選]
+#### Step 4: 建立 sales-ichef Plugin (Day 21-25) [可選]
+
 - [ ] 遷移 Slack 整合
 - [ ] 遷移 CRM 同步
 - [ ] iCHEF 特定配置
 
-### Step 5: 整合和遷移 (Day 26-30)
+#### Step 5: 整合和遷移 (Day 26-30)
+
 - [ ] 修改啟動流程使用 PluginManager
 - [ ] 更新部署腳本
 - [ ] E2E 測試
 - [ ] 文件更新
 
-## 驗收標準
+### 驗收標準
 
 1. **功能完整性**
    - [ ] sales-core Plugin 正常運作
@@ -1331,13 +1352,13 @@ class PluginManager:
 
 ---
 
-# 附錄
+## 附錄
 
-## A. 三 Agent 協作指南
+### A. 三 Agent 協作指南
 
-### 並行開發規則
+#### 並行開發規則
 
-```
+```text
 Agent A (Phase 1) 和 Agent B (Phase 2) 可以並行開發：
 
 Agent A 專注於：
@@ -1355,7 +1376,7 @@ Agent C (Phase 3) 在 Phase 1 + 2 完成後開始：
 - 依賴 Agent B 的 skills 結構
 ```
 
-### 共享介面定義
+#### 共享介面定義
 
 ```python
 # 三個 Agent 共同遵守的介面
@@ -1377,7 +1398,7 @@ class WorkflowPhase:
     condition: Optional[str]
 ```
 
-### 溝通檢查點
+#### 溝通檢查點
 
 | 時間點 | 檢查項目 |
 |--------|---------|
@@ -1386,9 +1407,9 @@ class WorkflowPhase:
 | Week 5 結束 | Agent C 完成 sales-core Plugin |
 | Week 7 結束 | 全系統整合測試 |
 
-## B. 測試策略
+### B. 測試策略
 
-```
+```text
 tests/
 ├── unit/
 │   ├── workflow_loader_test.py      # Agent A
@@ -1401,7 +1422,7 @@ tests/
     └── full_pipeline_test.py        # 全系統
 ```
 
-## C. 文件清單
+### C. 文件清單
 
 完成後需更新的文件：
 
