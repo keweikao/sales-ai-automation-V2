@@ -27,7 +27,7 @@ steps:
       - '--platform=managed'
       - '--allow-unauthenticated'
       - '--set-env-vars=GCP_PROJECT_ID=sales-ai-automation-v2,SUMMARY_BASE_URL=${_SUMMARY_BASE_URL},EVERY8D_API_URL=https://api.e8d.tw/API21/HTTP/SendSMS.ashx'
-      - '--set-secrets=EVERY8D_USERNAME=every8d-username:latest,EVERY8D_PASSWORD=every8d-password:latest,SMS_INTERNAL_TOKEN=sms-internal-token:latest'
+      - '--set-secrets=EVERY8D_USERNAME=every8d-username:latest,EVERY8D_PASSWORD=every8d-password:latest,SMS_INTERNAL_TOKEN=sms-internal-token:latest,GMAIL_SENDER_EMAIL=GMAIL_SENDER_EMAIL:latest,GMAIL_APP_PASSWORD=GMAIL_APP_PASSWORD:latest'
 
 images:
   - 'asia-east1-docker.pkg.dev/sales-ai-automation-v2/sales-ai-automation-v2/sms-service:latest'
