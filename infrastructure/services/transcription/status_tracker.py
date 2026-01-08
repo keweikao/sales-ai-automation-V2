@@ -104,3 +104,82 @@ class TranscriptionStatusTracker:
 
     def mark_completed(self, *, case_id: Optional[str], file_id: Optional[str]) -> None:
         self.update(case_id=case_id, file_id=file_id, step="completed", progress=1.0, detail="轉錄完成")
+
+    # =========================================================================
+    # Metrics Tracking Methods
+    # =========================================================================
+
+    def record_transcription_start(self, case_id: str) -> None:
+        """Record transcription start time for metrics tracking."""
+        if not self.is_enabled() or not case_id:
+            return
+
+        try:
+            self._db.collection("cases").document(case_id).set({
+                "metrics": {
+                    "timestamps": {
+                        "transcriptionStartedAt": firestore.SERVER_TIMESTAMP,
+                    }
+                }
+            }, merge=True)
+            logger.debug(f"Recorded transcription start for {case_id}")
+        except Exception as exc:
+            logger.warning("Failed to record transcription start: %s", exc)
+
+    def record_transcription_complete(
+        self,
+        case_id: str,
+        duration_seconds: Optional[float] = None,
+        audio_duration_seconds: Optional[float] = None,
+    ) -> None:
+        """Record transcription completion with metrics."""
+        if not self.is_enabled() or not case_id:
+            return
+
+        try:
+            update_data = {
+                "metrics": {
+                    "timestamps": {
+                        "transcriptionCompletedAt": firestore.SERVER_TIMESTAMP,
+                    }
+                }
+            }
+
+            if duration_seconds is not None:
+                update_data["metrics"]["durations"] = {
+                    "transcriptionSeconds": duration_seconds,
+                }
+
+            if audio_duration_seconds is not None:
+                update_data["metrics"]["audio"] = {
+                    "durationSeconds": audio_duration_seconds,
+                }
+
+            self._db.collection("cases").document(case_id).set(update_data, merge=True)
+            logger.debug(f"Recorded transcription complete for {case_id}: {duration_seconds}s")
+        except Exception as exc:
+            logger.warning("Failed to record transcription complete: %s", exc)
+
+    def record_audio_metadata(
+        self,
+        case_id: str,
+        duration_seconds: Optional[float] = None,
+        file_size_bytes: Optional[int] = None,
+    ) -> None:
+        """Record audio file metadata for metrics."""
+        if not self.is_enabled() or not case_id:
+            return
+
+        try:
+            update_data = {"metrics": {"audio": {}}}
+
+            if duration_seconds is not None:
+                update_data["metrics"]["audio"]["durationSeconds"] = duration_seconds
+
+            if file_size_bytes is not None:
+                update_data["metrics"]["audio"]["fileSizeBytes"] = file_size_bytes
+
+            self._db.collection("cases").document(case_id).set(update_data, merge=True)
+            logger.debug(f"Recorded audio metadata for {case_id}")
+        except Exception as exc:
+            logger.warning("Failed to record audio metadata: %s", exc)
