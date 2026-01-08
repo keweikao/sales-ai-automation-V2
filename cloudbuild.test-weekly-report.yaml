@@ -1,0 +1,24 @@
+steps:
+- name: 'python:3.11'
+  entrypoint: 'bash'
+  args:
+  - '-c'
+  - |
+    echo "Installing dependencies..."
+    pip install google-cloud-firestore slack_sdk aiohttp
+
+    echo ""
+    echo "Running weekly upload report test..."
+    export SLACK_BOT_TOKEN=$$SLACK_TOKEN
+    export GOOGLE_CLOUD_PROJECT=sales-ai-automation-v2
+    python tools/test_weekly_upload_report.py
+  secretEnv: ['SLACK_TOKEN']
+
+availableSecrets:
+  secretManager:
+  - versionName: projects/sales-ai-automation-v2/secrets/slack-bot-token/versions/latest
+    env: 'SLACK_TOKEN'
+
+timeout: '300s'
+options:
+  logging: CLOUD_LOGGING_ONLY

@@ -13,7 +13,7 @@ from typing import Any, Dict
 from flask import Flask, abort, jsonify, redirect, render_template, request
 from google.cloud import firestore
 
-from .summary_renderer import (
+from summary_renderer import (
     SummaryNotFoundError,
     SummaryRenderer,
     SummaryUnavailableError,
@@ -145,6 +145,18 @@ def create_app() -> Flask:
         except Exception as exc:
             logger.exception("Failed to save summary for %s", case_id)
             return jsonify({"error": str(exc)}), 500
+
+    @app.get("/report/upload/<report_id>")
+    def view_upload_report(report_id: str):
+        """Display weekly upload report page."""
+        logger.info("Viewing upload report %s", report_id)
+
+        doc = renderer.db.collection("upload_reports").document(report_id).get()
+        if not doc.exists:
+            abort(404, description="報表不存在")
+
+        report_data = doc.to_dict()
+        return render_template("upload_report.html", report=report_data)
 
     @app.get("/s/<code>")
     def redirect_short_link(code: str):

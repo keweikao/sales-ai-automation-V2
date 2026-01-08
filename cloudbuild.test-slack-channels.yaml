@@ -1,0 +1,19 @@
+steps:
+- name: 'python:3.11'
+  entrypoint: 'bash'
+  args:
+  - '-c'
+  - |
+    pip install slack_sdk
+    export SLACK_BOT_TOKEN=$$SLACK_TOKEN
+    python tools/test_slack_channels.py
+  secretEnv: ['SLACK_TOKEN']
+
+availableSecrets:
+  secretManager:
+  - versionName: projects/sales-ai-automation-v2/secrets/slack-bot-token/versions/latest
+    env: 'SLACK_TOKEN'
+
+timeout: '120s'
+options:
+  logging: CLOUD_LOGGING_ONLY

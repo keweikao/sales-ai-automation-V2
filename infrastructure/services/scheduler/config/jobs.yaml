@@ -1,0 +1,67 @@
+# Scheduler Job Configurations
+# Defines all scheduled jobs and their configurations
+
+jobs:
+  # Weekly Sales Report - Sends summary to managers every Monday
+  weekly_report:
+    name: "Weekly Sales Report"
+    description: "Generate and send weekly sales performance report"
+    cron: "0 9 * * 1"  # Monday 9 AM (UTC)
+    enabled: true
+    handler: "infrastructure.services.scheduler.jobs.weekly_report.run"
+    config:
+      include_focus_customers: true
+      send_to_slack: true
+      slack_channel: "#sales-reports"
+
+  # Weekly Upload Report - Tracks rep upload activity
+  weekly_upload_report:
+    name: "Weekly Upload Report"
+    description: "Report on sales rep recording upload activity"
+    cron: "0 9 * * 1"  # Monday 9 AM (UTC)
+    enabled: true
+    handler: "infrastructure.services.scheduler.jobs.weekly_upload_report.send_weekly_upload_report"
+    config:
+      lookback_days: 7
+      minimum_uploads: 3
+      send_individual_reminders: true
+
+  # Daily Reminder - Reminds reps to upload recordings
+  daily_reminder:
+    name: "Daily Upload Reminder"
+    description: "Remind sales reps to upload their recordings"
+    cron: "0 18 * * 1-5"  # Weekdays 6 PM (UTC)
+    enabled: false  # Disabled by default
+    handler: "infrastructure.services.scheduler.jobs.daily_reminder.run"
+    config:
+      reminder_message: "別忘了上傳今天的會議錄音！"
+      skip_if_uploaded: true
+
+  # Stale Case Cleanup - Archive old cases
+  stale_case_cleanup:
+    name: "Stale Case Cleanup"
+    description: "Archive cases that have been pending for too long"
+    cron: "0 3 * * 0"  # Sunday 3 AM (UTC)
+    enabled: true
+    handler: "infrastructure.services.scheduler.jobs.cleanup.archive_stale_cases"
+    config:
+      stale_threshold_days: 30
+      archive_collection: "archived_cases"
+
+  # Token Usage Report - Daily LLM cost tracking
+  token_usage_report:
+    name: "Token Usage Report"
+    description: "Generate daily LLM token usage and cost report"
+    cron: "0 1 * * *"  # Daily 1 AM (UTC)
+    enabled: true
+    handler: "infrastructure.services.scheduler.jobs.token_report.run"
+    config:
+      alert_threshold_usd: 50.0
+      send_alert_to: "#ops-alerts"
+
+# Default settings for all jobs
+defaults:
+  timezone: "Asia/Taipei"
+  retry_on_failure: true
+  max_retries: 3
+  retry_delay_seconds: 60

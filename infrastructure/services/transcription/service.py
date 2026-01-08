@@ -2,20 +2,23 @@
 Transcription Service implementation.
 
 Orchestrates transcription using configured providers.
-This is a facade that will delegate to the existing transcription code
-in src/transcription/ during the migration period.
 """
 
+import os
+import logging
 from typing import Optional
+
 from core.schemas.conversation import Transcript, TranscriptSegment
+from .providers.whisper import GroqWhisperPipeline
+
+logger = logging.getLogger(__name__)
 
 
 class TranscriptionService:
     """
     Service for transcribing audio to text.
 
-    During migration, this delegates to existing code in src/transcription/.
-    After migration, the logic will be moved here.
+    Uses Groq's hosted Whisper API for fast, accurate transcription.
     """
 
     def __init__(self, provider: str = "groq_whisper"):
@@ -23,9 +26,22 @@ class TranscriptionService:
         Initialize transcription service.
 
         Args:
-            provider: Transcription provider ("groq_whisper" or "google_stt")
+            provider: Transcription provider (default: "groq_whisper")
         """
         self.provider = provider
+        self._pipeline = None
+
+    def _get_pipeline(self):
+        """Lazy initialization of transcription pipeline."""
+        if self._pipeline is None:
+            if self.provider == "groq_whisper":
+                api_key = os.getenv("GROQ_API_KEY")
+                if not api_key:
+                    raise ValueError("GROQ_API_KEY environment variable is required")
+                self._pipeline = GroqWhisperPipeline(api_key=api_key)
+            else:
+                raise ValueError(f"Unsupported provider: {self.provider}")
+        return self._pipeline
 
     async def transcribe(
         self,
@@ -37,20 +53,27 @@ class TranscriptionService:
         Transcribe an audio file.
 
         Args:
-            audio_uri: GCS URI or Slack file URL
+            audio_uri: GCS URI (gs://...) or local file path
             language: Language code (default: Chinese)
             include_segments: Include timestamped segments
 
         Returns:
             Transcript object with full text and segments
         """
-        # TODO: Migrate logic from src/transcription/groq_whisper_pipeline.py
-        # For now, this is a placeholder that will be connected to existing code
+        logger.info(f"Starting transcription for: {audio_uri}")
 
-        raise NotImplementedError(
-            "Transcription service not yet migrated. "
-            "Use src/transcription/ directly during migration."
-        )
+        pipeline = self._get_pipeline()
+        result = pipeline.transcribe(audio_uri)
+
+        if not result.get("success"):
+            error_msg = result.get("error", "Unknown transcription error")
+            logger.error(f"Transcription failed: {error_msg}")
+            raise RuntimeError(f"Transcription failed: {error_msg}")
+
+        # Generate transcript ID from audio URI
+        transcript_id = self._generate_transcript_id(audio_uri)
+
+        return self._convert_to_transcript(result, transcript_id)
 
     async def transcribe_from_gcs(
         self,
@@ -89,9 +112,35 @@ class TranscriptionService:
         Returns:
             Transcript object
         """
-        # Download file and transcribe
-        # TODO: Implement after migration
-        raise NotImplementedError("Slack transcription not yet migrated.")
+        import tempfile
+        import httpx
+
+        # Download file from Slack
+        with tempfile.NamedTemporaryFile(suffix=".m4a", delete=False) as tmp_file:
+            async with httpx.AsyncClient() as client:
+                response = await client.get(
+                    file_url,
+                    headers={"Authorization": f"Bearer {slack_token}"},
+                    follow_redirects=True,
+                )
+                response.raise_for_status()
+                tmp_file.write(response.content)
+                local_path = tmp_file.name
+
+        try:
+            return await self.transcribe(local_path, language)
+        finally:
+            # Clean up temp file
+            os.unlink(local_path)
+
+    def _generate_transcript_id(self, audio_uri: str) -> str:
+        """Generate a transcript ID from the audio URI."""
+        import hashlib
+        from datetime import datetime
+
+        # Create hash from URI + timestamp
+        hash_input = f"{audio_uri}_{datetime.now().isoformat()}"
+        return hashlib.sha256(hash_input.encode()).hexdigest()[:16]
 
     def _convert_to_transcript(self, raw_result: dict, transcript_id: str) -> Transcript:
         """Convert raw transcription result to Transcript schema."""
@@ -106,11 +155,13 @@ class TranscriptionService:
                 confidence=seg.get("confidence"),
             ))
 
+        audio_info = raw_result.get("audio_info", {})
+
         return Transcript(
             id=transcript_id,
             segments=segments,
-            full_text=raw_result.get("text", ""),
+            full_text=raw_result.get("full_text", ""),
             language=raw_result.get("language", "zh-TW"),
-            duration_seconds=raw_result.get("duration"),
+            duration_seconds=audio_info.get("duration"),
             provider=self.provider,
         )

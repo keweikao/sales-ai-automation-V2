@@ -1,0 +1,240 @@
+# Full MEDDIC Sales Conversation Analysis Workflow
+#
+# A comprehensive workflow that analyzes sales conversations using
+# the MEDDIC methodology with real-time coaching capabilities.
+#
+# This is the main analysis pipeline that:
+# 1. Extracts context (customer info, meeting details)
+# 2. Analyzes buyer signals (MEDDIC qualification)
+# 3. Evaluates seller performance (coaching)
+# 4. Generates outputs (summary, CRM fields)
+# 5. Triggers alerts if needed
+
+metadata:
+  id: sales-meddic.full-analysis
+  name: Full MEDDIC Analysis
+  version: "1.0.0"
+  description: Comprehensive sales conversation analysis using MEDDIC methodology
+  tags:
+    - sales
+    - meddic
+    - comprehensive
+    - coaching
+
+triggers:
+  - type: manual
+    config: {}
+  - type: event
+    config:
+      event_type: transcript.ready
+  - type: webhook
+    config:
+      path: /api/v1/analyze
+
+phases:
+  # Phase 1: Extract base context
+  - id: context
+    name: Context Extraction
+    description: Extract customer and meeting context
+    execution_mode: sequential
+    steps:
+      - id: context-analysis
+        name: Context Analysis
+        skill_id: meddic.context-analysis
+        inputs:
+          - source: trigger
+            key: transcript_segments
+            target: transcript_segments
+        outputs:
+          - key: context_insights
+            type: object
+        retry:
+          max_attempts: 2
+          delay_seconds: 1.0
+        quality_checks:
+          - type: field_present
+            params:
+              fields: ["store_name", "urgency_level"]
+
+  # Phase 2: MEDDIC Analysis (parallel)
+  - id: meddic
+    name: MEDDIC Analysis
+    description: Analyze buyer signals and seller performance
+    execution_mode: parallel
+    depends_on:
+      - context
+    steps:
+      - id: buyer-analysis
+        name: Buyer Analysis
+        skill_id: meddic.buyer-analysis
+        inputs:
+          - source: trigger
+            key: transcript_segments
+            target: transcript_segments
+          - source: state
+            key: context_insights
+            target: context_insights
+        outputs:
+          - key: buyer_insights
+            type: object
+        retry:
+          max_attempts: 2
+          delay_seconds: 2.0
+        quality_checks:
+          - type: field_present
+            params:
+              fields: ["meddic_score", "qualification_status"]
+          - type: score_range
+            params:
+              field: meddic_score
+              min: 0
+              max: 100
+
+      - id: seller-coaching
+        name: Seller Coaching
+        skill_id: meddic.seller-coaching
+        inputs:
+          - source: trigger
+            key: transcript_segments
+            target: transcript_segments
+          - source: state
+            key: context_insights
+            target: context_insights
+        outputs:
+          - key: seller_insights
+            type: object
+        retry:
+          max_attempts: 2
+          delay_seconds: 2.0
+        quality_checks:
+          - type: field_present
+            params:
+              fields: ["progress_score", "coaching_notes"]
+          - type: score_range
+            params:
+              field: progress_score
+              min: 0
+              max: 100
+
+  # Phase 3: Buyer refinement (uses seller insights)
+  - id: refinement
+    name: Analysis Refinement
+    description: Refine buyer analysis with seller context
+    execution_mode: sequential
+    depends_on:
+      - meddic
+    steps:
+      - id: buyer-refine
+        name: Buyer Refinement
+        skill_id: meddic.buyer-analysis
+        inputs:
+          - source: trigger
+            key: transcript_segments
+            target: transcript_segments
+          - source: state
+            key: context_insights
+            target: context_insights
+          - source: state
+            key: buyer_insights
+            target: previous_insights
+          - source: state
+            key: seller_insights
+            target: seller_insights
+        outputs:
+          - key: buyer_insights
+            type: object
+        config:
+          mode: refine
+        conditions:
+          - field: seller_insights.progress_score
+            operator: lt
+            value: 80
+
+  # Phase 4: Output generation (parallel)
+  - id: output
+    name: Output Generation
+    description: Generate summary, CRM fields, and alerts
+    execution_mode: parallel
+    depends_on:
+      - refinement
+    steps:
+      - id: summary
+        name: Summary Generation
+        skill_id: meddic.summary-generation
+        inputs:
+          - source: trigger
+            key: transcript_segments
+            target: transcript_segments
+          - source: state
+            key: context_insights
+            target: context_insights
+          - source: state
+            key: buyer_insights
+            target: buyer_insights
+          - source: state
+            key: seller_insights
+            target: seller_insights
+        outputs:
+          - key: summary
+            type: object
+
+      - id: crm
+        name: CRM Extraction
+        skill_id: meddic.crm-extraction
+        inputs:
+          - source: trigger
+            key: transcript_segments
+            target: transcript_segments
+          - source: state
+            key: context_insights
+            target: context_insights
+          - source: state
+            key: buyer_insights
+            target: buyer_insights
+          - source: state
+            key: seller_insights
+            target: seller_insights
+        outputs:
+          - key: crm_fields
+            type: object
+
+      - id: coach-eval
+        name: Coach Evaluation
+        skill_id: meddic.coach-evaluation
+        inputs:
+          - source: trigger
+            key: case_id
+            target: case_id
+          - source: trigger
+            key: rep_id
+            target: rep_id
+          - source: trigger
+            key: rep_name
+            target: rep_name
+          - source: state
+            key: context_insights.store_name
+            target: store_name
+          - source: state
+            key: context_insights
+            target: context_insights
+          - source: state
+            key: buyer_insights
+            target: buyer_insights
+          - source: state
+            key: seller_insights
+            target: seller_insights
+        outputs:
+          - key: coach_alert
+            type: object
+
+timeout_seconds: 300
+
+retry:
+  max_attempts: 3
+  delay_seconds: 5.0
+  backoff_multiplier: 2.0
+
+initial_state:
+  language: zh-TW
+  enable_refinement: true
+  enable_coach_alerts: true

@@ -2,19 +2,20 @@
 Token usage tracker for LLM operations.
 
 Tracks token consumption for billing and monitoring.
-
-NOTE: Existing implementation in src/slack_app/monitoring/token_tracker.py
-Will be migrated and extended here.
 """
 
-from datetime import datetime
+import logging
+from dataclasses import asdict, dataclass
+from datetime import datetime, timedelta
 from typing import Optional
-from dataclasses import dataclass
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
 class TokenUsage:
     """Record of token usage for a single request."""
+
     conversation_id: Optional[str]
     task_type: str
     model: str
@@ -39,7 +40,11 @@ class TokenTracker:
     # Cost per 1M tokens (USD)
     COSTS = {
         "gemini-2.0-flash": {"input": 0.075, "output": 0.30},
+        "gemini-2.5-flash": {"input": 0.15, "output": 0.60},
+        "gemini-2.5-pro": {"input": 1.25, "output": 5.00},
     }
+
+    COLLECTION = "llm_usage"
 
     def __init__(self, db=None):
         self.db = db
@@ -103,31 +108,160 @@ class TokenTracker:
 
     async def _persist(self, usage: TokenUsage):
         """Persist usage to Firestore."""
-        # TODO: Implement Firestore persistence
-        pass
+        try:
+            # Create document data
+            data = {
+                "conversationId": usage.conversation_id,
+                "taskType": usage.task_type,
+                "model": usage.model,
+                "promptTokens": usage.prompt_tokens,
+                "completionTokens": usage.completion_tokens,
+                "totalTokens": usage.total_tokens,
+                "costUsd": usage.cost_usd,
+                "timestamp": usage.timestamp,
+                # Add date fields for easier querying
+                "date": usage.timestamp.strftime("%Y-%m-%d"),
+                "month": usage.timestamp.strftime("%Y-%m"),
+            }
+
+            # Add to collection with auto-generated ID
+            self.db.collection(self.COLLECTION).add(data)
+            logger.debug(f"Persisted token usage: {usage.total_tokens} tokens")
+
+        except Exception as e:
+            logger.error(f"Failed to persist token usage: {e}")
 
     async def get_conversation_usage(self, conversation_id: str) -> dict:
         """Get total usage for a conversation."""
-        # TODO: Query from Firestore
+        # First check session cache
         session_total = sum(
-            u.total_tokens for u in self._session_usage
+            u.total_tokens
+            for u in self._session_usage
             if u.conversation_id == conversation_id
         )
         session_cost = sum(
-            u.cost_usd for u in self._session_usage
+            u.cost_usd
+            for u in self._session_usage
             if u.conversation_id == conversation_id
         )
 
+        # Query from Firestore if available
+        firestore_total = 0
+        firestore_cost = 0.0
+
+        if self.db:
+            try:
+                query = self.db.collection(self.COLLECTION).where(
+                    "conversationId", "==", conversation_id
+                )
+                for doc in query.stream():
+                    data = doc.to_dict()
+                    firestore_total += data.get("totalTokens", 0)
+                    firestore_cost += data.get("costUsd", 0)
+            except Exception as e:
+                logger.error(f"Failed to query conversation usage: {e}")
+
         return {
             "conversation_id": conversation_id,
-            "total_tokens": session_total,
-            "total_cost_usd": session_cost,
+            "total_tokens": session_total + firestore_total,
+            "total_cost_usd": round(session_cost + firestore_cost, 6),
         }
 
     async def get_daily_usage(self, date: Optional[datetime] = None) -> dict:
         """Get aggregated usage for a day."""
-        # TODO: Query from Firestore/BigQuery
-        return {"message": "Daily usage aggregation not yet implemented"}
+        if date is None:
+            date = datetime.utcnow()
+
+        date_str = date.strftime("%Y-%m-%d")
+
+        result = {
+            "date": date_str,
+            "total_tokens": 0,
+            "total_cost_usd": 0.0,
+            "request_count": 0,
+            "by_task": {},
+            "by_model": {},
+        }
+
+        if not self.db:
+            return result
+
+        try:
+            query = self.db.collection(self.COLLECTION).where("date", "==", date_str)
+
+            for doc in query.stream():
+                data = doc.to_dict()
+                tokens = data.get("totalTokens", 0)
+                cost = data.get("costUsd", 0)
+                task = data.get("taskType", "unknown")
+                model = data.get("model", "unknown")
+
+                result["total_tokens"] += tokens
+                result["total_cost_usd"] += cost
+                result["request_count"] += 1
+
+                # Aggregate by task
+                if task not in result["by_task"]:
+                    result["by_task"][task] = {"tokens": 0, "cost": 0, "count": 0}
+                result["by_task"][task]["tokens"] += tokens
+                result["by_task"][task]["cost"] += cost
+                result["by_task"][task]["count"] += 1
+
+                # Aggregate by model
+                if model not in result["by_model"]:
+                    result["by_model"][model] = {"tokens": 0, "cost": 0, "count": 0}
+                result["by_model"][model]["tokens"] += tokens
+                result["by_model"][model]["cost"] += cost
+                result["by_model"][model]["count"] += 1
+
+            result["total_cost_usd"] = round(result["total_cost_usd"], 6)
+
+        except Exception as e:
+            logger.error(f"Failed to get daily usage: {e}")
+
+        return result
+
+    async def get_monthly_usage(self, month: Optional[str] = None) -> dict:
+        """Get aggregated usage for a month."""
+        if month is None:
+            month = datetime.utcnow().strftime("%Y-%m")
+
+        result = {
+            "month": month,
+            "total_tokens": 0,
+            "total_cost_usd": 0.0,
+            "request_count": 0,
+            "daily_breakdown": {},
+        }
+
+        if not self.db:
+            return result
+
+        try:
+            query = self.db.collection(self.COLLECTION).where("month", "==", month)
+
+            for doc in query.stream():
+                data = doc.to_dict()
+                tokens = data.get("totalTokens", 0)
+                cost = data.get("costUsd", 0)
+                date = data.get("date", "unknown")
+
+                result["total_tokens"] += tokens
+                result["total_cost_usd"] += cost
+                result["request_count"] += 1
+
+                # Daily breakdown
+                if date not in result["daily_breakdown"]:
+                    result["daily_breakdown"][date] = {"tokens": 0, "cost": 0}
+                result["daily_breakdown"][date]["tokens"] += tokens
+                result["daily_breakdown"][date]["cost"] += cost
+
+            result["total_cost_usd"] = round(result["total_cost_usd"], 6)
+
+        except Exception as e:
+            logger.error(f"Failed to get monthly usage: {e}")
+
+        return result
 
     def get_session_summary(self) -> dict:
         """Get summary of current session usage."""
@@ -136,7 +270,9 @@ class TokenTracker:
 
         return {
             "total_tokens": sum(u.total_tokens for u in self._session_usage),
-            "total_cost_usd": sum(u.cost_usd for u in self._session_usage),
+            "total_cost_usd": round(
+                sum(u.cost_usd for u in self._session_usage), 6
+            ),
             "requests": len(self._session_usage),
             "by_task": self._aggregate_by_task(),
         }
