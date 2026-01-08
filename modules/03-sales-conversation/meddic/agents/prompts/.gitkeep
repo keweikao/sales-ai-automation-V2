@@ -1,0 +1,3 @@
+# Agent prompts
+# Will contain prompt templates for each agent
+# Migration note: From analysis-service/src/agents/prompts/

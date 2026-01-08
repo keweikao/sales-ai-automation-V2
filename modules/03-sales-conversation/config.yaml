@@ -1,0 +1,115 @@
+# 03-Sales-Conversation Module Configuration
+
+module:
+  name: sales-conversation
+  version: "2.1.0"
+  status: mvp
+  migrated_from: v1
+
+# Transcript analyzer settings
+transcript_analyzer:
+  # Minimum transcript length to analyze
+  min_words: 100
+
+  # Language detection
+  default_language: zh-TW
+  supported_languages:
+    - zh-TW
+    - en-US
+
+# MEDDIC Analysis
+meddic:
+  # Enable/disable individual dimensions
+  dimensions:
+    metrics: true
+    economic_buyer: true
+    decision_criteria: true
+    decision_process: true
+    identify_pain: true
+    champion: true
+
+  # Scoring weights
+  weights:
+    metrics: 15
+    economic_buyer: 20
+    decision_criteria: 15
+    decision_process: 15
+    identify_pain: 20
+    champion: 15
+
+  # Qualification thresholds
+  thresholds:
+    qualified: 70
+    partially_qualified: 40
+
+# Coaching
+coaching:
+  enabled: true
+  max_insights: 5
+  categories:
+    - objection_handling
+    - discovery
+    - value_proposition
+    - closing
+    - rapport
+
+# Summary generation
+summary:
+  # Customer-facing summary
+  customer:
+    enabled: true
+    max_length: 500
+    tone: professional
+
+  # Internal summary
+  internal:
+    enabled: true
+    include_coaching: true
+
+# Slack bot
+slack_bot:
+  enabled: true
+  channels:
+    notifications: "#sales-updates"
+    alerts: "#sales-ai-alerts"
+
+  # Interactive features
+  features:
+    summary_editing: true
+    send_to_customer: true
+    feedback_collection: true
+
+# Agent configuration (from V1)
+agents:
+  context_analyzer:
+    enabled: true
+    model: gemini-2.0-flash
+
+  buyer_insight:
+    enabled: true
+    model: gemini-2.0-flash
+
+  seller_coach:
+    enabled: true
+    model: gemini-2.0-flash
+
+  summary_generator:
+    enabled: true
+    model: gemini-2.0-flash
+
+  crm_extractor:
+    enabled: true
+    model: gemini-2.0-flash
+
+# Notifications
+notifications:
+  on_analysis_complete:
+    enabled: true
+    channel: slack
+    template: analysis_complete
+
+  on_high_score:
+    enabled: true
+    threshold: 80
+    channel: slack
+    template: high_meddic_score

@@ -1,0 +1,54 @@
+# 01-Lead-Source Module Configuration
+
+module:
+  name: lead-source
+  version: "0.1.0"
+  status: mvp
+
+# Enabled lead sources
+sources:
+  squarespace:
+    enabled: true
+    webhook_path: /webhooks/squarespace
+    # Fields to extract from form
+    field_mappings:
+      email: email
+      name: name
+      company: company
+      phone: phone
+
+  utm:
+    enabled: true
+    # UTM parameters to track
+    parameters:
+      - utm_source
+      - utm_medium
+      - utm_campaign
+      - utm_term
+      - utm_content
+
+  linkedin:
+    enabled: false  # Future
+
+  events:
+    enabled: false  # Future
+
+# Lead scoring rules
+scoring:
+  initial_score: 10
+  rules:
+    - condition: "has_company"
+      points: 10
+    - condition: "has_phone"
+      points: 15
+    - condition: "utm_source == 'google'"
+      points: 5
+    - condition: "utm_medium == 'cpc'"
+      points: 10
+
+# Notifications
+notifications:
+  on_new_lead:
+    enabled: true
+    channel: slack
+    template: new_lead_alert

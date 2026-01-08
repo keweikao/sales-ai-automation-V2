@@ -1,0 +1,71 @@
+# Base configuration - shared across all environments
+# Override in dev.yaml or prod.yaml
+
+app:
+  name: sales-ai-automation
+  version: "2.1.0"
+
+# LLM Configuration
+llm:
+  default_model: gemini-2.0-flash
+  models:
+    analysis:
+      provider: google
+      model: gemini-2.0-flash
+      temperature: 0.3
+      max_tokens: 8192
+    summary:
+      provider: google
+      model: gemini-2.0-flash
+      temperature: 0.5
+      max_tokens: 4096
+  rate_limits:
+    requests_per_minute: 60
+    tokens_per_minute: 100000
+
+# Transcription Configuration
+transcription:
+  default_provider: groq_whisper
+  providers:
+    groq_whisper:
+      model: whisper-large-v3-turbo
+      language: zh
+      response_format: verbose_json
+    google_stt:
+      model: chirp_2
+      language_code: zh-TW
+
+# Notification Configuration
+notification:
+  channels:
+    slack:
+      enabled: true
+      default_channel: "#sales-updates"
+    sms:
+      enabled: false
+    email:
+      enabled: false
+
+# Scheduler Configuration
+scheduler:
+  timezone: Asia/Taipei
+  jobs:
+    weekly_report:
+      enabled: true
+      cron: "0 9 * * 1"  # Monday 9 AM
+    daily_reminder:
+      enabled: false
+      cron: "0 18 * * 1-5"  # Weekdays 6 PM
+
+# MEDDIC Scoring Weights
+meddic:
+  weights:
+    metrics: 15
+    economic_buyer: 20
+    decision_criteria: 15
+    decision_process: 15
+    identify_pain: 20
+    champion: 15
+  thresholds:
+    qualified: 70
+    partially_qualified: 40

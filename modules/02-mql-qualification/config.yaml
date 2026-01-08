@@ -1,0 +1,61 @@
+# 02-MQL-Qualification Module Configuration
+
+module:
+  name: mql-qualification
+  version: "0.1.0"
+  status: mvp
+
+# First contact analysis settings
+first_contact:
+  # Minimum call duration to analyze (seconds)
+  min_duration: 60
+
+  # Analysis prompts
+  analysis_focus:
+    - pain_points
+    - budget_signals
+    - timeline_indicators
+    - decision_maker_identification
+
+# Lead scoring
+scoring:
+  # Score thresholds
+  thresholds:
+    mql: 40  # Minimum to become MQL
+    sql: 70  # Minimum to become SQL
+
+  # Scoring criteria from first contact
+  criteria:
+    budget_mentioned:
+      weight: 20
+      signals:
+        - "budget"
+        - "investment"
+        - "cost"
+        - "pricing"
+
+    timeline_mentioned:
+      weight: 15
+      signals:
+        - "this quarter"
+        - "next month"
+        - "urgent"
+        - "asap"
+
+    pain_point_clear:
+      weight: 25
+
+    decision_maker:
+      weight: 20
+
+    competitor_mentioned:
+      weight: 10
+
+# Notifications
+notifications:
+  on_mql_qualified:
+    enabled: true
+    channel: slack
+    template: mql_qualified
+    recipients:
+      - sales_manager
