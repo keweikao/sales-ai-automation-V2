@@ -110,11 +110,12 @@ class MetricsReporter:
             end_date = end_date.replace(tzinfo=timezone.utc)
 
         # Query cases in the period
+        from google.cloud.firestore_v1.base_query import FieldFilter
         cases_ref = self.db.collection("cases")
         query = (
             cases_ref
-            .where("createdAt", ">=", start_date)
-            .where("createdAt", "<=", end_date)
+            .where(filter=FieldFilter("createdAt", ">=", start_date))
+            .where(filter=FieldFilter("createdAt", "<=", end_date))
         )
 
         cases = list(query.stream())
