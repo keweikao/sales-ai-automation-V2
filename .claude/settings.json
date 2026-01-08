@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "mcpServers": {
+    "firestore": {
+      "type": "stdio",
+      "command": "python",
+      "args": ["tools/firestore/mcp_server.py"],
+      "description": "Query and manage Firestore collections"
+    },
+    "gcs": {
+      "type": "stdio",
+      "command": "python",
+      "args": ["tools/gcs/mcp_server.py"],
+      "description": "Google Cloud Storage operations"
+    },
+    "slack": {
+      "type": "stdio",
+      "command": "python",
+      "args": ["tools/slack/mcp_server.py"],
+      "description": "Slack API operations"
+    },
+    "gcp-ai": {
+      "type": "stdio",
+      "command": "python",
+      "args": ["tools/gcp_ai/mcp_server.py"],
+      "description": "Gemini and Vertex AI operations"
+    },
+    "bigquery": {
+      "type": "stdio",
+      "command": "python",
+      "args": ["tools/bigquery/mcp_server.py"],
+      "description": "BigQuery data analysis"
+    },
+    "cloud-tasks": {
+      "type": "stdio",
+      "command": "python",
+      "args": ["tools/cloud_tasks/mcp_server.py"],
+      "description": "Cloud Tasks queue management"
+    },
+    "gcloud": {
+      "type": "stdio",
+      "command": "python",
+      "args": ["tools/gcloud/mcp_server.py"],
+      "description": "Google Cloud CLI operations"
+    }
+  },
+  "permissions": {
+    "allow": [
+      "Bash(python tools/*)",
+      "Bash(gcloud *)",
+      "Skill"
+    ]
+  }
+}
