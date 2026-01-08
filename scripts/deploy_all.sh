@@ -27,7 +27,7 @@ gcloud builds submit --config deploy/analysis/cloudbuild.analysis.deploy.yaml .
 echo "🔧 Updating Analysis Service Environment Variables..."
 gcloud run services update analysis-service \
   --update-env-vars MANAGER_CHANNEL_ID=C0A4F762FE0,GCP_PROJECT_ID=sales-ai-automation-v2 \
-  --set-secrets=SLACK_BOT_TOKEN=slack-bot-token:latest \
+  --set-secrets=SLACK_BOT_TOKEN=slack-bot-token:latest,GEMINI_API_KEY=GEMINI_API_KEY:latest \
   --region asia-east1 \
   --platform managed
 

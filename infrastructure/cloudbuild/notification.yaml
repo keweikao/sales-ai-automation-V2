@@ -1,0 +1,51 @@
+# Cloud Build configuration for Notification service (V2 architecture)
+# Combines SMS and Slack notification functionality
+steps:
+  # Build the container image using V2 Dockerfile
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-t'
+      - 'asia-east1-docker.pkg.dev/$PROJECT_ID/sales-ai-automation-v2/notification-service:$COMMIT_SHA'
+      - '-t'
+      - 'asia-east1-docker.pkg.dev/$PROJECT_ID/sales-ai-automation-v2/notification-service:latest'
+      - '-f'
+      - 'infrastructure/docker/Dockerfile.notification'
+      - '.'
+
+  # Push the container images
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - 'asia-east1-docker.pkg.dev/$PROJECT_ID/sales-ai-automation-v2/notification-service:$COMMIT_SHA'
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - 'asia-east1-docker.pkg.dev/$PROJECT_ID/sales-ai-automation-v2/notification-service:latest'
+
+  # Deploy to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - 'notification-service'
+      - '--image'
+      - 'asia-east1-docker.pkg.dev/$PROJECT_ID/sales-ai-automation-v2/notification-service:$COMMIT_SHA'
+      - '--region'
+      - 'asia-east1'
+      - '--platform'
+      - 'managed'
+      - '--allow-unauthenticated'
+      - '--memory'
+      - '256Mi'
+      - '--timeout'
+      - '60s'
+      - '--set-secrets'
+      - 'SMS_API_KEY=sms-api-key:latest,SLACK_BOT_TOKEN=slack-bot-token:latest'
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+
+timeout: '600s'

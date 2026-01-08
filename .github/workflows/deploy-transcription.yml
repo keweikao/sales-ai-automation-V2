@@ -5,8 +5,9 @@ on:
     branches:
       - main
     paths:
-      - 'src/transcription/**'
-      - 'cloudbuild.transcription.yaml'
+      - 'infrastructure/services/transcription/**'
+      - 'infrastructure/cloudbuild/transcription.yaml'
+      - 'infrastructure/docker/Dockerfile.transcription'
 
 env:
   PROJECT_ID: sales-ai-automation-v2
@@ -37,4 +38,4 @@ jobs:
 
     - name: Submit Cloud Build
       run: |
-        gcloud builds submit --config=cloudbuild.transcription.yaml
+        gcloud builds submit --config=infrastructure/cloudbuild/transcription.yaml .

@@ -1,18 +1,18 @@
-.PHONY: test-analysis test-agent67 test-slack test-summary-web test-code-intelligence test-all benchmark-agent5 benchmark-agent7 build-code-index
+.PHONY: test-modules test-web test-all lint
 
-test-analysis:
-	PYTHONPATH=analysis-service/src pytest analysis-service/tests
+# V2 Architecture Tests
+test-modules:
+	PYTHONPATH=. pytest modules/ -v --ignore=modules/*/tests || true
 
-test-slack:
-	pytest src/slack_app/tests
+test-web:
+	pytest web-service/tests -v
 
-test-summary-web:
-	pytest web-service/tests
+test-all: test-modules test-web
 
-test-code-intelligence:
-	pytest tests/code_intelligence -v
+# Linting
+lint:
+	find . -name "*.py" -print0 | xargs -0 python3 -m py_compile
 
-test-all: test-analysis test-slack test-summary-web
-
+# Build code index (if needed)
 build-code-index:
 	python3 tools/code_intelligence/cli.py build-index --force

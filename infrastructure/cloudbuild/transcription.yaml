@@ -1,0 +1,40 @@
+# Cloud Build configuration for Transcription service (V2 architecture)
+steps:
+  # Build the container image using V2 Dockerfile
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '--cache-from'
+      - 'asia-east1-docker.pkg.dev/sales-ai-automation-v2/sales-ai-automation-v2/transcription-service:latest'
+      - '-t'
+      - 'asia-east1-docker.pkg.dev/sales-ai-automation-v2/sales-ai-automation-v2/transcription-service:latest'
+      - '-f'
+      - 'infrastructure/docker/Dockerfile.transcription'
+      - '.'
+
+  # Push the container image to Artifact Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - 'asia-east1-docker.pkg.dev/sales-ai-automation-v2/sales-ai-automation-v2/transcription-service:latest'
+
+  # Deploy to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - 'transcription-service'
+      - '--image=asia-east1-docker.pkg.dev/sales-ai-automation-v2/sales-ai-automation-v2/transcription-service:latest'
+      - '--region=asia-east1'
+      - '--platform=managed'
+      - '--timeout=3600'
+      - '--memory=4Gi'
+      - '--cpu=2'
+      - '--update-env-vars=GCP_PROJECT_ID=sales-ai-automation-v2,WHISPER_MODEL_SIZE=tiny,WHISPER_DEVICE=cpu'
+      - '--set-secrets=GROQ_API_KEY=GROQ_API_KEY:latest,GEMINI_API_KEY=GEMINI_API_KEY:latest'
+
+images:
+  - 'asia-east1-docker.pkg.dev/sales-ai-automation-v2/sales-ai-automation-v2/transcription-service:latest'
+
+timeout: 1800s

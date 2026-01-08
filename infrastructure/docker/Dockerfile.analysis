@@ -1,0 +1,36 @@
+FROM python:3.11-slim
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1
+
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
+
+# Copy requirements and install Python dependencies
+COPY requirements.txt /app/requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy V2 application code
+COPY core /app/core
+COPY modules/03-sales-conversation /app/modules/03-sales-conversation
+COPY infrastructure/services/llm_gateway /app/infrastructure/services/llm_gateway
+COPY infrastructure/services/notification /app/infrastructure/services/notification
+
+# Copy main entry point
+COPY infrastructure/services/analysis_main.py /app/main.py
+
+# Set environment variables
+ENV PORT=8080 \
+    PYTHONPATH=/app
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD python -c "import requests; requests.get('http://localhost:8080/health')"
+
+# Start with gunicorn (longer timeout for analysis)
+CMD exec gunicorn --bind :$PORT --workers 1 --threads 4 --timeout 600 main:flask_app

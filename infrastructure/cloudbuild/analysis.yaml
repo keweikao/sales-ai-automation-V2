@@ -1,0 +1,38 @@
+# Cloud Build configuration for Analysis service (V2 architecture)
+steps:
+  # Build the container image using V2 Dockerfile
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '--cache-from'
+      - 'asia-east1-docker.pkg.dev/sales-ai-automation-v2/sales-ai-automation-v2/analysis-service:latest'
+      - '-t'
+      - 'asia-east1-docker.pkg.dev/sales-ai-automation-v2/sales-ai-automation-v2/analysis-service:latest'
+      - '-f'
+      - 'infrastructure/docker/Dockerfile.analysis'
+      - '.'
+
+  # Push the container image to Artifact Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - 'asia-east1-docker.pkg.dev/sales-ai-automation-v2/sales-ai-automation-v2/analysis-service:latest'
+
+  # Deploy to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - 'analysis-service'
+      - '--image=asia-east1-docker.pkg.dev/sales-ai-automation-v2/sales-ai-automation-v2/analysis-service:latest'
+      - '--region=asia-east1'
+      - '--platform=managed'
+      - '--timeout=600'
+      - '--update-env-vars=MANAGER_CHANNEL_ID=C0A4F762FE0,GCP_PROJECT_ID=sales-ai-automation-v2'
+      - '--set-secrets=SLACK_BOT_TOKEN=slack-bot-token:latest,GEMINI_API_KEY=GEMINI_API_KEY:latest'
+
+images:
+  - 'asia-east1-docker.pkg.dev/sales-ai-automation-v2/sales-ai-automation-v2/analysis-service:latest'
+
+timeout: 1200s

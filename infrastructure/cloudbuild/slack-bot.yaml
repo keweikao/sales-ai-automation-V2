@@ -1,0 +1,45 @@
+# Cloud Build configuration for Slack Bot service (V2 architecture)
+substitutions:
+  _SUMMARY_BASE_URL: https://summary-web-service-497329205771.asia-east1.run.app
+  _SHORT_URL_BASE: https://summary-web-service-497329205771.asia-east1.run.app/s
+  _SUMMARY_DELIVERY_QUEUE: summary-delivery-queue
+  _SUMMARY_DELIVERY_LOCATION: asia-east1
+  _SUMMARY_DELIVERY_HANDLER_URL: https://slack-app-497329205771.asia-east1.run.app/internal/summary-delivery
+
+steps:
+  # Build the container image using V2 Dockerfile
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '--cache-from'
+      - 'asia-east1-docker.pkg.dev/sales-ai-automation-v2/sales-ai-automation-v2/slack-app:latest'
+      - '-t'
+      - 'asia-east1-docker.pkg.dev/sales-ai-automation-v2/sales-ai-automation-v2/slack-app:latest'
+      - '-f'
+      - 'infrastructure/docker/Dockerfile.slack-bot'
+      - '.'
+
+  # Push the container image to Artifact Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - 'asia-east1-docker.pkg.dev/sales-ai-automation-v2/sales-ai-automation-v2/slack-app:latest'
+
+  # Deploy to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - 'slack-app'
+      - '--image=asia-east1-docker.pkg.dev/sales-ai-automation-v2/sales-ai-automation-v2/slack-app:latest'
+      - '--region=asia-east1'
+      - '--platform=managed'
+      - '--allow-unauthenticated'
+      - '--set-env-vars=SLACK_AUDIO_BUCKET=sales-ai-audio-bucket,TRANSCRIPTION_TASK_QUEUE=transcription-queue,TRANSCRIPTION_TASK_HANDLER_URL=https://transcription-service-acv3ye2faq-de.a.run.app/transcribe,TRANSCRIPTION_TASK_SERVICE_ACCOUNT=497329205771-compute@developer.gserviceaccount.com,GCP_PROJECT_ID=sales-ai-automation-v2,SUMMARY_BASE_URL=${_SUMMARY_BASE_URL},SHORT_URL_BASE=${_SHORT_URL_BASE},SUMMARY_DELIVERY_QUEUE=${_SUMMARY_DELIVERY_QUEUE},SUMMARY_DELIVERY_LOCATION=${_SUMMARY_DELIVERY_LOCATION},SUMMARY_DELIVERY_HANDLER_URL=${_SUMMARY_DELIVERY_HANDLER_URL},SMS_SERVICE_URL=https://sms-service-497329205771.asia-east1.run.app'
+      - '--set-secrets=SLACK_BOT_TOKEN=slack-bot-token:latest,SLACK_SIGNING_SECRET=slack-signing-secret:latest,SMS_INTERNAL_TOKEN=sms-internal-token:latest'
+
+images:
+  - 'asia-east1-docker.pkg.dev/sales-ai-automation-v2/sales-ai-automation-v2/slack-app:latest'
+
+timeout: 1200s

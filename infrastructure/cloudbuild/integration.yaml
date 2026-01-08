@@ -1,0 +1,53 @@
+# Cloud Build configuration for Integration service (V2 architecture)
+# Handles Salesforce and other CRM integrations
+steps:
+  # Build the container image using V2 Dockerfile
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-t'
+      - 'asia-east1-docker.pkg.dev/$PROJECT_ID/sales-ai-automation-v2/integration-service:$COMMIT_SHA'
+      - '-t'
+      - 'asia-east1-docker.pkg.dev/$PROJECT_ID/sales-ai-automation-v2/integration-service:latest'
+      - '-f'
+      - 'infrastructure/docker/Dockerfile.integration'
+      - '.'
+
+  # Push the container images
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - 'asia-east1-docker.pkg.dev/$PROJECT_ID/sales-ai-automation-v2/integration-service:$COMMIT_SHA'
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - 'asia-east1-docker.pkg.dev/$PROJECT_ID/sales-ai-automation-v2/integration-service:latest'
+
+  # Deploy to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - 'integration-service'
+      - '--image'
+      - 'asia-east1-docker.pkg.dev/$PROJECT_ID/sales-ai-automation-v2/integration-service:$COMMIT_SHA'
+      - '--region'
+      - 'asia-east1'
+      - '--platform'
+      - 'managed'
+      - '--allow-unauthenticated'
+      - '--memory'
+      - '512Mi'
+      - '--cpu'
+      - '1'
+      - '--timeout'
+      - '300'
+      - '--set-secrets'
+      - 'SF_CLIENT_ID=sf-client-id:latest,SF_CLIENT_SECRET=sf-client-secret:latest,SF_USERNAME=sf-username:latest,SF_PASSWORD=sf-password:latest,SF_SECURITY_TOKEN=sf-security-token:latest'
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+
+timeout: '600s'

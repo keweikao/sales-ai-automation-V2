@@ -25,6 +25,10 @@ jobs:
       id-token: 'write'
       issues: 'write'
       pull-requests: 'write'
+    env:
+      GEMINI_API_KEY: '${{ secrets.GEMINI_API_KEY }}'
+      GOOGLE_GENAI_USE_VERTEXAI: '${{ vars.GOOGLE_GENAI_USE_VERTEXAI }}'
+      GOOGLE_GENAI_USE_GCA: '${{ vars.GOOGLE_GENAI_USE_GCA }}'
     steps:
       - name: 'Mint identity token'
         id: 'mint_identity_token'
