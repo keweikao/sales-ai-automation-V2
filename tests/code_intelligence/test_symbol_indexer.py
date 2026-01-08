@@ -12,9 +12,12 @@ project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root / "tools" / "code_intelligence"))
 
 try:
-    from symbol_indexer import SmartCodeSearch
-    KIT_AVAILABLE = True
-except ImportError:
+    import symbol_indexer as _symbol_indexer
+
+    SmartCodeSearch = _symbol_indexer.SmartCodeSearch
+    # If kit-ai is not installed, symbol_indexer will set Repository to None.
+    KIT_AVAILABLE = _symbol_indexer.Repository is not None
+except Exception:
     KIT_AVAILABLE = False
 
 

@@ -11,9 +11,12 @@ project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root / "tools" / "code_intelligence"))
 
 try:
-    from repo_analyzer import SalesAIRepoAnalyzer
-    KIT_AVAILABLE = True
-except ImportError:
+    import repo_analyzer as _repo_analyzer
+
+    SalesAIRepoAnalyzer = _repo_analyzer.SalesAIRepoAnalyzer
+    # If kit-ai is not installed, repo_analyzer will set Repository to None.
+    KIT_AVAILABLE = _repo_analyzer.Repository is not None
+except Exception:
     KIT_AVAILABLE = False
 
 
