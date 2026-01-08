@@ -556,7 +556,6 @@ pytest tests/integration/ -v
 # 部署到 staging
 ./infrastructure/scripts/deploy.sh staging
 ```
-```
 
 #### Agent D - Sales Analysis Skill
 
@@ -613,6 +612,9 @@ await logger.log_event(
 - 使用 `integrations/slack/templates/` 中的 Block Kit 模板
 - 訊息長度不超過 3000 字元
 - 重要資訊放在訊息開頭
+
+```text
+(end of skill definition)
 ```
 
 ---
