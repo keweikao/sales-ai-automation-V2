@@ -5,37 +5,37 @@
       "type": "stdio",
       "command": "python",
       "args": ["tools/firestore/mcp_server.py"],
-      "description": "Query and manage Firestore collections"
+      "description": "Query and manage Firestore collections",
+      "env": {
+        "GOOGLE_APPLICATION_CREDENTIALS": "${GOOGLE_APPLICATION_CREDENTIALS}"
+      }
     },
     "gcs": {
       "type": "stdio",
       "command": "python",
       "args": ["tools/gcs/mcp_server.py"],
-      "description": "Google Cloud Storage operations"
+      "description": "Google Cloud Storage operations",
+      "env": {
+        "GOOGLE_APPLICATION_CREDENTIALS": "${GOOGLE_APPLICATION_CREDENTIALS}"
+      }
     },
     "slack": {
       "type": "stdio",
       "command": "python",
       "args": ["tools/slack/mcp_server.py"],
-      "description": "Slack API operations"
-    },
-    "gcp-ai": {
-      "type": "stdio",
-      "command": "python",
-      "args": ["tools/gcp_ai/mcp_server.py"],
-      "description": "Gemini and Vertex AI operations"
+      "description": "Slack API operations",
+      "env": {
+        "SLACK_BOT_TOKEN": "${SLACK_BOT_TOKEN}"
+      }
     },
     "bigquery": {
       "type": "stdio",
       "command": "python",
       "args": ["tools/bigquery/mcp_server.py"],
-      "description": "BigQuery data analysis"
-    },
-    "cloud-tasks": {
-      "type": "stdio",
-      "command": "python",
-      "args": ["tools/cloud_tasks/mcp_server.py"],
-      "description": "Cloud Tasks queue management"
+      "description": "BigQuery data analysis",
+      "env": {
+        "GOOGLE_APPLICATION_CREDENTIALS": "${GOOGLE_APPLICATION_CREDENTIALS}"
+      }
     },
     "gcloud": {
       "type": "stdio",
