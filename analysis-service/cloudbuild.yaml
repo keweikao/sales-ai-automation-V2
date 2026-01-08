@@ -1,5 +1,0 @@
-steps:
-- name: 'gcr.io/cloud-builders/docker'
-  args: ['build', '-t', 'asia-east1-docker.pkg.dev/sales-ai-automation-v2/sales-ai-automation-v2/analysis-service:latest', '-f', 'analysis-service/Dockerfile', '.']
-images:
-- 'asia-east1-docker.pkg.dev/sales-ai-automation-v2/sales-ai-automation-v2/analysis-service:latest'

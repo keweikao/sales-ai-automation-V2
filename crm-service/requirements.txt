@@ -1,7 +1,0 @@
-flask>=2.2.5
-gunicorn>=21.2.0
-simple-salesforce>=1.12.5
-google-cloud-firestore>=2.13.1
-google-cloud-secret-manager>=2.16.4
-requests>=2.31.0
-python-dotenv>=1.0.0
