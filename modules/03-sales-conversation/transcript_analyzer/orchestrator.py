@@ -34,6 +34,30 @@ import time
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Callable, Awaitable, Tuple
 
+# Metrics tracking
+# Note: Module 06-analytics has hyphen in name, requires special import
+try:
+    import importlib
+    metrics_module = importlib.import_module("modules.06-analytics.metrics")
+    MetricsTracker = metrics_module.MetricsTracker
+    METRICS_AVAILABLE = True
+except (ImportError, ModuleNotFoundError):
+    try:
+        # Fallback: try direct file import
+        import sys
+        from pathlib import Path
+        metrics_path = Path(__file__).resolve().parents[2] / "06-analytics" / "metrics"
+        if metrics_path.exists():
+            sys.path.insert(0, str(metrics_path.parent))
+            from metrics.tracker import MetricsTracker
+            METRICS_AVAILABLE = True
+        else:
+            METRICS_AVAILABLE = False
+            MetricsTracker = None  # type: ignore
+    except ImportError:
+        METRICS_AVAILABLE = False
+        MetricsTracker = None  # type: ignore
+
 # Import agents - using relative import for modules with hyphens
 # Note: Directory names with hyphens require special handling
 try:
@@ -188,6 +212,11 @@ class MultiAgentOrchestrator:
 
         # Initialize agents lazily
         self._agents: Optional[Dict[str, Any]] = None
+
+        # Initialize metrics tracker
+        self._metrics_tracker: Optional[MetricsTracker] = None
+        if METRICS_AVAILABLE and db_client:
+            self._metrics_tracker = MetricsTracker(db=db_client)
 
     def _ensure_agents(self) -> Dict[str, Any]:
         """Lazy initialization of agent instances."""
@@ -570,6 +599,10 @@ class MultiAgentOrchestrator:
         logger.info(f"Starting V3 (State-Based) analysis for case {case_id}")
         start_time = time.time()
 
+        # Record analysis start for metrics
+        if self._metrics_tracker:
+            self._metrics_tracker.record_analysis_start(case_id)
+
         # Load demo_meta from Firestore if available
         demo_meta = None
         if self.db:
@@ -818,6 +851,22 @@ class MultiAgentOrchestrator:
         logger.info(f"Quality checks: {state.quality_checks}")
         logger.info(f"Buyer refinements: {state.buyer_refinement_count}")
         logger.info(f"Competitors detected: {state.competitors_detected}")
+
+        # Record analysis completion metrics
+        if self._metrics_tracker:
+            agent_durations = {
+                agent_id: result.duration
+                for agent_id, result in agent_results.items()
+                if result.duration > 0
+            }
+            self._metrics_tracker.record_analysis_complete(
+                case_id=case_id,
+                duration_seconds=total_duration,
+                agent_durations=agent_durations,
+                success=success,
+            )
+            # Calculate and store total processing time (from transcription start to analysis end)
+            self._metrics_tracker.calculate_and_store_total_time(case_id)
 
         return AnalysisResult(
             case_id=case_id,
