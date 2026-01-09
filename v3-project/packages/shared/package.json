@@ -1,0 +1,17 @@
+{
+  "name": "@Sales_ai_automation_v3/shared",
+  "version": "0.0.1",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "build": "tsc",
+    "check-types": "tsc --noEmit"
+  },
+  "dependencies": {
+    "yaml": "^2.7.0"
+  },
+  "devDependencies": {
+    "typescript": "catalog:"
+  }
+}

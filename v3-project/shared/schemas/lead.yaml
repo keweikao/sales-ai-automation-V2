@@ -1,0 +1,148 @@
+# Lead 資料模型定義
+# V2/V3 共用
+version: "1.0"
+name: "Lead Schema"
+description: "潛客資料模型"
+
+sources:
+  - id: "squarespace"
+    name: "Squarespace"
+    description: "官網表單"
+
+  - id: "linkedin"
+    name: "LinkedIn"
+    description: "LinkedIn 廣告"
+
+  - id: "referral"
+    name: "Referral"
+    description: "轉介紹"
+
+  - id: "website"
+    name: "Website"
+    description: "官網其他來源"
+
+  - id: "event"
+    name: "Event"
+    description: "展覽或活動"
+
+  - id: "cold_outreach"
+    name: "Cold Outreach"
+    description: "主動開發"
+
+  - id: "other"
+    name: "Other"
+    description: "其他來源"
+
+statuses:
+  - id: "new"
+    name: "New"
+    chinese_name: "新進"
+    description: "新進的潛客"
+    order: 1
+
+  - id: "contacted"
+    name: "Contacted"
+    chinese_name: "已聯繫"
+    description: "已初步聯繫"
+    order: 2
+
+  - id: "mql"
+    name: "MQL"
+    chinese_name: "行銷合格"
+    description: "Marketing Qualified Lead"
+    order: 3
+
+  - id: "sql"
+    name: "SQL"
+    chinese_name: "銷售合格"
+    description: "Sales Qualified Lead"
+    order: 4
+
+  - id: "opportunity"
+    name: "Opportunity"
+    chinese_name: "商機"
+    description: "已成為商機"
+    order: 5
+
+  - id: "negotiation"
+    name: "Negotiation"
+    chinese_name: "議價中"
+    description: "進入議價階段"
+    order: 6
+
+  - id: "closed_won"
+    name: "Closed Won"
+    chinese_name: "成交"
+    description: "已成交"
+    order: 7
+
+  - id: "closed_lost"
+    name: "Closed Lost"
+    chinese_name: "流失"
+    description: "未成交"
+    order: 8
+
+fields:
+  - name: "id"
+    type: "string"
+    required: true
+    description: "唯一識別碼"
+
+  - name: "email"
+    type: "string"
+    required: true
+    format: "email"
+    description: "電子郵件"
+
+  - name: "name"
+    type: "string"
+    required: false
+    description: "聯絡人姓名"
+
+  - name: "company"
+    type: "string"
+    required: false
+    description: "公司/店家名稱"
+
+  - name: "phone"
+    type: "string"
+    required: false
+    description: "電話號碼"
+
+  - name: "title"
+    type: "string"
+    required: false
+    description: "職稱"
+
+  - name: "source"
+    type: "enum"
+    enum_ref: "sources"
+    required: true
+    default: "other"
+    description: "來源"
+
+  - name: "status"
+    type: "enum"
+    enum_ref: "statuses"
+    required: true
+    default: "new"
+    description: "狀態"
+
+  - name: "score"
+    type: "integer"
+    required: true
+    default: 0
+    min: 0
+    max: 100
+    description: "潛客分數"
+
+  - name: "tags"
+    type: "array"
+    items: "string"
+    required: false
+    description: "標籤"
+
+  - name: "salesforce_id"
+    type: "string"
+    required: false
+    description: "Salesforce ID"

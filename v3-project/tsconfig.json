@@ -1,0 +1,3 @@
+{
+  "extends": "@Sales_ai_automation_v3/config/tsconfig.base.json",
+}
