@@ -1,0 +1,183 @@
+# Conversation 資料模型定義
+# V2/V3 共用
+version: "1.0"
+name: "Conversation Schema"
+description: "銷售對話資料模型"
+
+statuses:
+  - id: "pending"
+    name: "Pending"
+    chinese_name: "待處理"
+    description: "等待處理"
+    order: 1
+
+  - id: "transcribing"
+    name: "Transcribing"
+    chinese_name: "轉錄中"
+    description: "正在進行語音轉文字"
+    order: 2
+
+  - id: "analyzing"
+    name: "Analyzing"
+    chinese_name: "分析中"
+    description: "正在進行 AI 分析"
+    order: 3
+
+  - id: "completed"
+    name: "Completed"
+    chinese_name: "已完成"
+    description: "處理完成"
+    order: 4
+
+  - id: "failed"
+    name: "Failed"
+    chinese_name: "失敗"
+    description: "處理失敗"
+    order: 5
+
+conversation_types:
+  - id: "discovery"
+    name: "Discovery"
+    chinese_name: "探索"
+    description: "初次了解需求"
+
+  - id: "demo"
+    name: "Demo"
+    chinese_name: "演示"
+    description: "產品演示"
+
+  - id: "negotiation"
+    name: "Negotiation"
+    chinese_name: "議價"
+    description: "價格協商"
+
+  - id: "follow_up"
+    name: "Follow Up"
+    chinese_name: "跟進"
+    description: "後續跟進"
+
+  - id: "closing"
+    name: "Closing"
+    chinese_name: "結案"
+    description: "成交或結案"
+
+fields:
+  - name: "id"
+    type: "string"
+    required: true
+    description: "唯一識別碼"
+
+  - name: "lead_id"
+    type: "string"
+    required: false
+    foreign_key: "leads.id"
+    description: "關聯的潛客 ID"
+
+  - name: "sales_rep_id"
+    type: "string"
+    required: false
+    description: "業務員 ID"
+
+  - name: "sales_rep_name"
+    type: "string"
+    required: false
+    description: "業務員名稱"
+
+  - name: "status"
+    type: "enum"
+    enum_ref: "statuses"
+    required: true
+    default: "pending"
+    description: "處理狀態"
+
+  - name: "conversation_type"
+    type: "enum"
+    enum_ref: "conversation_types"
+    required: false
+    description: "對話類型"
+
+  # Transcript 相關
+  - name: "transcript_full_text"
+    type: "text"
+    required: false
+    description: "完整逐字稿"
+
+  - name: "transcript_segments"
+    type: "json"
+    required: false
+    description: "逐字稿片段（含時間戳）"
+
+  - name: "transcript_language"
+    type: "string"
+    required: false
+    default: "zh-TW"
+    description: "語言代碼"
+
+  - name: "audio_duration_seconds"
+    type: "float"
+    required: false
+    description: "音檔時長（秒）"
+
+  - name: "audio_file_uri"
+    type: "string"
+    required: false
+    description: "音檔儲存路徑"
+
+  # Analysis 相關
+  - name: "meddic_score"
+    type: "integer"
+    required: false
+    min: 0
+    max: 100
+    description: "MEDDIC 總分"
+
+  - name: "progress_score"
+    type: "integer"
+    required: false
+    min: 0
+    max: 100
+    description: "推進分數"
+
+  - name: "qualification_status"
+    type: "string"
+    required: false
+    enum: ["qualified", "unqualified", "needs_work"]
+    description: "資格狀態"
+
+  - name: "summary"
+    type: "text"
+    required: false
+    description: "對話摘要（給銷售主管）"
+
+  - name: "customer_summary"
+    type: "text"
+    required: false
+    description: "客戶摘要（可發送給客戶）"
+
+  - name: "analysis_raw"
+    type: "json"
+    required: false
+    description: "原始分析結果 JSON"
+
+  # Timestamps
+  - name: "created_at"
+    type: "timestamp"
+    required: true
+    default: "now"
+    description: "建立時間"
+
+  - name: "updated_at"
+    type: "timestamp"
+    required: true
+    default: "now"
+    description: "更新時間"
+
+  - name: "completed_at"
+    type: "timestamp"
+    required: false
+    description: "完成時間"
+
+  - name: "analyzed_at"
+    type: "timestamp"
+    required: false
+    description: "分析完成時間"
