@@ -15,7 +15,7 @@ import {
   Input,
   Button,
 } from '@sales-ai/ui';
-import type { ConversationStatus, ConversationFilters } from '@sales-ai/types';
+import type { Conversation, ConversationStatus, ConversationFilters } from '@sales-ai/types';
 import { useConversations } from '@/hooks/use-dashboard';
 
 export const Route = createFileRoute('/conversations/')({
@@ -102,7 +102,7 @@ function ConversationsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {data?.items.map((conv) => (
+                {data?.items.map((conv: Conversation) => (
                   <TableRow key={conv.id}>
                     <TableCell className="font-mono text-sm">{conv.id}</TableCell>
                     <TableCell>{conv.salesRepName || '-'}</TableCell>

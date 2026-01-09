@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { Card, CardHeader, CardContent, ScoreGauge, StatusBadge, Badge } from '@sales-ai/ui';
+import type { Conversation, PerformerStats } from '@sales-ai/types';
 import { useDashboardStats, useTrends, useConversations } from '@/hooks/use-dashboard';
 import {
   LineChart,
@@ -143,7 +144,7 @@ function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {conversations?.items.slice(0, 5).map((conv) => (
+              {conversations?.items.slice(0, 5).map((conv: Conversation) => (
                 <Link
                   key={conv.id}
                   to="/conversations/$id"
@@ -174,7 +175,7 @@ function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {stats?.topPerformers.map((performer, index) => (
+              {stats?.topPerformers.map((performer: PerformerStats, index: number) => (
                 <div
                   key={performer.id}
                   className="flex items-center justify-between rounded-lg border p-3"

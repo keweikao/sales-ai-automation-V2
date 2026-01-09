@@ -14,6 +14,7 @@ import {
   TableCell,
   Input,
 } from '@sales-ai/ui';
+import type { PerformerStats } from '@sales-ai/types';
 import { useWeeklyReport } from '@/hooks/use-dashboard';
 import {
   BarChart,
@@ -160,7 +161,7 @@ function WeeklyReportPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {report.byRep.map((rep, index) => (
+                    {report.byRep.map((rep: PerformerStats, index: number) => (
                       <TableRow key={rep.id}>
                         <TableCell>
                           <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
@@ -202,7 +203,7 @@ function WeeklyReportPage() {
             </CardHeader>
             <CardContent>
               <ul className="space-y-3">
-                {report.insights.map((insight, index) => (
+                {report.insights.map((insight: string, index: number) => (
                   <li
                     key={index}
                     className="flex items-start gap-3 rounded-lg border p-3"

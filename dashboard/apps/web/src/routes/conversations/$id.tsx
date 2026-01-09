@@ -214,7 +214,7 @@ function ConversationDetailPage() {
                   <div>
                     <div className="text-sm font-medium text-muted-foreground mb-2">已識別需求</div>
                     <div className="flex flex-wrap gap-2">
-                      {conversation.analysis.buyerData.identifiedNeeds.map((need, i) => (
+                      {conversation.analysis.buyerData.identifiedNeeds.map((need: string, i: number) => (
                         <Badge key={i} variant="secondary">{need}</Badge>
                       ))}
                       {conversation.analysis.buyerData.identifiedNeeds.length === 0 && (
@@ -226,7 +226,7 @@ function ConversationDetailPage() {
                   <div>
                     <div className="text-sm font-medium text-muted-foreground mb-2">痛點</div>
                     <div className="flex flex-wrap gap-2">
-                      {conversation.analysis.buyerData.painPoints.map((pain, i) => (
+                      {conversation.analysis.buyerData.painPoints.map((pain: string, i: number) => (
                         <Badge key={i} variant="destructive">{pain}</Badge>
                       ))}
                       {conversation.analysis.buyerData.painPoints.length === 0 && (
@@ -238,7 +238,7 @@ function ConversationDetailPage() {
                   <div>
                     <div className="text-sm font-medium text-muted-foreground mb-2">猶豫點</div>
                     <div className="flex flex-wrap gap-2">
-                      {conversation.analysis.buyerData.hesitations.map((hes, i) => (
+                      {conversation.analysis.buyerData.hesitations.map((hes: string, i: number) => (
                         <Badge key={i} variant="warning">{hes}</Badge>
                       ))}
                       {conversation.analysis.buyerData.hesitations.length === 0 && (
