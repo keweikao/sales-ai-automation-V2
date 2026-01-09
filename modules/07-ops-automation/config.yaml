@@ -2,14 +2,14 @@
 
 module:
   name: ops-automation
-  version: "0.1.0"
-  status: partial  # Only error notifications implemented
+  version: "0.2.0"
+  status: active  # Full ops automation enabled
 
 # Error notifications
 monitoring:
   error_notifier:
     enabled: true
-    channel: "#sales-ai-alerts"
+    channel: "#sales-reports"  # Unified to sales-reports channel
 
     # Error severity levels
     levels:
@@ -32,15 +32,77 @@ monitoring:
       - notification_failed
       - salesforce_sync_failed
 
-# Health checks (future)
+# Health checks
 health_checks:
-  enabled: false
-  endpoints:
+  enabled: true
+  schedule: "0 */4 * * *"  # Every 4 hours
+  check_method: activity_based  # Use recent activity to determine health
+  thresholds:
+    healthy_success_rate: 0.95
+    degraded_success_rate: 0.70
+    latency_healthy_ms: 500
+    latency_degraded_ms: 1000
+  services:
     - name: transcription
-      url: /health
+      check_method: activity_based
+      status_field: transcriptionStatus
     - name: analysis
-      url: /health
+      check_method: activity_based
+      status_field: analysisStatus
+    - name: database
+      check_method: direct
+    - name: llm_gateway
+      check_method: activity_based
+    - name: notification
+      check_method: assume_healthy
 
-# Auto-remediation (future)
+# Auto-remediation
 remediation:
-  enabled: false
+  enabled: true
+  auto_retry:
+    enabled: true
+    max_retries: 3
+    hours_lookback: 24
+  cleanup:
+    enabled: true
+    stale_pending_hours: 24
+    stale_transcription_hours: 12
+    stale_analysis_hours: 6
+    orphaned_files_days: 30
+
+# Ops Agent (LLM-based analysis)
+agent:
+  enabled: true
+  model: "gemini-2.0-flash"
+  temperature: 0.1
+  analysis_enabled: true
+  auto_remediate: true
+
+# Reporting
+reporting:
+  channel: "#sales-reports"
+  channel_id: "C0A7C2HUXRR"
+
+  # Morning report (09:30 Taiwan time)
+  morning_report:
+    enabled: true
+    schedule: "30 1 * * *"  # 01:30 UTC = 09:30 Taiwan
+    period_start_hour: 18  # Previous day 18:30
+    period_start_minute: 30
+    period_end_hour: 9     # Current day 09:30
+    period_end_minute: 30
+
+  # Evening report (18:30 Taiwan time)
+  evening_report:
+    enabled: true
+    schedule: "30 10 * * *"  # 10:30 UTC = 18:30 Taiwan
+    period_start_hour: 9   # Current day 09:30
+    period_start_minute: 30
+    period_end_hour: 18    # Current day 18:30
+    period_end_minute: 30
+
+# Health history (for weekly comparison)
+history:
+  enabled: true
+  collection: "ops_health_history"
+  retention_days: 90

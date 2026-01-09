@@ -18,7 +18,7 @@ jobs:
   weekly_upload_report:
     name: "Weekly Upload Report"
     description: "Report on sales rep recording upload activity"
-    cron: "0 9 * * 1"  # Monday 9 AM (UTC)
+    cron: "0 1 * * 1"  # Monday 9 AM (UTC+8 / Taiwan)
     enabled: true
     handler: "infrastructure.services.scheduler.jobs.weekly_upload_report.send_weekly_upload_report"
     config:
@@ -58,6 +58,66 @@ jobs:
     config:
       alert_threshold_usd: 50.0
       send_alert_to: "#ops-alerts"
+
+  # ===== Ops Automation Jobs =====
+
+  # Ops Morning Report - 09:30 Taiwan time
+  ops_morning_report:
+    name: "Ops Morning Report"
+    description: "系統健康早報 (涵蓋 18:30-09:30 區間)"
+    cron: "30 1 * * *"  # 01:30 UTC = 09:30 Taiwan
+    enabled: true
+    handler: "infrastructure.services.scheduler.jobs.ops_daily_report.run"
+    config:
+      report_type: "morning"
+      slack_channel: "#sales-reports"
+      slack_channel_id: "C0A7C2HUXRR"
+      include_insights: true
+      include_recommendations: true
+      include_weekly_comparison: true
+
+  # Ops Evening Report - 18:30 Taiwan time
+  ops_evening_report:
+    name: "Ops Evening Report"
+    description: "系統健康晚報 (涵蓋 09:30-18:30 區間)"
+    cron: "30 10 * * *"  # 10:30 UTC = 18:30 Taiwan
+    enabled: true
+    handler: "infrastructure.services.scheduler.jobs.ops_daily_report.run"
+    config:
+      report_type: "evening"
+      slack_channel: "#sales-reports"
+      slack_channel_id: "C0A7C2HUXRR"
+      include_insights: true
+      include_recommendations: true
+      include_weekly_comparison: true
+
+  # Ops Health Check - Every 4 hours
+  ops_health_check:
+    name: "Ops Health Check"
+    description: "定期健康檢查，異常時發送告警"
+    cron: "0 */4 * * *"  # Every 4 hours
+    enabled: true
+    handler: "infrastructure.services.scheduler.jobs.ops_health_check.run"
+    config:
+      send_alert_on_issue: true
+      alert_channel: "#sales-reports"
+      alert_channel_id: "C0A7C2HUXRR"
+      save_to_history: true
+
+  # Ops Auto Remediation - Every 2 hours
+  ops_auto_remediation:
+    name: "Ops Auto Remediation"
+    description: "自動重試失敗任務和清理過期資料"
+    cron: "0 */2 * * *"  # Every 2 hours
+    enabled: true
+    handler: "infrastructure.services.scheduler.jobs.ops_auto_remediation.run"
+    config:
+      retry_transcriptions: true
+      retry_analyses: true
+      cleanup_stale: true
+      notify_on_success: false
+      notify_on_failure: true
+      alert_channel: "#sales-reports"
 
 # Default settings for all jobs
 defaults:

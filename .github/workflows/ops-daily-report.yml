@@ -1,0 +1,88 @@
+name: Ops Daily Report
+
+on:
+  schedule:
+    # 早報: 每日 09:30 台灣時間 = 01:30 UTC
+    - cron: '30 1 * * *'
+    # 晚報: 每日 18:30 台灣時間 = 10:30 UTC
+    - cron: '30 10 * * *'
+  workflow_dispatch:
+    inputs:
+      report_type:
+        description: 'Report type (morning/evening/scheduled)'
+        required: true
+        default: 'scheduled'
+        type: choice
+        options:
+          - morning
+          - evening
+          - scheduled
+
+jobs:
+  send-ops-report:
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install google-cloud-firestore slack_sdk aiohttp httpx google-generativeai
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Determine report type
+        id: report-type
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "type=${{ inputs.report_type }}" >> $GITHUB_OUTPUT
+          else
+            # Determine based on cron schedule
+            HOUR=$(date -u +%H)
+            if [ "$HOUR" == "01" ]; then
+              echo "type=morning" >> $GITHUB_OUTPUT
+            else
+              echo "type=evening" >> $GITHUB_OUTPUT
+            fi
+          fi
+
+      - name: Run Ops Daily Report
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GOOGLE_CLOUD_PROJECT: sales-ai-automation-v2
+          OPS_REPORT_CHANNEL_ID: C0A7C2HUXRR
+          OPS_REPORT_CHANNEL: "#sales-reports"
+        run: |
+          python -c "
+          import asyncio
+          import sys
+          sys.path.insert(0, '.')
+          from infrastructure.services.scheduler.jobs.ops_daily_report import run
+
+          report_type = '${{ steps.report-type.outputs.type }}'
+          print(f'Running {report_type} report...')
+
+          result = asyncio.run(run(report_type=report_type))
+          print(f'Result: {result}')
+
+          if result.get('status') == 'error':
+              sys.exit(1)
+          "
+
+      - name: Report status
+        if: always()
+        run: |
+          echo "Report type: ${{ steps.report-type.outputs.type }}"
+          echo "Job status: ${{ job.status }}"
