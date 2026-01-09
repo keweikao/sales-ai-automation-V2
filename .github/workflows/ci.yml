@@ -59,6 +59,10 @@ jobs:
         working-directory: dashboard
         run: bun install
 
+      - name: Build packages (for composite project references)
+        working-directory: dashboard
+        run: bun run build --filter='./packages/*'
+
       - name: TypeScript type check
         working-directory: dashboard
         run: bun run typecheck
