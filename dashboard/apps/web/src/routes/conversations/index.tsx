@@ -16,7 +16,7 @@ import {
   Button,
 } from '@sales-ai/ui';
 import type { Conversation, ConversationStatus, ConversationFilters } from '@sales-ai/types';
-import { useConversations } from '@/hooks/use-dashboard';
+import { useConversations } from '../../hooks/use-dashboard';
 
 export const Route = createFileRoute('/conversations/')({
   component: ConversationsPage,

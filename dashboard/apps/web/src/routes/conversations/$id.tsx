@@ -15,7 +15,7 @@ import {
   Button,
   Badge,
 } from '@sales-ai/ui';
-import { useConversation } from '@/hooks/use-dashboard';
+import { useConversation } from '../../hooks/use-dashboard';
 
 export const Route = createFileRoute('/conversations/$id')({
   component: ConversationDetailPage,

@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { Card, CardHeader, CardContent, ScoreGauge, StatusBadge, Badge } from '@sales-ai/ui';
 import type { Conversation, PerformerStats } from '@sales-ai/types';
-import { useDashboardStats, useTrends, useConversations } from '@/hooks/use-dashboard';
+import { useDashboardStats, useTrends, useConversations } from '../hooks/use-dashboard';
 import {
   LineChart,
   Line,

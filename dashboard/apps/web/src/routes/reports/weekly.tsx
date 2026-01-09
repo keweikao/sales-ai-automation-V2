@@ -15,7 +15,7 @@ import {
   Input,
 } from '@sales-ai/ui';
 import type { PerformerStats } from '@sales-ai/types';
-import { useWeeklyReport } from '@/hooks/use-dashboard';
+import { useWeeklyReport } from '../../hooks/use-dashboard';
 import {
   BarChart,
   Bar,

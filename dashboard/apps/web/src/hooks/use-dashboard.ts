@@ -1,13 +1,13 @@
 import { useQuery } from '@tanstack/react-query';
 import type { TrendPeriod, ConversationFilters } from '@sales-ai/types';
-import { api } from '@/lib/api';
+import { api } from '../lib/api';
 import {
   mockDashboardStats,
   mockConversationList,
   mockConversationDetail,
   mockWeeklyReport,
   mockTrends,
-} from '@/lib/mock-data';
+} from '../lib/mock-data';
 
 const USE_MOCK = import.meta.env.VITE_USE_MOCK !== 'false';
 
