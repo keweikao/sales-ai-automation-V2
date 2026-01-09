@@ -74,12 +74,6 @@ function InsightItem({ insight }: { insight: CoachingInsight }) {
 }
 
 export function CoachingPanel({ coaching, className }: CoachingPanelProps) {
-  const groupedInsights = {
-    strength: coaching.insights.filter((i) => i.category === 'strength'),
-    improvement: coaching.insights.filter((i) => i.category === 'improvement'),
-    action: coaching.insights.filter((i) => i.category === 'action'),
-  };
-
   return (
     <Card className={cn('w-full', className)}>
       <CardHeader className="pb-2">
