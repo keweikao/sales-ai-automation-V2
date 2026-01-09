@@ -23,7 +23,7 @@ project_root = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(project_root))
 
 # Dynamic imports for hyphenated directories
-import importlib.util
+import importlib.util  # noqa: E402
 
 # Default target channel
 DEFAULT_CHANNEL = "C0A4F762FE0"
@@ -114,7 +114,6 @@ async def main():
     # Import Slack sender and Firestore
     from infrastructure.services.notification.channels.slack.sender import SlackSender
     from google.cloud import firestore
-    from datetime import datetime
 
     print("Modules loaded successfully")
 

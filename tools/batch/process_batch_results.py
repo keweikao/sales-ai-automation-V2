@@ -10,7 +10,6 @@ import sys
 import json
 import argparse
 import logging
-from datetime import datetime, timezone
 from typing import Dict, List, Optional
 import re
 

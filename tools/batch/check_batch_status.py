@@ -11,11 +11,9 @@ import os
 import sys
 import json
 import logging
-from pathlib import Path
 
 from google.cloud import speech_v2
 from google.api_core.client_options import ClientOptions
-from google.longrunning import operations_pb2
 
 # Configure logging
 logging.basicConfig(
@@ -57,7 +55,7 @@ def check_status():
         logger.error("狀態檔案中找不到 operations")
         sys.exit(1)
     
-    logger.info(f"檢查批次狀態...")
+    logger.info("檢查批次狀態...")
     logger.info(f"  提交時間: {state.get('submitted_at')}")
     logger.info(f"  案件數量: {state.get('case_count')}")
     logger.info(f"  批次數量: {len(operations_data)}")
@@ -90,14 +88,14 @@ def check_status():
             if operation.done:
                 completed_count += 1
                 if operation.error.code:
-                    print(f"  ❌ 狀態: 失敗")
+                    print("  ❌ 狀態: 失敗")
                     print(f"     錯誤: {operation.error.message}")
                 else:
-                    print(f"  ✅ 狀態: 完成")
+                    print("  ✅ 狀態: 完成")
                     print(f"     輸出: {output_uri}")
             else:
                 all_done = False
-                print(f"  ⏳ 狀態: 處理中...")
+                print("  ⏳ 狀態: 處理中...")
                 
                 # Check metadata for progress if available
                 if operation.metadata:

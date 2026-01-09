@@ -1,7 +1,7 @@
 """對話相關 API 路由"""
 import logging
 from fastapi import APIRouter, Query, HTTPException
-from typing import Optional, List
+from typing import Optional
 from datetime import datetime
 
 from schemas.conversation import (

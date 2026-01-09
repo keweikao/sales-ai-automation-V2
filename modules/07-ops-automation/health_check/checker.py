@@ -8,7 +8,7 @@ analysis, notification, and database services.
 import asyncio
 from datetime import datetime, timedelta, timezone
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 from dataclasses import dataclass, field
 
 import httpx

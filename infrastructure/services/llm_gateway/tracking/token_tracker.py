@@ -5,8 +5,8 @@ Tracks token consumption for billing and monitoring.
 """
 
 import logging
-from dataclasses import asdict, dataclass
-from datetime import datetime, timedelta
+from dataclasses import dataclass
+from datetime import datetime
 from typing import Optional
 
 logger = logging.getLogger(__name__)

@@ -7,7 +7,7 @@ enabling the learning loop that makes agents truly adaptive.
 
 import logging
 from datetime import datetime, timedelta
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict
 
 from core.schemas.outcome import (
     DealOutcome,

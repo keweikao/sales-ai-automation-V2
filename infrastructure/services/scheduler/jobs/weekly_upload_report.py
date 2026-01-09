@@ -41,7 +41,7 @@ _formatter_module = _load_module(
 UploadDataAggregator = _aggregator_module.UploadDataAggregator
 UploadReportSlackFormatter = _formatter_module.UploadReportSlackFormatter
 
-from infrastructure.services.notification.channels.slack.sender import SlackSender
+from infrastructure.services.notification.channels.slack.sender import SlackSender  # noqa: E402
 
 logger = logging.getLogger(__name__)
 

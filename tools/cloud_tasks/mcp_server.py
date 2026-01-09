@@ -9,7 +9,6 @@ import sys
 import json
 import os
 from typing import Any, Dict, Optional
-from datetime import datetime
 
 try:
     from google.cloud import tasks_v2

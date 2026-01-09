@@ -59,7 +59,7 @@ def rescue():
                 logger.error(f"  Failed to re-trigger transcription: {e}")
 
     logger.info("="*30)
-    logger.info(f"Rescued Summary:")
+    logger.info("Rescued Summary:")
     logger.info(f"Successfully Transcribed & Analyzed: {transcribed_count}")
     logger.info(f"Re-triggered for Gemini 3.0: {failed_count}")
     logger.info("="*30)

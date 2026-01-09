@@ -7,7 +7,6 @@ Gemini API 驗證腳本
 import os
 import sys
 import logging
-from pathlib import Path
 
 # 設定 logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -43,7 +42,7 @@ def test_vertex_ai_gemini():
             }
         )
         
-        logger.info(f"✅ Gemini API 回應成功！")
+        logger.info("✅ Gemini API 回應成功！")
         logger.info(f"回應內容: {response.text[:100]}...")
         
         return True
@@ -75,7 +74,7 @@ def test_google_ai_gemini():
         response = model.generate_content("Hello, how are you?")
 
         
-        logger.info(f"✅ Google AI Gemini API 回應成功！")
+        logger.info("✅ Google AI Gemini API 回應成功！")
         logger.info(f"回應內容: {response.text[:100]}...")
         
         return True

@@ -5,7 +5,7 @@ Mock Firestore implementation for E2E tests
 """
 
 from datetime import datetime
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional
 from unittest.mock import MagicMock
 import copy
 

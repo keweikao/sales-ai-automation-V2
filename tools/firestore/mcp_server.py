@@ -3,7 +3,6 @@
 Provides a tool to query Firestore collections with context optimization."""
 import sys
 import json
-from typing import Any
 from .query import query
 
 # MCP Tool Definition for firestore_query

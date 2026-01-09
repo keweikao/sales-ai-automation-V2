@@ -9,11 +9,10 @@ Dynamic Batch 批次提交工具
 """
 
 import os
-import sys
 import argparse
 import logging
 from datetime import datetime, timezone
-from typing import List, Dict, Optional
+from typing import List, Dict
 import json
 
 from google.cloud import firestore, storage
@@ -245,7 +244,7 @@ def main():
     
     # Print summary
     print("\n" + "=" * 60)
-    print(f"📊 待轉錄案件摘要")
+    print("📊 待轉錄案件摘要")
     print("-" * 60)
     print(f"案件數量: {len(cases)}")
     print(f"預估成本: ${len(cases) * 30 * 0.003:.2f} (假設每個 30 分鐘)")
@@ -259,9 +258,9 @@ def main():
         print("📋 後續步驟")
         print("-" * 60)
         print("1. 執行以下命令檢查狀態:")
-        print(f"   python tools/batch/check_batch_status.py")
+        print("   python tools/batch/check_batch_status.py")
         print("\n2. 處理完成後，執行以下命令處理結果:")
-        print(f"   python tools/batch/process_batch_results.py")
+        print("   python tools/batch/process_batch_results.py")
         print("=" * 60)
 
 

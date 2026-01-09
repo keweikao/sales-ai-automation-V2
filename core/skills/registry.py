@@ -13,7 +13,7 @@ import importlib
 import importlib.util
 import logging
 from pathlib import Path
-from typing import Any, Callable, Optional, Type
+from typing import Callable, Optional, Type
 
 from .base import Skill, SkillCategory, SkillMetadata
 

@@ -6,7 +6,6 @@ Downloads audio files from Slack.
 
 import tempfile
 import httpx
-from typing import Optional
 
 
 class SlackAudioSource:

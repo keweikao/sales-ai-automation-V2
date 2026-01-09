@@ -2,7 +2,6 @@ import os
 import logging
 from google.cloud import speech_v2
 from google.cloud.speech_v2.types import cloud_speech
-from google.api_core import exceptions as gapi_exceptions
 from google.api_core.client_options import ClientOptions
 
 logging.basicConfig(level=logging.INFO)
@@ -57,15 +56,14 @@ except Exception as e:
         print(f"Errors metadata: {e.errors}")
     # Try to extract more details if it's a gRPC error
     try:
-        from google.rpc import errdetails_pb2
         # This might be tricky without full proto access, but let's see.
         pass
-    except:
+    except Exception:
         pass
 finally:
     # Cleanup if needed
     try:
         client.delete_recognizer(name=f"{parent}/recognizers/{recognizer_id}")
         print("Test recognizer deleted.")
-    except:
+    except Exception:
         pass

@@ -10,8 +10,7 @@ Tests the workflow execution infrastructure including:
 
 import pytest
 import asyncio
-from unittest.mock import MagicMock, AsyncMock, patch
-from dataclasses import dataclass
+from unittest.mock import MagicMock
 
 from core.skills.base import Skill, SkillMetadata, SkillContext, SkillResult
 from core.skills.registry import SkillRegistry

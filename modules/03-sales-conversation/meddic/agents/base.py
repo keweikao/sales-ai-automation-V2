@@ -33,7 +33,7 @@ except ImportError:
 
 # Retry mechanism (P0 Fix)
 try:
-    from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+    from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type  # noqa: F401
     TENACITY_AVAILABLE = True
 except ImportError:
     TENACITY_AVAILABLE = False
@@ -379,14 +379,14 @@ class GeminiJSONAgent:
         if CIRCUIT_BREAKER_AVAILABLE and CircuitBreaker:
             cb = CircuitBreaker.get_instance("gemini_api", failure_threshold=5, recovery_timeout=30)
             if not cb.can_execute():
-                _base_logger.warning(f"[CIRCUIT:gemini_api] Request blocked - circuit is OPEN")
+                _base_logger.warning("[CIRCUIT:gemini_api] Request blocked - circuit is OPEN")
                 raise CircuitOpenError("Gemini API circuit breaker is open")
 
         # P1: Apply Rate Limiting (60 requests per minute = 1 per second)
         if RATE_LIMITER_AVAILABLE and RateLimiter:
             rl = RateLimiter.get_instance("gemini_api", max_tokens=60, refill_rate=1.0)
             if not rl.acquire(tokens=1, wait=True, timeout=30.0):
-                _base_logger.warning(f"[RATE:gemini_api] Rate limit exceeded")
+                _base_logger.warning("[RATE:gemini_api] Rate limit exceeded")
                 raise RateLimitExceeded("Gemini API rate limit exceeded")
 
         start_time = time.time()

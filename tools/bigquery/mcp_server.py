@@ -5,7 +5,6 @@ Provides a tool to run BigQuery queries.
 """
 import sys
 import json
-from typing import Any
 from .query import query
 
 # MCP Tool Definition for bigquery_query

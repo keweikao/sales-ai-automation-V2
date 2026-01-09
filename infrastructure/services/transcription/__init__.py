@@ -91,8 +91,8 @@ def get_pipeline(engine: str = None):
 
 
 # Export commonly used classes
-from .providers import GroqWhisperPipeline, GeminiTranscriptionPipeline, TranscriptionPipeline
-from .status_tracker import TranscriptionStatusTracker
+from .providers import GroqWhisperPipeline, GeminiTranscriptionPipeline, TranscriptionPipeline  # noqa: E402
+from .status_tracker import TranscriptionStatusTracker  # noqa: E402
 
 __all__ = [
     "get_pipeline",

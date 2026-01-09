@@ -9,7 +9,6 @@ This script scans key directories and files to automatically generate
 a project context document that can be shared with any LLM.
 """
 
-import os
 import re
 import yaml
 from pathlib import Path
@@ -33,7 +32,7 @@ def find_services():
                             'name': svc,
                             'path': str(cb_file.parent.relative_to(PROJECT_ROOT))
                         })
-        except:
+        except Exception:
             pass
     return services
 
@@ -94,9 +93,9 @@ def extract_env_vars():
                 # Find common env var patterns
                 vars_found = re.findall(r'\$[{_]?([A-Z][A-Z0-9_]+)', content)
                 env_vars.update(vars_found)
-        except:
+        except Exception:
             pass
-    
+
     # Filter to important ones
     important = ['GCP_PROJECT_ID', 'GEMINI_API_KEY', 'SLACK_BOT_TOKEN', 
                  'SLACK_SIGNING_SECRET', 'FIRESTORE_DATABASE']
@@ -111,7 +110,7 @@ def count_lines_of_code():
         try:
             with open(py_file) as f:
                 total += len(f.readlines())
-        except:
+        except Exception:
             pass
     return total
 
@@ -225,7 +224,7 @@ def main():
         f.write(content)
     
     print(f"✅ Generated {OUTPUT_FILE}")
-    print(f"   You can now share this file with any LLM for context.")
+    print("   You can now share this file with any LLM for context.")
 
 if __name__ == "__main__":
     main()

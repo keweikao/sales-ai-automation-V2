@@ -5,7 +5,6 @@ Provides a tool to upload files to Google Cloud Storage.
 """
 import sys
 import json
-from typing import Any
 from .upload import upload
 
 # MCP Tool Definitions

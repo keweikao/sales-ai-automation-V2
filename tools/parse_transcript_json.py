@@ -46,7 +46,7 @@ def export_transcript():
     segments = transcription.get("segments", [])
     
     with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
-        f.write(f"Transcript for Case: 202512-IC001\n")
+        f.write("Transcript for Case: 202512-IC001\n")
         f.write("="*50 + "\n\n")
         
         if segments:

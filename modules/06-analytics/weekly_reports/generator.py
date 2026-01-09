@@ -350,7 +350,7 @@ class WeeklyReportGenerator:
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": f"*📋 業務表現排名:*\n" + "\n".join(rep_lines)
+                    "text": "*📋 業務表現排名:*\n" + "\n".join(rep_lines)
                 }
             })
 

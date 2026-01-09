@@ -8,7 +8,6 @@ Migration note: From analysis-service/src/agents/agent1_context.py
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 from typing import Any, Dict, Iterable, Optional
 

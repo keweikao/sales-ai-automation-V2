@@ -565,7 +565,7 @@ class CoachAgent:
                 "type": "section",
                 "fields": [
                     {"type": "mrkdwn", "text": f"*業務:* {alert.rep_name}"},
-                    {"type": "mrkdwn", "text": f"*類型:* 連續表現低落"},
+                    {"type": "mrkdwn", "text": "*類型:* 連續表現低落"},
                     {"type": "mrkdwn", "text": f"*嚴重性:* {alert.severity.upper()}"}
                 ]
             },

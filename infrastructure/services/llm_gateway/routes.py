@@ -4,7 +4,7 @@ LLM Gateway API routes.
 
 from fastapi import APIRouter
 from pydantic import BaseModel
-from typing import Any, Optional
+from typing import Optional
 
 router = APIRouter(prefix="/llm", tags=["llm"])
 

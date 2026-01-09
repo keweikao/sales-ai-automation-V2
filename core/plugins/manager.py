@@ -6,7 +6,7 @@ import importlib
 import importlib.util
 import logging
 from pathlib import Path
-from typing import Any, Callable, Optional, Type
+from typing import Any, Optional, Type
 
 from core.skills import SkillRegistry
 from core.workflows import WorkflowLoader

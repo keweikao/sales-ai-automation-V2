@@ -1,4 +1,3 @@
-import os
 from google.cloud import firestore
 
 def get_case_details(case_id):

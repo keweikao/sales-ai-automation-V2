@@ -16,7 +16,6 @@ from core.schemas.outcome import (
     ExplicitFeedback,
     SuggestionFeedback,
     SummaryEditFeedback,
-    OutcomeFeedback,
     SuggestionResponse,
     FeedbackType,
     LearningSignal,
@@ -255,7 +254,7 @@ class FeedbackCollector:
 
         # Check for tone changes (simplified)
         formal_words = ["您", "貴司", "敬請", "please", "kindly"]
-        informal_words = ["你", "我們", "ok", "okay"]
+        # informal_words reserved for future tone analysis
 
         orig_formal = sum(1 for w in formal_words if w in original)
         edit_formal = sum(1 for w in formal_words if w in edited)
@@ -378,8 +377,8 @@ class FeedbackCollector:
         agent_id: Optional[str] = None
     ) -> Dict[str, Any]:
         """Get summary of feedback collected."""
-        cutoff = datetime.utcnow()
-        # Would filter by date in production
+        # cutoff would be used in production for date filtering
+        _ = datetime.utcnow()  # Placeholder for future date filtering
 
         docs = self.firestore.collection("feedback").stream()
         feedback_list = [doc.to_dict() for doc in docs]

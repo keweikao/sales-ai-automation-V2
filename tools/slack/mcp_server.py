@@ -5,7 +5,6 @@ Provides a tool to send messages to Slack channels.
 """
 import sys
 import json
-from typing import Any
 from .send_message import send_message
 
 # MCP Tool Definition for slack_send_message

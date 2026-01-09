@@ -5,10 +5,9 @@ E2E 測試配置和共用 fixtures
 """
 
 import pytest
-import os
 from datetime import datetime
-from unittest.mock import Mock, MagicMock, patch
-from typing import Dict, Any, List
+from unittest.mock import MagicMock, patch
+from typing import Dict, Any
 
 
 # ===== Pytest Configuration =====
@@ -37,7 +36,7 @@ def sample_case_id():
 @pytest.fixture
 def sample_file_id():
     """提供測試用的 file ID"""
-    return f"F123456789TEST"
+    return "F123456789TEST"
 
 
 @pytest.fixture
@@ -286,7 +285,6 @@ def mock_gcs():
 @pytest.fixture
 def wait_for_async():
     """等待非同步操作完成的輔助函數"""
-    import asyncio
     import time
 
     def _wait(condition_func, timeout=5.0, interval=0.1):

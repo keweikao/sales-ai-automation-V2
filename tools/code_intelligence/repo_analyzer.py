@@ -2,7 +2,6 @@
 專案分析器 - 使用 Cased Kit 分析 Sales AI Automation 專案
 """
 
-import os
 from typing import Dict, List, Optional
 from pathlib import Path
 

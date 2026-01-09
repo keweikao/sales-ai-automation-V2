@@ -57,7 +57,7 @@ __all__ = [
 
 # Optional: OpsAgent (requires google-generativeai)
 try:
-    from .agent import OpsAgent, OpsAnalysisResult
+    from .agent import OpsAgent, OpsAnalysisResult  # noqa: F401
 
     __all__.extend(["OpsAgent", "OpsAnalysisResult"])
 except ImportError:

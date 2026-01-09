@@ -7,7 +7,7 @@ Provides tools to interact with the Gemini API using an API key.
 import sys
 import json
 import os
-from typing import Any, Dict, List
+from typing import Any, Dict
 
 try:
     import google.generativeai as genai

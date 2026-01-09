@@ -1,7 +1,6 @@
 """
 查看所有案件 (不依賴 createdAt 欄位)
 """
-import os
 from google.cloud import firestore
 
 db = firestore.Client()

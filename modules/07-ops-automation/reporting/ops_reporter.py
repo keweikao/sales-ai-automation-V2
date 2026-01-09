@@ -297,7 +297,7 @@ class OpsReporter:
                 f"{analysis_retry.get('successful', 0)} 件分析"
             )
         else:
-            lines.append(f"• 重試: 執行失敗")
+            lines.append("• 重試: 執行失敗")
 
         # Cleanup results
         cleanup = run_result.cleanup_result or {}
@@ -309,7 +309,7 @@ class OpsReporter:
             )
             lines.append(f"• 清理: {total_cleaned} 件過期任務")
         else:
-            lines.append(f"• 清理: 執行失敗")
+            lines.append("• 清理: 執行失敗")
 
         return [{
             "type": "section",

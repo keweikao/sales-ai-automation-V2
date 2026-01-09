@@ -6,7 +6,7 @@ Description: Manage IAM, Cloud Build, and Cloud Run resources efficiently.
 import sys
 import json
 import subprocess
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List
 
 # MCP Tool Definitions
 TOOLS = [

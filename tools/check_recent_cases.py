@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Check transcription status for cases created since yesterday."""
 
-import json
 import datetime
 from google.cloud import firestore
 
@@ -9,7 +8,7 @@ from google.cloud import firestore
 db = firestore.Client(project='sales-ai-automation-v2')
 
 # Calculate yesterday's date (midnight) - use UTC timezone
-from datetime import timezone
+from datetime import timezone  # noqa: E402
 yesterday = datetime.datetime.now(timezone.utc) - datetime.timedelta(days=1)
 yesterday_midnight = yesterday.replace(hour=0, minute=0, second=0, microsecond=0)
 

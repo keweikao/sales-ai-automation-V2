@@ -8,7 +8,7 @@ Tests the core skill infrastructure including:
 """
 
 import pytest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 from dataclasses import dataclass
 from typing import Optional
 
@@ -18,12 +18,10 @@ from core.skills.base import (
     SkillCategory,
     SkillContext,
     SkillResult,
-    LLMSkill,
 )
 from core.skills.registry import (
     SkillRegistry,
     SkillNotFoundError,
-    SkillRegistrationError,
     skill,
 )
 

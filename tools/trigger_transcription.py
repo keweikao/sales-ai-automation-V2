@@ -3,8 +3,6 @@
 
 import json
 from google.cloud import tasks_v2
-from google.protobuf import timestamp_pb2
-import time
 
 # Configuration
 PROJECT_ID = "sales-ai-automation-v2"

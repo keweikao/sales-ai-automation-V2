@@ -13,7 +13,7 @@ Migration note: From src/slack_app/interactions/summary_sender.py
 
 import logging
 import os
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 
 import requests
 from slack_sdk import WebClient

@@ -6,7 +6,6 @@ Migration note: From src/slack_app/utils/file_pipeline.py
 """
 
 import json
-import os
 import tempfile
 from pathlib import Path
 from typing import Optional
@@ -64,7 +63,6 @@ def upload_to_gcs(
     """
     import logging
     import time
-    from google.api_core import retry as api_retry
     from google.api_core import exceptions as api_exceptions
 
     logger = logging.getLogger(__name__)

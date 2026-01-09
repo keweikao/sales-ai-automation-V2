@@ -4,7 +4,6 @@ CLI 工具 - 提供命令列介面使用程式碼智能功能
 
 import click
 import json
-from pathlib import Path
 
 from repo_analyzer import SalesAIRepoAnalyzer
 from symbol_indexer import SmartCodeSearch
@@ -84,7 +83,7 @@ def build_index(force):
     result = searcher.build_index(force_rebuild=force)
     
     if result["status"] == "success":
-        click.echo(f"✓ 索引建立完成")
+        click.echo("✓ 索引建立完成")
         click.echo(f"  總符號數: {result['total_symbols']}")
         click.echo(f"  索引檔案: {result['index_file']}")
     elif result["status"] == "skipped":
@@ -103,7 +102,7 @@ def index_stats():
     
     if stats["status"] == "success":
         click.echo(f"總符號數: {stats['total_symbols']}")
-        click.echo(f"\n類型分布:")
+        click.echo("\n類型分布:")
         for symbol_type, count in stats['type_distribution'].items():
             click.echo(f"  {symbol_type}: {count}")
         click.echo(f"\n索引檔案: {stats['index_file']}")

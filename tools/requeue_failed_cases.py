@@ -42,7 +42,7 @@ for case in cases:
                 })
                 
                 requeued_count += 1
-                print(f"  ✅ Status updated to 'queued_for_batch'")
+                print("  ✅ Status updated to 'queued_for_batch'")
                 print("-" * 40)
 
 print("\n" + "=" * 80)

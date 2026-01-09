@@ -24,7 +24,7 @@ import json
 import argparse
 import re
 from pathlib import Path
-from typing import Dict, List, Optional, Set
+from typing import Dict, List
 from dataclasses import dataclass
 
 # Add parent directory to path
@@ -236,7 +236,7 @@ class GeminiModelManager:
                     with open(file_path, 'w', encoding='utf-8') as f:
                         f.write(updated_content)
 
-                    print(f"  ✅ Updated successfully")
+                    print("  ✅ Updated successfully")
                     updates_count += 1
                 except Exception as e:
                     print(f"  ❌ Failed to update: {e}")
@@ -305,7 +305,7 @@ def main():
                 print(f"   {config.file_path}:{config.line_number} - {config.name}")
 
         if validation["deprecated"]:
-            print(f"\n💡 Run 'python tools/gemini_model_manager.py update' to fix deprecated models")
+            print("\n💡 Run 'python tools/gemini_model_manager.py update' to fix deprecated models")
             return 1
 
         return 0

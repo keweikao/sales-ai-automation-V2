@@ -17,7 +17,7 @@ os.environ["GCP_PROJECT"] = "sales-ai-automation-v2"
 # Add analysis-service to python path (parent of src)
 sys.path.append(os.path.join(os.getcwd(), "analysis-service"))
 
-from src.orchestrator import MultiAgentOrchestrator
+from src.orchestrator import MultiAgentOrchestrator  # noqa: E402
 
 TRANSCRIPT_FILE = "202512-IC001_transcript_fixed.txt"
 

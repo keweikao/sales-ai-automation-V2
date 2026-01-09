@@ -17,7 +17,7 @@ start_date = datetime(2025, 12, 16, tzinfo=timezone.utc)
 
 # Query all cases
 print("=" * 60)
-print(f"查詢 2025-12-16 以來的案件 (Case ID: 202512*)...")
+print("查詢 2025-12-16 以來的案件 (Case ID: 202512*)...")
 print("=" * 60)
 
 # Get all documents and filter
@@ -90,7 +90,7 @@ for doc in all_cases:
         completed_transcription.append(case_info)
 
 # Print summary
-print(f"\n📊 統計摘要 (2025-12-16 至今)")
+print("\n📊 統計摘要 (2025-12-16 至今)")
 print("-" * 40)
 print(f"✅ 已完成轉錄: {len(completed_transcription)} 個")
 print(f"⏳ 尚未轉錄:   {len(pending_transcription)} 個")
@@ -98,7 +98,7 @@ print(f"❌ 失敗案件:   {len(failed_cases)} 個")
 print(f"📁 總計案件:   {len(completed_transcription) + len(pending_transcription) + len(failed_cases)} 個")
 
 if pending_transcription:
-    print(f"\n\n📋 尚未轉錄的案件樣例 (前 5 筆):")
+    print("\n\n📋 尚未轉錄的案件樣例 (前 5 筆):")
     print("-" * 60)
     for i, case in enumerate(pending_transcription[:5], 1):
         print(f"\n{i}. Case ID: {case['case_id']}")
@@ -108,7 +108,7 @@ if pending_transcription:
         print(f"   建立時間: {case['created_at']}")
 
 if failed_cases:
-    print(f"\n\n❌ 失敗的案件樣例 (前 5 筆):")
+    print("\n\n❌ 失敗的案件樣例 (前 5 筆):")
     print("-" * 60)
     for i, case in enumerate(failed_cases[:5], 1):
         print(f"\n{i}. Case ID: {case['case_id']}")
@@ -117,7 +117,7 @@ if failed_cases:
 
 # Print summary at the very end to ensure visibility
 print("\n" + "=" * 60)
-print(f"📊 最終統計摘要 (2025-12-16 至今, Case ID: 202512*)")
+print("📊 最終統計摘要 (2025-12-16 至今, Case ID: 202512*)")
 print("-" * 40)
 print(f"✅ 已完成轉錄: {len(completed_transcription)} 個")
 print(f"⏳ 尚未轉錄:   {len(pending_transcription)} 個")

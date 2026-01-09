@@ -60,7 +60,7 @@ async def run(
     from infrastructure.services.notification.service import NotificationService
 
     channel_id = alert_channel_id or os.getenv("OPS_ALERT_CHANNEL_ID", "C0A7C2HUXRR")
-    channel = alert_channel or os.getenv("OPS_ALERT_CHANNEL", "#sales-reports")
+    _ = alert_channel or os.getenv("OPS_ALERT_CHANNEL", "#sales-reports")  # Reserved for future use
 
     logger.info("Starting ops health check...")
 

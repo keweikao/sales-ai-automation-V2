@@ -103,7 +103,7 @@ def fix_case(db, case_id: str, case_data: dict) -> bool:
     file_url = case_data.get("fileUrl")
     
     if not file_url:
-        print(f"  ❌ No fileUrl found, skipping")
+        print("  ❌ No fileUrl found, skipping")
         return False
     
     # Create GCS destination path
@@ -125,7 +125,7 @@ def fix_case(db, case_id: str, case_data: dict) -> bool:
             "updatedAt": firestore.SERVER_TIMESTAMP,
         })
         
-        print(f"  ✅ Case updated with gcsUri")
+        print("  ✅ Case updated with gcsUri")
         return True
         
     except Exception as e:

@@ -36,7 +36,7 @@ def main():
 
     main_path = project_root / "api-gateway" / "main.py"
     spec = importlib.util.spec_from_file_location("api_gateway_main", main_path)
-    module = importlib.util.module_from_spec(spec)
+    _ = importlib.util.module_from_spec(spec)  # Keep for future use
 
     # Mock the relative imports by setting up the package structure
     sys.modules["api_gateway"] = type(sys)("api_gateway")
@@ -44,11 +44,6 @@ def main():
     # This approach won't work due to relative imports in main.py
     # Instead, we'll generate the schema inline
 
-    from fastapi import FastAPI
-    from fastapi.openapi.utils import get_openapi
-
-    # Import schemas directly
-    schemas_path = project_root / "api-gateway" / "schemas"
 
     # Manually define the OpenAPI schema based on our routers
     openapi_schema = {

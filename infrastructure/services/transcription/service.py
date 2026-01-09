@@ -6,7 +6,6 @@ Orchestrates transcription using configured providers.
 
 import os
 import logging
-from typing import Optional
 
 from core.schemas.conversation import Transcript, TranscriptSegment
 from .providers.whisper import GroqWhisperPipeline

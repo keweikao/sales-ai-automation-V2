@@ -241,5 +241,5 @@ class SummaryRenderer:
 
         try:
             _update(transaction)
-        except Exception as exc:  # noqa: broad-except
+        except Exception as exc:  # noqa: BLE001
             logger.warning("Failed to record summary view for %s: %s", case_id, exc)

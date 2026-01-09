@@ -6,13 +6,12 @@ Migrated from: src/transcription/gemini_pipeline.py
 """
 
 import os
-import json
 import logging
 import time
 import re
 import subprocess
 import tempfile
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, List
 from pathlib import Path
 from google.cloud import storage
 import google.generativeai as genai

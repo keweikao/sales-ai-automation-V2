@@ -4,7 +4,6 @@ AI 助手自動初始化腳本
 在每次 AI 助手啟動時自動執行，確保程式碼智能工具就緒
 """
 
-import os
 import sys
 import subprocess
 from pathlib import Path
@@ -47,7 +46,7 @@ def check_and_build_index():
 def check_dependencies():
     """檢查必要的依賴是否已安裝"""
     try:
-        import kit
+        import kit  # noqa: F401
         return True
     except ImportError:
         print("⚠️  cased-kit 未安裝")

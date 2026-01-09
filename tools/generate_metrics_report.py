@@ -25,7 +25,7 @@ Usage:
 
 import argparse
 import sys
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 from pathlib import Path
 
 # Add project root to path
@@ -33,7 +33,7 @@ project_root = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(project_root))
 
 # Import from 06-analytics module (has hyphen in name)
-import importlib.util
+import importlib.util  # noqa: E402
 metrics_reporter_path = project_root / "modules" / "06-analytics" / "metrics" / "reporter.py"
 spec = importlib.util.spec_from_file_location("reporter", metrics_reporter_path)
 reporter_module = importlib.util.module_from_spec(spec)

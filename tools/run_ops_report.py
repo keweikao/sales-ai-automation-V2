@@ -510,7 +510,6 @@ class StatsCollector:
 async def run_health_check(db) -> Dict[str, Any]:
     """Run simplified health check."""
     import importlib.util
-    import httpx
 
     ops_module_path = project_root / "modules" / "07-ops-automation"
 

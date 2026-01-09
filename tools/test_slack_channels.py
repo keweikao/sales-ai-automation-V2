@@ -3,7 +3,6 @@
 Test script to list Slack channels the bot can access.
 """
 
-import asyncio
 import os
 import sys
 

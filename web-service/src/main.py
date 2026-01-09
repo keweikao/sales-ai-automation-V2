@@ -53,7 +53,7 @@ def create_app() -> Flask:
         except SummaryUnavailableError as exc:
             logger.warning("Summary unavailable for %s", case_id)
             abort(404, description=str(exc))
-        except Exception as exc:  # noqa: broad-except
+        except Exception as exc:  # noqa: BLE001
             logger.exception("Failed to render summary for %s", case_id)
             abort(500, description=str(exc))
 
@@ -183,7 +183,7 @@ def create_app() -> Flask:
                     "delivery.lastViewedViaShortUrl": firestore.SERVER_TIMESTAMP,
                 }
             )
-        except Exception as exc:  # noqa: broad-except
+        except Exception as exc:  # noqa: BLE001
             logger.warning("Failed updating short url stats for %s: %s", code, exc)
 
         return redirect(target_url, code=302)

@@ -6,16 +6,13 @@ Provides metrics that enable data-driven improvements to agents.
 
 import logging
 from datetime import datetime, timedelta
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any
 from dataclasses import dataclass
-from statistics import mean, stdev
-import math
+from statistics import mean
 
 from core.schemas.outcome import (
     DealOutcome,
     DealStatus,
-    AgentMetrics,
-    SystemMetrics,
     LearningSignal,
 )
 

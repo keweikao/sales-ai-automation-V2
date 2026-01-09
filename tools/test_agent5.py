@@ -1,13 +1,12 @@
 import sys
 import os
 import unittest
-from unittest.mock import MagicMock, patch
-from dataclasses import asdict
+from unittest.mock import MagicMock
 
 # Add analysis-service/src to path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../analysis-service/src')))
 
-from agents.agent5_coach import CoachAgent, CoachAlert, ManagerAlert
+from agents.agent5_coach import CoachAgent
 
 class TestCoachAgent(unittest.TestCase):
     def setUp(self):

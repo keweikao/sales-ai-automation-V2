@@ -15,7 +15,6 @@ import argparse
 import requests
 from pathlib import Path
 from google.cloud import storage, firestore
-from datetime import datetime
 
 # 配置
 GCP_PROJECT_ID = os.getenv("GCP_PROJECT_ID", "sales-ai-automation-v2")
@@ -297,7 +296,7 @@ class E2ETest:
                         
                         # 檢查是否有報告
                         if agent_data.get('data'):
-                            print_info(f"    - JSON 數據: ✓")
+                            print_info("    - JSON 數據: ✓")
                     else:
                         print_error(f"  ✗ {agent_id}: {status}")
             else:

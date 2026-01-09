@@ -15,7 +15,7 @@ __all__ = [
 
 # OpsAgent is imported conditionally to avoid requiring Gemini SDK
 try:
-    from .ops_agent import OpsAgent, OpsAnalysisResult
+    from .ops_agent import OpsAgent, OpsAnalysisResult  # noqa: F401
 
     __all__.extend(["OpsAgent", "OpsAnalysisResult"])
 except ImportError:

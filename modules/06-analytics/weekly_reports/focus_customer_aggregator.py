@@ -184,7 +184,7 @@ class FocusCustomerAggregator:
 
         # 取得各 agent 數據
         agent2_data = self._get_agent_data(analysis, "agent2")
-        agent6_data = self._get_agent_data(analysis, "agent6")
+        _ = self._get_agent_data(analysis, "agent6")  # Reserved for future use
         agent7_data = self._get_agent_data(analysis, "agent7")
 
         # 處理 created_at

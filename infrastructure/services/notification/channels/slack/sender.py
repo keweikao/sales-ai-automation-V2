@@ -4,7 +4,7 @@ Slack message sender.
 Handles sending messages to Slack channels and users.
 """
 
-from typing import Any, Optional
+from typing import Optional
 from slack_sdk.web.async_client import AsyncWebClient
 
 

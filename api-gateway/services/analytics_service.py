@@ -5,7 +5,6 @@ Analytics Service for Firestore aggregations.
 from datetime import datetime, timedelta
 from typing import Optional
 
-from google.cloud import firestore
 
 from deps.firestore import FirestoreService
 

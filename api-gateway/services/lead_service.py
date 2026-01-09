@@ -2,10 +2,8 @@
 Lead Service for Firestore operations.
 """
 
-from datetime import datetime
 from typing import Optional
 
-from google.cloud import firestore
 
 from deps.firestore import FirestoreService
 

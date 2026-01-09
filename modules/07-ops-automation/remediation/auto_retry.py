@@ -4,7 +4,6 @@ Auto retry service.
 Automatically retries failed transcription and analysis tasks.
 """
 
-import asyncio
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, Callable
 from dataclasses import dataclass, field

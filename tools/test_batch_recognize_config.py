@@ -2,7 +2,6 @@ import os
 import logging
 from google.cloud import speech_v2
 from google.cloud.speech_v2.types import cloud_speech
-from google.api_core import exceptions as gapi_exceptions
 from google.api_core.client_options import ClientOptions
 
 logging.basicConfig(level=logging.INFO)
@@ -72,5 +71,5 @@ finally:
     try:
         client.delete_recognizer(name=f"{parent}/recognizers/{recognizer_id}")
         print("Recognizer deleted.")
-    except:
+    except Exception:
         pass

@@ -6,7 +6,7 @@ Analyzes individual sales rep performance trends and comparisons.
 
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from google.cloud import firestore
 

@@ -1,13 +1,8 @@
 """
 監控特定案件的處理狀態，並在完成時發送 Email 通知
 """
-import os
-import sys
 import time
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-from datetime import datetime, timezone
+from datetime import datetime
 from google.cloud import firestore
 
 # Configuration
@@ -67,7 +62,7 @@ def format_status_report(case_id, data):
     analysis = data.get('analysis')
     if analysis:
         agents = analysis.get('agents', {})
-        report += f"\n\n🤖 Agent 分析結果:"
+        report += "\n\n🤖 Agent 分析結果:"
         for agent_name, agent_data in agents.items():
             if agent_data:
                 report += f"\n  - {agent_name}: ✅ 完成"
@@ -85,7 +80,7 @@ def send_email_notification(subject, body, to_email):
     # Note: This requires app password setup for Gmail
     # For now, we'll just print the notification
     print(f"\n{'=' * 60}")
-    print(f"📧 EMAIL 通知")
+    print("📧 EMAIL 通知")
     print(f"{'=' * 60}")
     print(f"收件人: {to_email}")
     print(f"主旨: {subject}")
@@ -156,7 +151,7 @@ def monitor_case(case_id, customer_name, email=None):
         
         # Wait before next check
         time.sleep(CHECK_INTERVAL)
-        print(f".", end="", flush=True)
+        print(".", end="", flush=True)
     
     return False
 

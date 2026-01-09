@@ -10,8 +10,8 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from tools.code_intelligence.repo_analyzer import SalesAIRepoAnalyzer
-from tools.code_intelligence.symbol_indexer import SmartCodeSearch
+from tools.code_intelligence.repo_analyzer import SalesAIRepoAnalyzer  # noqa: E402
+from tools.code_intelligence.symbol_indexer import SmartCodeSearch  # noqa: E402
 
 def main():
     print("=" * 60)
@@ -44,7 +44,7 @@ def main():
     print("-" * 60)
     result = searcher.build_index(force_rebuild=True)
     if result["status"] == "success":
-        print(f"✓ 索引建立成功")
+        print("✓ 索引建立成功")
         print(f"  總符號數: {result['total_symbols']}")
     
     # 4. 搜尋程式碼
@@ -63,7 +63,7 @@ def main():
     stats = searcher.get_stats()
     if stats["status"] == "success":
         print(f"總符號數: {stats['total_symbols']}")
-        print(f"類型分布:")
+        print("類型分布:")
         for symbol_type, count in sorted(stats['type_distribution'].items(), 
                                         key=lambda x: x[1], reverse=True)[:5]:
             print(f"  • {symbol_type}: {count}")

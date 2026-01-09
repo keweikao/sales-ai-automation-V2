@@ -47,11 +47,7 @@ def _get_skills_module():
 
 # Type hints for IDE support
 if TYPE_CHECKING:
-    from modules.sales_conversation.skills import (
-        ContextAnalysisSkill,
-        CRMExtractionSkill,
-        SummaryGenerationSkill,
-    )
+    pass
 
 
 class SalesCorePlugin(Plugin):

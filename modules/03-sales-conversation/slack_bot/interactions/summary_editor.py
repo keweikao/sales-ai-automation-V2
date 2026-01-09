@@ -9,7 +9,6 @@ Migration note: From src/slack_app/interactions/summary_editor.py
 
 import logging
 from typing import Dict, Any, Optional
-from datetime import datetime
 from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
 from google.cloud import firestore

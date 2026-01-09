@@ -105,7 +105,7 @@ def main():
             print(f"  業務: {case['sales_rep']}")
             print(f"  狀態: {case['status']}")
             print(f"  建立時間: {created_str}")
-            print(f"  Agent 狀態:")
+            print("  Agent 狀態:")
             for agent, status in case['agent_status'].items():
                 print(f"    {agent}: {status}")
     else:

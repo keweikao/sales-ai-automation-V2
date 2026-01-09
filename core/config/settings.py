@@ -7,7 +7,6 @@ Usage:
     print(settings.gcp_project_id)
 """
 
-import os
 from functools import lru_cache
 from typing import Optional
 from pydantic import Field

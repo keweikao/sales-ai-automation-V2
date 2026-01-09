@@ -53,11 +53,7 @@ def _get_skills_module():
 
 # Type hints for IDE support
 if TYPE_CHECKING:
-    from modules.sales_conversation.skills import (
-        BuyerAnalysisSkill,
-        CoachEvaluationSkill,
-        SellerCoachingSkill,
-    )
+    pass
 
 
 class SalesMeddicPlugin(Plugin):

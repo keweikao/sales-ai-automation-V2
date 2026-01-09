@@ -58,8 +58,10 @@ def main():
         print(f"Failed to trigger batch: {e}")
 
     # Cleanup
-    if os.path.exists(local_input): os.remove(local_input)
-    if os.path.exists(local_output): os.remove(local_output)
+    if os.path.exists(local_input):
+        os.remove(local_input)
+    if os.path.exists(local_output):
+        os.remove(local_output)
 
 if __name__ == "__main__":
     main()

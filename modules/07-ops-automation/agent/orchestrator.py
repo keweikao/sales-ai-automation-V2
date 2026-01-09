@@ -5,7 +5,6 @@ Runs health checks, collects statistics, executes remediation,
 and optionally runs LLM analysis.
 """
 
-import asyncio
 import logging
 import uuid
 from datetime import datetime, timezone, timedelta
@@ -14,7 +13,7 @@ from dataclasses import dataclass, field
 
 from google.cloud import firestore
 
-from ..health_check import HealthChecker, ServiceStatus, SystemHealthReport
+from ..health_check import HealthChecker, SystemHealthReport
 from ..monitoring.error_notifier import ErrorNotifier
 from ..remediation import AutoRetryService, DataCleanupService
 from ..history import HealthHistoryService, HealthHistoryRecord, StatsCollector, ProcessingStats

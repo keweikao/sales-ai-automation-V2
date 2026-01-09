@@ -5,7 +5,6 @@ P1: Slack 事件處理測試
 """
 
 import pytest
-from unittest.mock import MagicMock, patch, call
 from datetime import datetime
 
 

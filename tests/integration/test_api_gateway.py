@@ -7,9 +7,7 @@ in isolated test context, these tests focus on data layer validation.
 """
 
 import pytest
-from unittest.mock import MagicMock, patch
 from datetime import datetime
-from typing import Generator
 
 
 @pytest.fixture

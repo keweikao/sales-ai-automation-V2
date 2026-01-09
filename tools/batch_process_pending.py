@@ -1,4 +1,3 @@
-import os
 import json
 import logging
 from datetime import datetime, timezone
@@ -56,8 +55,7 @@ def main():
             if not (case_id.startswith('202512') or case_id.startswith('202601')):
                 continue
                 
-        # Filter by status
-        status = data.get('status', 'unknown')
+        # Filter by transcription presence
         transcription = data.get('transcription')
         
         has_transcription = (

@@ -32,7 +32,7 @@ import re
 import os
 import time
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Callable, Awaitable, Tuple
+from typing import Any, Dict, List, Optional, Callable, Tuple
 
 # Metrics tracking
 # Note: Module 06-analytics has hyphen in name, requires special import
@@ -124,7 +124,7 @@ class InsufficientDataError(Exception):
 
 # P1 Fix: Resilience utilities
 try:
-    from infrastructure.services.llm_gateway.resilience import atomic_update, atomic_read_update
+    from infrastructure.services.llm_gateway.resilience import atomic_update, atomic_read_update  # noqa: F401
     RESILIENCE_AVAILABLE = True
 except ImportError:
     RESILIENCE_AVAILABLE = False
@@ -439,7 +439,6 @@ class MultiAgentOrchestrator:
     ) -> Dict[str, Any]:
         """Replace placeholders in summary data with actual values."""
         import copy
-        import re
 
         result = copy.deepcopy(data)
 
@@ -679,7 +678,7 @@ class MultiAgentOrchestrator:
                 logger.info("Agent 2 quality check passed!")
                 break
 
-            logger.info(f"Agent 2 quality check failed. Triggering refinement...")
+            logger.info("Agent 2 quality check failed. Triggering refinement...")
             result_a2 = await self._refine_buyer_analysis(state, agents['agent2'], feedback)
 
             if result_a2.success:

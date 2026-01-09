@@ -35,8 +35,6 @@ target_cases = [
 def reset_cases():
     batch = db.batch()
     count = 0
-    
-    encoded_cases = [case.encode('utf-8') for case in target_cases] # Ensure string format if needed, though python strings are unicode
 
     print(f"Resetting {len(target_cases)} cases to 'queued_for_batch'...")
     
