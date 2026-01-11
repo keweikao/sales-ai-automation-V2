@@ -10,6 +10,14 @@ Usage:
     await scheduler.run_job("weekly_report")
 """
 
-from .service import Scheduler
+
+def __getattr__(name):
+    """Lazy import to avoid loading yaml dependency when only importing jobs."""
+    if name == "Scheduler":
+        from .service import Scheduler
+
+        return Scheduler
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
 
 __all__ = ["Scheduler"]
