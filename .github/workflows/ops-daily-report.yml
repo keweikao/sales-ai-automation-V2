@@ -35,7 +35,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install google-cloud-firestore slack_sdk aiohttp httpx google-generativeai
+          pip install google-cloud-firestore slack_sdk aiohttp httpx google-generativeai pyyaml
 
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2

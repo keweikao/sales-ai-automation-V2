@@ -95,6 +95,30 @@ def _setup_ops_module_path():
             sys.modules["ops_automation.history"] = hist_module
             hist_spec.loader.exec_module(hist_module)
 
+        # Load agent
+        agent_init = ops_module_path / "agent" / "__init__.py"
+        if agent_init.exists():
+            agent_spec = importlib.util.spec_from_file_location(
+                "ops_automation.agent",
+                agent_init,
+                submodule_search_locations=[str(ops_module_path / "agent")],
+            )
+            agent_module = importlib.util.module_from_spec(agent_spec)
+            sys.modules["ops_automation.agent"] = agent_module
+            agent_spec.loader.exec_module(agent_module)
+
+        # Load reporting
+        reporting_init = ops_module_path / "reporting" / "__init__.py"
+        if reporting_init.exists():
+            rep_spec = importlib.util.spec_from_file_location(
+                "ops_automation.reporting",
+                reporting_init,
+                submodule_search_locations=[str(ops_module_path / "reporting")],
+            )
+            rep_module = importlib.util.module_from_spec(rep_spec)
+            sys.modules["ops_automation.reporting"] = rep_module
+            rep_spec.loader.exec_module(rep_module)
+
         # Now exec the main module
         spec.loader.exec_module(ops_module)
 
