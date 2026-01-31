@@ -1,9 +1,10 @@
 name: Weekly Metrics Report
 
 on:
-  schedule:
-    # 每週一早上 9:00 台灣時間 (UTC+8) = 週日 01:00 UTC
-    - cron: '0 1 * * 1'
+  # DISABLED: V2 project has been migrated, schedule disabled on 2026-01-31
+  # schedule:
+  #   # 每週一早上 9:00 台灣時間 (UTC+8) = 週日 01:00 UTC
+  #   - cron: '0 1 * * 1'
   workflow_dispatch:  # 允許手動觸發
 
 jobs:
