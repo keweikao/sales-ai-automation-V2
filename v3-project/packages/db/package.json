@@ -1,0 +1,32 @@
+{
+  "name": "@Sales_ai_automation_v3/db",
+  "type": "module",
+  "exports": {
+    ".": {
+      "default": "./src/index.ts"
+    },
+    "./*": {
+      "default": "./src/*.ts"
+    }
+  },
+  "scripts": {
+    "db:push": "drizzle-kit push",
+    "db:generate": "drizzle-kit generate",
+    "db:studio": "drizzle-kit studio",
+    "db:migrate": "drizzle-kit migrate"
+  },
+  "devDependencies": {
+    "typescript": "catalog:",
+    "@Sales_ai_automation_v3/config": "workspace:*",
+    "drizzle-kit": "^0.31.8",
+    "@types/ws": "^8.18.1"
+  },
+  "dependencies": {
+    "dotenv": "catalog:",
+    "zod": "catalog:",
+    "@Sales_ai_automation_v3/env": "workspace:*",
+    "drizzle-orm": "^0.45.1",
+    "@neondatabase/serverless": "^1.0.2",
+    "ws": "^8.18.3"
+  }
+}

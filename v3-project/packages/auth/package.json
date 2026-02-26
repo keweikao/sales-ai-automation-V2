@@ -1,0 +1,24 @@
+{
+  "name": "@Sales_ai_automation_v3/auth",
+  "exports": {
+    ".": {
+      "default": "./src/index.ts"
+    },
+    "./*": {
+      "default": "./src/*.ts"
+    }
+  },
+  "type": "module",
+  "scripts": {},
+  "devDependencies": {
+    "typescript": "catalog:",
+    "@Sales_ai_automation_v3/config": "workspace:*"
+  },
+  "dependencies": {
+    "dotenv": "catalog:",
+    "zod": "catalog:",
+    "@Sales_ai_automation_v3/env": "workspace:*",
+    "@Sales_ai_automation_v3/db": "workspace:*",
+    "better-auth": "catalog:"
+  }
+}

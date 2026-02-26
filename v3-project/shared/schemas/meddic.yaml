@@ -1,0 +1,220 @@
+# MEDDIC 銷售資格評估框架
+# 此檔案定義業務規則，V2/V3 共用
+version: "1.0"
+name: "MEDDIC Framework"
+description: "iCHEF 銷售資格評估框架"
+
+dimensions:
+  - name: "Metrics"
+    key: "metrics"
+    chinese_name: "量化指標"
+    description: "客戶期望的可衡量業務結果"
+    questions:
+      - "客戶想解決什麼問題？"
+      - "有具體的數字目標嗎？"
+      - "時間框架是什麼？"
+    rating_levels:
+      - level: "strong"
+        score_range: [80, 100]
+        criteria: "明確量化目標，有具體時間框架"
+      - level: "moderate"
+        score_range: [50, 79]
+        criteria: "有目標但不夠具體，或缺少時間框架"
+      - level: "weak"
+        score_range: [20, 49]
+        criteria: "目標模糊或不確定"
+      - level: "not_discussed"
+        score_range: [0, 19]
+        criteria: "未提及量化指標"
+
+  - name: "Economic Buyer"
+    key: "economic_buyer"
+    chinese_name: "經濟決策者"
+    description: "有預算權限和最終決策權的人"
+    questions:
+      - "誰有權批准這筆預算？"
+      - "決策者是否已參與對話？"
+    rating_levels:
+      - level: "strong"
+        score_range: [80, 100]
+        criteria: "已確認決策者身份，且有直接接觸"
+      - level: "moderate"
+        score_range: [50, 79]
+        criteria: "知道決策者是誰，但尚未直接接觸"
+      - level: "weak"
+        score_range: [20, 49]
+        criteria: "不確定誰是決策者"
+      - level: "not_discussed"
+        score_range: [0, 19]
+        criteria: "未提及決策者"
+
+  - name: "Decision Criteria"
+    key: "decision_criteria"
+    chinese_name: "決策標準"
+    description: "客戶評估解決方案的標準"
+    questions:
+      - "客戶看重什麼功能？"
+      - "價格敏感度如何？"
+      - "有技術要求嗎？"
+    rating_levels:
+      - level: "strong"
+        score_range: [80, 100]
+        criteria: "清楚了解客戶的評估標準"
+      - level: "moderate"
+        score_range: [50, 79]
+        criteria: "部分了解評估標準"
+      - level: "weak"
+        score_range: [20, 49]
+        criteria: "對評估標準不太清楚"
+      - level: "not_discussed"
+        score_range: [0, 19]
+        criteria: "未討論決策標準"
+
+  - name: "Decision Process"
+    key: "decision_process"
+    chinese_name: "決策流程"
+    description: "客戶內部的決策流程和時間表"
+    questions:
+      - "決策流程有幾個階段？"
+      - "預計何時做決定？"
+      - "還需要誰的同意？"
+    rating_levels:
+      - level: "strong"
+        score_range: [80, 100]
+        criteria: "清楚了解決策流程和時間表"
+      - level: "moderate"
+        score_range: [50, 79]
+        criteria: "大致了解流程，但細節不清"
+      - level: "weak"
+        score_range: [20, 49]
+        criteria: "對決策流程不太清楚"
+      - level: "not_discussed"
+        score_range: [0, 19]
+        criteria: "未討論決策流程"
+
+  - name: "Identify Pain"
+    key: "identify_pain"
+    chinese_name: "痛點識別"
+    description: "客戶目前面臨的問題和挑戰"
+    questions:
+      - "客戶的主要痛點是什麼？"
+      - "痛點造成什麼影響？"
+      - "不解決會有什麼後果？"
+    rating_levels:
+      - level: "strong"
+        score_range: [80, 100]
+        criteria: "深入了解痛點及其業務影響"
+      - level: "moderate"
+        score_range: [50, 79]
+        criteria: "知道痛點但影響不夠清楚"
+      - level: "weak"
+        score_range: [20, 49]
+        criteria: "對痛點了解有限"
+      - level: "not_discussed"
+        score_range: [0, 19]
+        criteria: "未討論痛點"
+
+  - name: "Champion"
+    key: "champion"
+    chinese_name: "內部支持者"
+    description: "在客戶組織內支持我們的人"
+    questions:
+      - "誰在內部為我們說話？"
+      - "支持者有影響力嗎？"
+      - "支持者的動機是什麼？"
+    rating_levels:
+      - level: "strong"
+        score_range: [80, 100]
+        criteria: "有明確的內部支持者，且有影響力"
+      - level: "moderate"
+        score_range: [50, 79]
+        criteria: "有潛在支持者，但影響力不確定"
+      - level: "weak"
+        score_range: [20, 49]
+        criteria: "尚未建立內部支持者"
+      - level: "not_discussed"
+        score_range: [0, 19]
+        criteria: "未提及內部支持者"
+
+# iCHEF 特定：承諾事件 (Commitment Events)
+commitment_events:
+  - id: "CE1"
+    name: "Time"
+    chinese_name: "時間承諾"
+    description: "安排安裝或教育訓練時間"
+    signals:
+      - "確認可以的日期"
+      - "排出訓練時間"
+      - "預約安裝"
+    weight: 1
+
+  - id: "CE2"
+    name: "Data"
+    chinese_name: "資料承諾"
+    description: "提供菜單、桌位、庫存資料"
+    signals:
+      - "提供菜單檔案"
+      - "確認桌位數量"
+      - "提供庫存清單"
+    weight: 2
+
+  - id: "CE3"
+    name: "Money"
+    chinese_name: "金錢承諾"
+    description: "簽約或付訂金"
+    signals:
+      - "確認付款方式"
+      - "簽署合約"
+      - "支付訂金"
+    weight: 3
+
+# iCHEF 特定：客戶類型
+customer_types:
+  - id: "impulsive"
+    chinese_name: "衝動型"
+    description: "重視速度和便利性"
+    characteristics:
+      - "快速做決定"
+      - "不太比價"
+      - "重視方便"
+    selling_approach: "強調快速上線、簡單易用"
+
+  - id: "calculated"
+    chinese_name: "精算型"
+    description: "重視成本和 ROI"
+    characteristics:
+      - "會詳細比較"
+      - "關注價格"
+      - "要求 ROI 數據"
+    selling_approach: "提供詳細成本分析、ROI 案例"
+
+  - id: "conservative"
+    chinese_name: "保守觀望型"
+    description: "重視安全性和參考案例"
+    characteristics:
+      - "需要時間考慮"
+      - "想看成功案例"
+      - "擔心風險"
+    selling_approach: "提供參考客戶、強調穩定性"
+
+# 轉換障礙
+conversion_concerns:
+  - id: "menu_complexity"
+    chinese_name: "菜單複雜度"
+    description: "擔心菜單設定太複雜"
+
+  - id: "staff_training"
+    chinese_name: "員工訓練"
+    description: "擔心員工學不會"
+
+  - id: "data_migration"
+    chinese_name: "資料遷移"
+    description: "擔心資料搬移問題"
+
+  - id: "system_stability"
+    chinese_name: "系統穩定性"
+    description: "擔心系統不穩定"
+
+  - id: "cost"
+    chinese_name: "成本考量"
+    description: "覺得太貴或預算不足"
